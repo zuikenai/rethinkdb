@@ -7,7 +7,6 @@
 #include "arch/runtime/coroutines.hpp"
 #include "logger.hpp"
 
-
 int get_cpu_count() {
     return sysconf(_SC_NPROCESSORS_ONLN);
 }
