@@ -18,6 +18,7 @@ SHELL := $(shell which bash)
 
 empty :=
 space := $(empty) $(empty)
+tab := $(empty)	$(empty)
 comma := ,
 hash  := \#
 dollar := \$
@@ -121,6 +122,11 @@ else
   # unset MAKEFLAGS to avoid some confusion
   EXTERN_MAKE := MAKEFLAGS= make --no-print-directory
 endif
+
+##### Test for certain make command line flags
+
+ALWAYS_MAKE = $(if $(findstring B,$(firstword $(MAKEFLAGS)))$(filter -B,$(MAKEFLAGS)),1)
+DRY_RUN = $(if $(findstring n,$(firstword $(MAKEFLAGS))),1)
 
 ##### Misc
 
