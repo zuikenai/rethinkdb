@@ -803,6 +803,7 @@ bool log_serializer_t::next_shutdown_step() {
 
     // The datablock manager uses block tokens, so it goes before.
     if (shutdown_state == shutdown_waiting_on_datablock_manager) {
+        guarantee(!last_write && active_write_count == 0);
         shutdown_state = shutdown_waiting_on_block_tokens;
         if (!offset_tokens.empty()) {
             shutdown_in_one_shot = false;
@@ -820,6 +821,7 @@ bool log_serializer_t::next_shutdown_step() {
         lba_index->shutdown();
         metablock_manager->shutdown();
         extent_manager->shutdown();
+        guarantee(!last_write && active_write_count == 0);
 
         delete lba_index;
         lba_index = NULL;

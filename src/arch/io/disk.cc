@@ -13,6 +13,7 @@
 #include <functional>
 
 #include "arch/types.hpp"
+#include "arch/timer.hpp"
 #include "arch/runtime/thread_pool.hpp"
 #include "config/args.hpp"
 #include "backtrace.hpp"
@@ -66,7 +67,7 @@ public:
         accounter.done_fun = std::bind(&conflict_resolving_diskmgr_t::done,
                                        &conflict_resolver, ph::_1);
         conflict_resolver.done_fun = std::bind(&stats_diskmgr_t::done, &stack_stats, ph::_1);
-        stack_stats.done_fun = std::bind(&linux_disk_manager_t::done, this, ph::_1);
+        stack_stats.done_fun = std::bind(&linux_disk_manager_t::done, this, ph::_1, false);
     }
 
     ~linux_disk_manager_t() {
@@ -136,8 +137,23 @@ public:
                                a));
     };
 
-    void done(stats_diskmgr_t::action_t *a) {
+    void done(stats_diskmgr_t::action_t *a, bool napped) {
         assert_thread();
+        if (!napped) {
+            struct test_t : public timer_callback_t {
+                void on_timer() { me->done(a, true); delete this; }
+                stats_diskmgr_t::action_t *a;
+                linux_disk_manager_t *me;
+            };
+            test_t *cb = new test_t();
+            cb->me = this;
+            cb->a = a;
+            int time = randint(100);
+            if (time > 0) {
+                fire_timer_once(time, cb);
+                return;
+            }
+        }
         outstanding_txn--;
         action_t *a2 = static_cast<action_t *>(a);
         bool succeeded = a2->get_succeeded();

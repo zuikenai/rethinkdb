@@ -105,7 +105,7 @@
 
 // Maximum number of threads we support
 // TODO: make this dynamic where possible
-#define MAX_THREADS                               128
+#define MAX_THREADS                               2
 
 // Ticks (in milliseconds) the internal timed tasks are performed at
 #define TIMER_TICKS_IN_MS                         5
@@ -158,10 +158,10 @@
 #define SUPERBLOCK_ID                             0
 
 // The ratio at which we should start GCing.
-#define DEFAULT_GC_HIGH_RATIO                     0.20
+#define DEFAULT_GC_HIGH_RATIO                     0.02
 
 // The ratio at which we don't want to keep GC'ing.
-#define DEFAULT_GC_LOW_RATIO                      0.15
+#define DEFAULT_GC_LOW_RATIO                      0.01
 
 // What's the maximum number of "young" extents we can have?
 #define GC_YOUNG_EXTENT_MAX_SIZE                  50

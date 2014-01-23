@@ -9,6 +9,7 @@
 #include "utils.hpp"
 #include <boost/bind.hpp>
 
+#include "arch/timing.hpp"
 #include "arch/arch.hpp"
 #include "arch/runtime/coroutines.hpp"
 #include "concurrency/mutex.hpp"
@@ -1016,6 +1017,8 @@ void data_block_manager_t::gc_writer_t::write_gcs(gc_write_t *writes, size_t num
             old_block_tokens.clear();
             new_block_tokens.clear();
         }
+        //fprintf(stderr, "Preparing for GC write\n");
+        //nap(2000);
 
         // Step 4B: Commit the transaction to the serializer, emptying
         // out all the i_array bits.

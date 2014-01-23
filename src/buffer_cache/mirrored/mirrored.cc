@@ -1257,9 +1257,9 @@ mc_cache_t::~mc_cache_t() {
     shutting_down = true;
     serializer->unregister_read_ahead_cb(this);
 
-    rassert(num_live_non_writeback_transactions == 0,
+    /*rassert(num_live_non_writeback_transactions == 0,
             "num_live_non_writeback_transactions is %d\n",
-            num_live_non_writeback_transactions);
+            num_live_non_writeback_transactions);*/
 
     /* Wait for all transactions to commit before shutting down */
     if (num_live_non_writeback_transactions + num_live_writeback_transactions > 0) {
