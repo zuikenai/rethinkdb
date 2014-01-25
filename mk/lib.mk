@@ -125,8 +125,16 @@ endif
 
 ##### Test for certain make command line flags
 
-ALWAYS_MAKE = $(if $(findstring B,$(firstword $(MAKEFLAGS)))$(filter -B,$(MAKEFLAGS)),1)
-DRY_RUN = $(if $(findstring n,$(firstword $(MAKEFLAGS))),1)
+# Extract the short flags from MAKEFLAGS
+ifeq (,$(filter --%,$(firstword $(MAKEFLAGS))))
+  # MAKEFLAGS look like `SHoRt --long-options - ...'
+  SHORTFLAGS := $(firstword $(MAKEFLAGS))
+else
+  # MAKEFLAGS looks like `--long-options - ... - -SHoRt'
+  SHORTFLAGS := $(firstword $(filter -%, $(filter-out -, $(filter-out --%, $(MAKEFLAGS)))))
+endif
+ALWAYS_MAKE := $(if $(findstring B,$(SHORTFLAGS)),1)
+DRY_RUN := $(if $(findstring n,$(SHORTFLAGS)),1)
 
 ##### Misc
 

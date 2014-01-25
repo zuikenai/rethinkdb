@@ -308,9 +308,9 @@ unit: $(BUILD_DIR)/$(SERVER_UNIT_TEST_NAME)
 
 .PRECIOUS: $(PROTO_DIR)/. $(QL2_PROTO_HEADERS) $(QL2_PROTO_CODE)
 
-$(PROTO_DIR)/%.pb.h $(PROTO_DIR)/%.pb.cc: $(SOURCE_DIR)/%.proto | $(PROTOC_BIN_DEP) $(PROTO_DIR)/.
+$(PROTO_DIR)/%.pb.h $(PROTO_DIR)/%.pb.cc: $(SOURCE_DIR)/%.proto $(PROTOC_BIN_DEP) | $(PROTO_DIR)/.
 	$P PROTOC[CPP] $^
-	$(PROTOC) $(PROTOCFLAGS_CXX) --cpp_out $(PROTO_DIR) $^
+	$(PROTOC) $(PROTOCFLAGS_CXX) --cpp_out $(PROTO_DIR) $<
 	touch $@
 
 rpc/semilattice/joins/macros.hpp: $(TOP)/scripts/generate_join_macros.py

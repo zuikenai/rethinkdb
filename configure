@@ -159,6 +159,7 @@ main () {
     write "CONFIGURE_STATUS := started" 3>> "$config"
     write "CONFIGURE_ERROR := " 3>> "$config"
     write "CONFIGURE_COMMAND_LINE := $(echo ${default_args:-}) $@" 3>> "$config"
+    write "CONFIGURE_MAGIC_NUMBER := 2" 3>> "$config"
     configure 3>> "$config"
 
     trap - EXIT
@@ -971,6 +972,7 @@ pkg_name () {
         coffee) echo coffee-script ;;
         proto2js) echo protobufjs ;;
         npm) echo node ;;
+        z) echo zlib ;;
         *) echo "$1" ;;
     esac
 }
