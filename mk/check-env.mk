@@ -14,6 +14,13 @@ allowed-variables :=
 -include $(TOP)/mk/gen/allowed-variables.mk
 allowed-variables += TOP CWD JUST_SCAN_MAKEFILES COUNTDOWN_TOTAL
 
+MAKECMDGOALS ?=
+PUNNED_GOALS := $(filter $(allowed-variables), $(MAKECMDGOALS))
+.PHONY: $(PUNNED_GOALS)
+$(PUNNED_GOALS):
+	@true
+$(foreach arg,$(PUNNED_GOALS),$(eval $(arg) := 1))
+
 STRICT_MAKE_VARIABLE_CHECK ?= 0
 
 # CHECK_ARG_VARIABLES checks the variables set on the command line for unknown variables
