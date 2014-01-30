@@ -1,0 +1,4 @@
+{ "name": "packed-handlebars",
+  "version": "1.0.12",
+  "dependencies": { "handlebars": "1.0.12" },
+  "bundleDependencies": [ "handlebars" ] }

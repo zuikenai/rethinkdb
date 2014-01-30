@@ -25,8 +25,9 @@ pkg_fetch () {
     mkdir "$tmp_dir/node_modules"
     in_dir "$tmp_dir" npm --cache "$tmp_dir/npm-cache" install
     in_dir "$tmp_dir" npm pack
-    in_dir "$tmp_dir" rm -rf npm-shrinkwrap.json package.json node_modules npm-cache
-    pkg_move_tmp_to_src
+    in_dir "$tmp_dir" tar xf packed-$npm_package-$version.tgz
+    mv "$tmp_dir/package" "$src_dir"
+    pkg_remove_tmp_fetch_dir
 }
 
 pkg_shrinkwrap () {
@@ -42,9 +43,9 @@ pkg_shrinkwrap () {
 pkg_install () {
     rm -rf "$install_dir" || : 2>/dev/null
     mkdir -p "$install_dir/node_modules"
-    local tgz
-    tgz=$(niceabspath "$src_dir/packed-$npm_package-$version.tgz")
-    in_dir "$install_dir" npm --no-registry install "$tgz"
+    local src
+    src=$(niceabspath "$src_dir")
+    in_dir "$install_dir" npm --no-registry install "$src"
 
     local bin_dir="$install_dir/node_modules/packed-$npm_package/node_modules/.bin/"
     mkdir "$install_dir/bin"
