@@ -54,12 +54,12 @@ module RethinkDB
       :javascript => :js,
       :typeof => :type_of
     }
-    @@allow_json = {:insert => true}
+    @@allow_json = {:INSERT => true}
 
     termtypes = Term::TermType.constants.map{ |c| c.to_sym }
     termtypes.each {|termtype|
 
-      method = define_method termtype.downcase do |*a, &b|
+      method = define_method(termtype.downcase){|*a, &b|
         bitop = [:"|", :"&"].include?(__method__)
 
         if [:<, :<=, :>, :>=, :+, :-, :*, :/, :%].include?(__method__)
@@ -99,7 +99,7 @@ module RethinkDB
           ap
         }
         return RQL.new(t, bitop)
-      end
+      }
 
       [*@@method_aliases[termtype.downcase]].each{|method_alias|
         define_method method_alias, method
