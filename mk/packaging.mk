@@ -48,7 +48,7 @@ ifeq ($(BUILD_PORTABLE),1)
 endif
 
 DSC_CONFIGURE_DEFAULT = --prefix=/usr --sysconfdir=/etc --localstatedir=/var
-DIST_CONFIGURE_DEFAULT += $(foreach pkg, $(DIST_SUPPORT_PACKAGES), --fetch $(pkg))
+DIST_CONFIGURE_DEFAULT = $(foreach pkg, $(DIST_SUPPORT_PACKAGES), --fetch $(pkg))
 DIST_SUPPORT = $(foreach pkg, $(DIST_SUPPORT_PACKAGES), $(SUPPORT_SRC_DIR)/$(pkg)_$($(pkg)_VERSION))
 
 DEB_BUILD_DEPENDS := g++, libboost-dev, libssl-dev, curl, exuberant-ctags, m4, debhelper
