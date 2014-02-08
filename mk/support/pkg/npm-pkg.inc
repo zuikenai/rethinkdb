@@ -43,9 +43,12 @@ pkg_shrinkwrap () {
 pkg_install () {
     rm -rf "$install_dir" || : 2>/dev/null
     mkdir -p "$install_dir/node_modules"
-    local src
-    src=$(niceabspath "$src_dir")
-    in_dir "$install_dir" npm --no-registry install "$src"
+    local pkg
+    pkg=$(niceabspath "$src_dir/package-$npm_package-$version.tgz")
+    if ! test -e "$pkg"; then
+        pkg=$(niceabspath "$src_dir")
+    fi
+    in_dir "$install_dir" npm --no-registry install "$pkg"
 
     local bin_dir="$install_dir/node_modules/packed-$npm_package/node_modules/.bin/"
     mkdir "$install_dir/bin"
