@@ -55,11 +55,12 @@ configure () {
     require "Use ccache"
     boolvar USE_CCACHE $use_ccache
     check_cxx
-    require "Target System"
-    var MACHINE $($CXX -dumpmachine)
     require "Host System"
+    var MACHINE $($CXX -dumpmachine)
+    require "Build System"
     show "`uname -msr`"
-    require "Target Operating System"
+    check_cross_compiling
+    require "Host Operating System"
     case "${MACHINE#*-}" in
         *apple-darwin*)
             var OS "Darwin"
@@ -82,7 +83,7 @@ configure () {
     boolvar NO_TCMALLOC not $with_tcmalloc
     require "Build client drivers"
     boolvar BUILD_DRIVERS $enable_drivers
-    require "Host Architecture"
+    require "Build Architecture"
     var GCC_ARCH $(uname -m | grep '^[A-Za-z0-9_]*$' | head -n 1)
     var GCC_ARCH_REDUCED $(echo "$GCC_ARCH" | sed -e 's/^i[56]86$$/i486/g')
     if [ "$COMPILER" = CLANG ]; then
@@ -148,7 +149,7 @@ configure () {
             fetch_pkg $pkg
         fi
     done
-    if [ -n "$final_warning" ]; then
+    if [ -n "${final_warning:-}" ]; then
         echo "* Warning: $final_warning"
     fi
 }
@@ -890,6 +891,23 @@ check_lib_compile () {
         var HAS_$(uc $2) 1
     else
         error_details="${error_details:-}"$(cat "$bfile.log")
+    fi
+}
+
+# Test if we are cross-compiling
+check_cross_compiling () {
+    require "Cross-compiling"
+    local bfile="$root/mk/gen/check_cross_compile"
+    echo "int main(){ return 0; }" > "$bfile.cc"
+    if ! "$CXX" ${CXXFLAGS:-} ${LDFLAGS:-} "$bfile.cc" -o "$bfile.out" 1>"$bfile.log" 2>&1; then
+        error_details=$(cat "$bfile.log")
+        error "Failed to compile"
+    else
+        if "$bfile.out" >/dev/null 2>&1; then
+            boolvar CROSS_COMPILING false
+        else
+            boolvar CROSS_COMPILING true
+        fi
     fi
 }
 
