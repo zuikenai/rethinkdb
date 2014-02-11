@@ -107,13 +107,12 @@ scoped_ptr_t<perfmon_result_t> perfmon_collection_t::end_stats(void *_context) {
           std::bind(&substat_ender_t::end_substat, ph::_1, ph::_2, ctx, &substats));
 
     // Stage 2: Merge the substats in
-    size_t i = 0;
-    for (perfmon_membership_t *p = constituents.head(); p != NULL; p = constituents.next(p), ++i) {
+    for (size_t i = 0; i < substats.size(); ++i) {
         rassert(i < ctx->size);
-        if (p->splice()) {
+        if (constituents_vector[i]->splice()) {
             substats[i]->splice_into(map.get());
         } else {
-            map->insert(p->name, substats[i].release());
+            map->insert(constituents_vector[i]->name, substats[i].release());
         }
     }
 
