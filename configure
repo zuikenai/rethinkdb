@@ -521,10 +521,10 @@ check_cxx () {
     require "C++ Compiler"
     local force_CXX
     lookup "$force_paths" cxx force_CXX || :
-    local test_CXX=${force_CXX:-${CXX:-c++}}
-    local full_CXX=$(which "$test_CXX" 2>/dev/null)
+    local test_CXX="${force_CXX:-${CXX:-c++}}"
+    local full_CXX="$(which "$test_CXX" 2>/dev/null)"
     if [[ ! -x "$full_CXX" ]]; then
-        if [[ -n ${force_CXX:-} ]]; then
+        if [[ -n "${force_CXX:-}" ]]; then
             error "unable to run $force_CXX"
             return
         fi
