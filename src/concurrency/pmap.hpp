@@ -7,11 +7,13 @@
 #include "utils.hpp"
 
 template <class callable_t, class value_t>
-struct pmap_runner_one_arg_t {
+class pmap_runner_one_arg_t {
     value_t i;
     const callable_t *c;
     int *outstanding;
     cond_t *to_signal;
+
+public:
     pmap_runner_one_arg_t(value_t _i, const callable_t *_c, int *_outstanding, cond_t *_to_signal)
         : i(_i), c(_c), outstanding(_outstanding), to_signal(_to_signal) { }
 
@@ -71,6 +73,7 @@ class pmap_runner_two_arg_t {
     int *outstanding;
     cond_t *to_signal;
 
+public:
     pmap_runner_two_arg_t(value1_t _i, value2_t _i2, const callable_t *_c, int *_outstanding, cond_t *_to_signal)
         : i(_i), i2(_i2), c(_c), outstanding(_outstanding), to_signal(_to_signal) { }
 

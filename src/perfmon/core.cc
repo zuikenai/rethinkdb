@@ -6,6 +6,7 @@
 #include <boost/tokenizer.hpp>
 
 #include "arch/runtime/coroutines.hpp"
+#include "concurrency/pmap.hpp"
 #include "containers/scoped.hpp"
 #include "containers/scoped_regex.hpp"
 #include "logger.hpp"
@@ -47,11 +48,25 @@ void *perfmon_collection_t::begin_stats() {
         ctx = new stats_collection_context_t(&constituents_access, constituents);
     }
 
-    size_t i = 0;
-    for (perfmon_membership_t *p = constituents.head(); p != NULL; p = constituents.next(p), ++i) {
-        rassert(i < ctx->size);
-        ctx->contexts[i] = p->get()->begin_stats();
+    // Use `pmap` because some of the constituents might do thread-switches
+    // in `begin_stats()`. Doing one after another could drive up the latency
+    // of this function significantly.
+    std::vector<perfmon_membership_t *> constituents_vector;
+    constituents_vector.reserve(constituents.size());
+    for (perfmon_membership_t *p = constituents.head(); p != NULL; p = constituents.next(p)) {
+        constituents_vector.push_back(p);
     }
+    rassert(ctx->size >= constituents.size());
+    struct substat_beginner_t {
+        static void begin_substat(perfmon_membership_t *c,
+                                  size_t i,
+                                  stats_collection_context_t *ctx_out) {
+            ctx_out->contexts[i] = c->get()->begin_stats();
+        }
+    };
+    pimap(constituents_vector.begin(), constituents_vector.end(),
+          std::bind(&substat_beginner_t::begin_substat, ph::_1, ph::_2, ctx));
+
     return ctx;
 }
 
@@ -69,14 +84,36 @@ scoped_ptr_t<perfmon_result_t> perfmon_collection_t::end_stats(void *_context) {
 
     scoped_ptr_t<perfmon_result_t> map = perfmon_result_t::alloc_map_result();
 
+    // Stage 1: call `end_stats()` on all constituents
+    // Use `pmap` because some of the constituents might do thread-switches
+    // in `end_stats()`. Doing one after another could drive up the latency
+    // of this function significantly.
+    std::vector<perfmon_membership_t *> constituents_vector;
+    constituents_vector.reserve(constituents.size());
+    for (perfmon_membership_t *p = constituents.head(); p != NULL; p = constituents.next(p)) {
+        constituents_vector.push_back(p);
+    }
+    rassert(ctx->size >= constituents.size());
+    struct substat_ender_t {
+        static void end_substat(perfmon_membership_t *c,
+                                size_t i,
+                                stats_collection_context_t *ctx,
+                                scoped_array_t<scoped_ptr_t<perfmon_result_t> > *stat_out) {
+             (*stat_out)[i] = c->get()->end_stats(ctx->contexts[i]);
+        }
+    };
+    scoped_array_t<scoped_ptr_t<perfmon_result_t> > substats(constituents.size());
+    pimap(constituents_vector.begin(), constituents_vector.end(),
+          std::bind(&substat_ender_t::end_substat, ph::_1, ph::_2, ctx, &substats));
+
+    // Stage 2: Merge the substats in
     size_t i = 0;
     for (perfmon_membership_t *p = constituents.head(); p != NULL; p = constituents.next(p), ++i) {
         rassert(i < ctx->size);
-        scoped_ptr_t<perfmon_result_t> stat = p->get()->end_stats(ctx->contexts[i]);
         if (p->splice()) {
-            stat->splice_into(map.get());
+            substats[i]->splice_into(map.get());
         } else {
-            map->insert(p->name, stat.release());
+            map->insert(p->name, substats[i].release());
         }
     }
 
