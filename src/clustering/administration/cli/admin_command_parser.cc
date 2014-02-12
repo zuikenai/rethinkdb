@@ -316,9 +316,11 @@ admin_command_parser_t::param_options_t *admin_command_parser_t::command_info_t:
     return option;
 }
 
-admin_command_parser_t::admin_term_cap_t::admin_term_cap_t(UNUSED fd_t fd) {
+admin_command_parser_t::admin_term_cap_t::admin_term_cap_t(fd_t fd) {
 
 #ifndef HAS_TERMCAP
+
+    (void) fd; // UNUSED
 
     return;
 
