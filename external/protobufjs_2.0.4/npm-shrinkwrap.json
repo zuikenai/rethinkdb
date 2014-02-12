@@ -1,16 +1,16 @@
 {
   "name": "packed-protobufjs",
-  "version": "1.1.4",
+  "version": "2.0.4",
   "dependencies": {
     "protobufjs": {
-      "version": "1.1.4",
-      "from": "protobufjs@1.1.4",
-      "resolved": "https://registry.npmjs.org/protobufjs/-/protobufjs-1.1.4.tgz",
+      "version": "2.0.4",
+      "from": "protobufjs@2.0.4",
+      "resolved": "https://registry.npmjs.org/protobufjs/-/protobufjs-2.0.4.tgz",
       "dependencies": {
         "bytebuffer": {
-          "version": "2.1.0",
-          "from": "bytebuffer@latest",
-          "resolved": "https://registry.npmjs.org/bytebuffer/-/bytebuffer-2.1.0.tgz",
+          "version": "2.3.1",
+          "from": "bytebuffer@>=2.2 <3",
+          "resolved": "https://registry.npmjs.org/bytebuffer/-/bytebuffer-2.3.1.tgz",
           "dependencies": {
             "long": {
               "version": "1.1.2",
