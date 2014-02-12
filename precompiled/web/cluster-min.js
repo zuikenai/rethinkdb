@@ -4,7 +4,7 @@ var AlertUpdates, BackboneCluster, ComputedCluster, ConnectionStatus, Database, 
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.VERSION = '1.11.3-514-g6062ea';
+window.VERSION = '1.11.3-517-g3d622a';
 
 Handlebars.registerHelper('debug', function() {
   var input, inputs, options, _i, _j, _len, _results;
@@ -289,7 +289,7 @@ Handlebars.registerHelper('humanize_role', function(role) {
 
 Handlebars.registerHelper('humanize_machine_reachability', function(status) {
   var result;
-  if (!(status != null)) {
+  if (status == null) {
     result = 'N/A';
   } else {
     if (status.reachable) {
@@ -516,7 +516,7 @@ units_space = ["B", "KB", "MB", "GB", "TB", "PB"];
 
 human_readable_units = function(num, units) {
   var index, num_str, _tmp;
-  if (!(num != null)) {
+  if (num == null) {
     return "N/A";
   }
   index = 0;
@@ -639,6 +639,7 @@ objects_are_equal = function(a, b) {
   return true;
 };
 
+
 /*
     Taken from "Namespacing and modules with Coffeescript"
     https://github.com/jashkenas/coffee-script/wiki/Easy-modules-with-coffeescript
@@ -664,8 +665,7 @@ objects_are_equal = function(a, b) {
     ------------------------------
         x = new foo.bar.Amazing
     ------------------------------
-*/
-
+ */
 
 this.module = function(names, fn) {
   var space, _name;
@@ -706,18 +706,13 @@ render_body = function() {
 };
 
 OptionsView = (function(_super) {
-
   __extends(OptionsView, _super);
 
   function OptionsView() {
     this.turn_updates_off = __bind(this.turn_updates_off, this);
-
     this.turn_updates_on = __bind(this.turn_updates_on, this);
-
     this.toggle_options = __bind(this.toggle_options, this);
-
     this.hide = __bind(this.hide, this);
-
     this.render = __bind(this.render, this);
     return OptionsView.__super__.constructor.apply(this, arguments);
   }
@@ -783,24 +778,16 @@ OptionsView = (function(_super) {
 })(Backbone.View);
 
 AlertUpdates = (function(_super) {
-
   __extends(AlertUpdates, _super);
 
   function AlertUpdates() {
     this.deactivate_update = __bind(this.deactivate_update, this);
-
     this.render = __bind(this.render, this);
-
     this.compare_version = __bind(this.compare_version, this);
-
     this.render_updates = __bind(this.render_updates, this);
-
     this.check = __bind(this.check, this);
-
     this.hide = __bind(this.hide, this);
-
     this.close = __bind(this.close, this);
-
     this.initialize = __bind(this.initialize, this);
     return AlertUpdates.__super__.constructor.apply(this, arguments);
   }
@@ -815,14 +802,15 @@ AlertUpdates = (function(_super) {
   };
 
   AlertUpdates.prototype.initialize = function() {
-    var check_updates;
+    var check_updates, err;
     if (window.localStorage != null) {
       try {
         check_updates = JSON.parse(window.localStorage.check_updates);
         if (check_updates !== false) {
           return this.check();
         }
-      } catch (err) {
+      } catch (_error) {
+        err = _error;
         window.localStorage.check_updates = JSON.stringify(true);
         return this.check();
       }
@@ -848,11 +836,12 @@ AlertUpdates = (function(_super) {
   };
 
   AlertUpdates.prototype.render_updates = function(data) {
-    var ignored_version;
+    var err, ignored_version;
     if (data.status === 'need_update') {
       try {
         ignored_version = JSON.parse(window.localStorage.ignore_version);
-      } catch (err) {
+      } catch (_error) {
+        err = _error;
         ignored_version = null;
       }
       if ((!ignored_version) || this.compare_version(ignored_version, data.last_version) < 0) {
@@ -907,16 +896,12 @@ AlertUpdates = (function(_super) {
 })(Backbone.View);
 
 Settings = (function(_super) {
-
   __extends(Settings, _super);
 
   function Settings() {
     this.render = __bind(this.render, this);
-
     this.change_settings = __bind(this.change_settings, this);
-
     this.initialize = __bind(this.initialize, this);
-
     this.close = __bind(this.close, this);
     return Settings.__super__.constructor.apply(this, arguments);
   }
@@ -977,16 +962,12 @@ Settings = (function(_super) {
 })(Backbone.View);
 
 IsDisconnected = (function(_super) {
-
   __extends(IsDisconnected, _super);
 
   function IsDisconnected() {
     this.display_fail = __bind(this.display_fail, this);
-
     this.animate_loading = __bind(this.animate_loading, this);
-
     this.render = __bind(this.render, this);
-
     this.initialize = __bind(this.initialize, this);
     return IsDisconnected.__super__.constructor.apply(this, arguments);
   }
@@ -1027,11 +1008,12 @@ IsDisconnected = (function(_super) {
   };
 
   IsDisconnected.prototype.display_fail = function() {
-    var _this = this;
-    return this.$('.animation_state').fadeOut('slow', function() {
-      $('.reconnecting_state').html(_this.message);
-      return $('.animation_state').fadeIn('slow');
-    });
+    return this.$('.animation_state').fadeOut('slow', (function(_this) {
+      return function() {
+        $('.reconnecting_state').html(_this.message);
+        return $('.animation_state').fadeIn('slow');
+      };
+    })(this));
   };
 
   return IsDisconnected;
@@ -1040,26 +1022,17 @@ IsDisconnected = (function(_super) {
 
 module('UIComponents', function() {
   this.AbstractModal = (function(_super) {
-
     __extends(AbstractModal, _super);
 
     function AbstractModal() {
       this.find_custom_button = __bind(this.find_custom_button, this);
-
       this.add_custom_button = __bind(this.add_custom_button, this);
-
       this.on_error = __bind(this.on_error, this);
-
       this.on_submit = __bind(this.on_submit, this);
-
       this.on_success = __bind(this.on_success, this);
-
       this.reset_buttons = __bind(this.reset_buttons, this);
-
       this.check_keypress_is_enter = __bind(this.check_keypress_is_enter, this);
-
       this.hide_modal = __bind(this.hide_modal, this);
-
       this.render = __bind(this.render, this);
       return AbstractModal.__super__.constructor.apply(this, arguments);
     }
@@ -1089,9 +1062,8 @@ module('UIComponents', function() {
     };
 
     AbstractModal.prototype.render = function(template_data) {
-      var btn, _i, _len, _ref,
-        _this = this;
-      if (!(template_data != null)) {
+      var btn, _i, _len, _ref;
+      if (template_data == null) {
         template_data = {};
       }
       template_data = _.extend(template_data, {
@@ -1103,18 +1075,22 @@ module('UIComponents', function() {
         'show': true,
         'backdrop': true,
         'keyboard': true
-      }).on('hidden', function() {
-        return _this.$modal.remove();
-      });
+      }).on('hidden', (function(_this) {
+        return function() {
+          return _this.$modal.remove();
+        };
+      })(this));
       this.setElement(this.$modal);
       this.delegateEvents();
       _ref = this.custom_buttons;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         btn = _ref[_i];
         this.$('.custom_btn_placeholder').append("<button class='btn " + btn.class_str + "' data-loading-text='" + btn.data_loading_text + "'>" + btn.main_text + "</button>");
-        this.$('.custom_btn_placeholder > .' + btn.class_str).click(function(e) {
-          return btn.on_click(e);
-        });
+        this.$('.custom_btn_placeholder > .' + btn.class_str).click((function(_this) {
+          return function(e) {
+            return btn.on_click(e);
+          };
+        })(this));
         this.$('.custom_btn_placeholder > .' + btn.class_str).button();
       }
       return register_modal(this);
@@ -1190,7 +1166,6 @@ module('UIComponents', function() {
 
   })(Backbone.View);
   this.ConfirmationDialogModal = (function(_super) {
-
     __extends(ConfirmationDialogModal, _super);
 
     function ConfirmationDialogModal() {
@@ -1242,7 +1217,6 @@ module('UIComponents', function() {
 
   })(this.AbstractModal);
   return this.RenameItemModal = (function(_super) {
-
     __extends(RenameItemModal, _super);
 
     function RenameItemModal() {
@@ -1456,28 +1430,18 @@ module('UIComponents', function() {
 
 module('UIComponents', function() {
   this.AbstractList = (function(_super) {
-
     __extends(AbstractList, _super);
 
     function AbstractList() {
       this.destroy = __bind(this.destroy, this);
-
       this.get_selected_elements = __bind(this.get_selected_elements, this);
-
       this.remove_elements = __bind(this.remove_elements, this);
-
       this.add_element = __bind(this.add_element, this);
-
       this.reset_element_views = __bind(this.reset_element_views, this);
-
       this.render = __bind(this.render, this);
-
       this.on_remove = __bind(this.on_remove, this);
-
       this.on_add = __bind(this.on_add, this);
-
       this.on_reset = __bind(this.on_reset, this);
-
       this.initialize = __bind(this.initialize, this);
       return AbstractList.__super__.constructor.apply(this, arguments);
     }
@@ -1655,18 +1619,13 @@ module('UIComponents', function() {
 
   })(Backbone.View);
   this.CheckboxListElement = (function(_super) {
-
     __extends(CheckboxListElement, _super);
 
     function CheckboxListElement() {
       this.mark_selection = __bind(this.mark_selection, this);
-
       this.link_clicked = __bind(this.link_clicked, this);
-
       this.clicked = __bind(this.clicked, this);
-
       this.json_for_template = __bind(this.json_for_template, this);
-
       this.render = __bind(this.render, this);
       return CheckboxListElement.__super__.constructor.apply(this, arguments);
     }
@@ -1718,18 +1677,13 @@ module('UIComponents', function() {
 
   })(Backbone.View);
   return this.CollapsibleListElement = (function(_super) {
-
     __extends(CollapsibleListElement, _super);
 
     function CollapsibleListElement() {
       this.swap_divs = __bind(this.swap_divs, this);
-
       this.show_with_transition = __bind(this.show_with_transition, this);
-
       this.show = __bind(this.show, this);
-
       this.toggle_showing = __bind(this.toggle_showing, this);
-
       this.render = __bind(this.render, this);
       return CollapsibleListElement.__super__.constructor.apply(this, arguments);
     }
@@ -1790,14 +1744,11 @@ module('UIComponents', function() {
 
 module('UIComponents', function() {
   return this.OperationProgressBar = (function(_super) {
-
     __extends(OperationProgressBar, _super);
 
     function OperationProgressBar() {
       this.set_none_state = __bind(this.set_none_state, this);
-
       this.skip_to_processing = __bind(this.skip_to_processing, this);
-
       this.render = __bind(this.render, this);
       return OperationProgressBar.__super__.constructor.apply(this, arguments);
     }
@@ -1816,8 +1767,7 @@ module('UIComponents', function() {
     };
 
     OperationProgressBar.prototype.render = function(current_value, max_value, additional_info) {
-      var data, percent_complete,
-        _this = this;
+      var data, percent_complete;
       if (current_value !== max_value && (this.timeout != null)) {
         clearTimeout(this.timeout);
         this.timeout = null;
@@ -1872,12 +1822,14 @@ module('UIComponents', function() {
           finished: true,
           percent_complete: 100
         });
-        if (!(this.timeout != null)) {
-          this.timeout = setTimeout(function() {
-            _this.stage = 'none';
-            _this.render(current_value, max_value, {});
-            return _this.timeout = null;
-          }, 2000);
+        if (this.timeout == null) {
+          this.timeout = setTimeout((function(_this) {
+            return function() {
+              _this.stage = 'none';
+              _this.render(current_value, max_value, {});
+              return _this.timeout = null;
+            };
+          })(this), 2000);
         }
       }
       this.$el.html(this.template(data));
@@ -1903,12 +1855,10 @@ module('UIComponents', function() {
 
 module('DatabaseView', function() {
   this.NotFound = (function(_super) {
-
     __extends(NotFound, _super);
 
     function NotFound() {
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return NotFound.__super__.constructor.apply(this, arguments);
     }
@@ -1933,16 +1883,12 @@ module('DatabaseView', function() {
 
   })(Backbone.View);
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.rename_database = __bind(this.rename_database, this);
-
       this.render = __bind(this.render, this);
-
       this.check_if_still_exists = __bind(this.check_if_still_exists, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -2044,16 +1990,12 @@ module('DatabaseView', function() {
 
   })(Backbone.View);
   this.Title = (function(_super) {
-
     __extends(Title, _super);
 
     function Title() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.update = __bind(this.update, this);
-
       this.initialize = __bind(this.initialize, this);
       return Title.__super__.constructor.apply(this, arguments);
     }
@@ -2089,14 +2031,11 @@ module('DatabaseView', function() {
 
   })(Backbone.View);
   this.Profile = (function(_super) {
-
     __extends(Profile, _super);
 
     function Profile() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Profile.__super__.constructor.apply(this, arguments);
     }
@@ -2157,12 +2096,10 @@ module('DatabaseView', function() {
 
   })(Backbone.View);
   this.RemoveDatabaseModal = (function(_super) {
-
     __extends(RemoveDatabaseModal, _super);
 
     function RemoveDatabaseModal() {
       this.on_success = __bind(this.on_success, this);
-
       this.on_submit = __bind(this.on_submit, this);
       return RemoveDatabaseModal.__super__.constructor.apply(this, arguments);
     }
@@ -2205,7 +2142,7 @@ module('DatabaseView', function() {
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         namespace = _ref[_i];
         if (namespace.get('database') === this.database_to_delete.get('id')) {
-          if (!(post_data[namespace.get('protocol') + '_namespaces'] != null)) {
+          if (post_data[namespace.get('protocol') + '_namespaces'] == null) {
             post_data[namespace.get('protocol') + '_namespaces'] = {};
           }
           post_data[namespace.get('protocol') + '_namespaces'][namespace.get('id')] = null;
@@ -2247,14 +2184,11 @@ module('DatabaseView', function() {
 
   })(UIComponents.AbstractModal);
   return this.NamespaceList = (function(_super) {
-
     __extends(NamespaceList, _super);
 
     function NamespaceList() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return NamespaceList.__super__.constructor.apply(this, arguments);
     }
@@ -2270,19 +2204,20 @@ module('DatabaseView', function() {
     };
 
     NamespaceList.prototype.render = function() {
-      var data, namespaces_in_db,
-        _this = this;
+      var data, namespaces_in_db;
       namespaces_in_db = [];
-      namespaces.each(function(namespace) {
-        var ns;
-        if (namespace.get('database') === _this.model.get('id')) {
-          ns = _.extend(DataUtils.get_namespace_status(namespace.get('id')), {
-            name: namespace.get('name'),
-            id: namespace.get('id')
-          });
-          return namespaces_in_db.push(ns);
-        }
-      });
+      namespaces.each((function(_this) {
+        return function(namespace) {
+          var ns;
+          if (namespace.get('database') === _this.model.get('id')) {
+            ns = _.extend(DataUtils.get_namespace_status(namespace.get('id')), {
+              name: namespace.get('name'),
+              id: namespace.get('id')
+            });
+            return namespaces_in_db.push(ns);
+          }
+        };
+      })(this));
       data = {
         has_tables: namespaces_in_db.length > 0,
         tables: _.sortBy(namespaces_in_db, function(namespace) {
@@ -2310,26 +2245,17 @@ module('DatabaseView', function() {
 
 module('NamespaceView', function() {
   this.DatabaseList = (function(_super) {
-
     __extends(DatabaseList, _super);
 
     function DatabaseList() {
       this.destroy = __bind(this.destroy, this);
-
       this.update_toolbar_buttons = __bind(this.update_toolbar_buttons, this);
-
       this.get_selected_namespaces = __bind(this.get_selected_namespaces, this);
-
       this.add_element = __bind(this.add_element, this);
-
       this.remove_namespace = __bind(this.remove_namespace, this);
-
       this.add_namespace = __bind(this.add_namespace, this);
-
       this.add_database = __bind(this.add_database, this);
-
       this.render = __bind(this.render, this);
-
       this.update_button_create_namespace = __bind(this.update_button_create_namespace, this);
       return DatabaseList.__super__.constructor.apply(this, arguments);
     }
@@ -2465,18 +2391,13 @@ module('NamespaceView', function() {
 
   })(UIComponents.AbstractList);
   this.DatabaseListElement = (function(_super) {
-
     __extends(DatabaseListElement, _super);
 
     function DatabaseListElement() {
       this.destroy = __bind(this.destroy, this);
-
       this.register_namespace_callback = __bind(this.register_namespace_callback, this);
-
       this.remove_database = __bind(this.remove_database, this);
-
       this.render_summary = __bind(this.render_summary, this);
-
       this.render = __bind(this.render, this);
       return DatabaseListElement.__super__.constructor.apply(this, arguments);
     }
@@ -2549,22 +2470,15 @@ module('NamespaceView', function() {
 
   })(UIComponents.CollapsibleListElement);
   this.NamespaceList = (function(_super) {
-
     __extends(NamespaceList, _super);
 
     function NamespaceList() {
       this.destroy = __bind(this.destroy, this);
-
       this.bind_callbacks_to_namespace = __bind(this.bind_callbacks_to_namespace, this);
-
       this.register_namespace_callbacks = __bind(this.register_namespace_callbacks, this);
-
       this.remove_namespace = __bind(this.remove_namespace, this);
-
       this.add_namespace = __bind(this.add_namespace, this);
-
       this.add_element = __bind(this.add_element, this);
-
       this.initialize = __bind(this.initialize, this);
       return NamespaceList.__super__.constructor.apply(this, arguments);
     }
@@ -2623,18 +2537,19 @@ module('NamespaceView', function() {
     };
 
     NamespaceList.prototype.bind_callbacks_to_namespace = function(namespace_list_element) {
-      var _this = this;
       namespace_list_element.off('selected');
-      return namespace_list_element.on('selected', function() {
-        var callback, _i, _len, _ref, _results;
-        _ref = _this.callbacks;
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          callback = _ref[_i];
-          _results.push(callback());
-        }
-        return _results;
-      });
+      return namespace_list_element.on('selected', (function(_this) {
+        return function() {
+          var callback, _i, _len, _ref, _results;
+          _ref = _this.callbacks;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            callback = _ref[_i];
+            _results.push(callback());
+          }
+          return _results;
+        };
+      })(this));
     };
 
     NamespaceList.prototype.destroy = function() {
@@ -2645,14 +2560,11 @@ module('NamespaceView', function() {
 
   })(UIComponents.AbstractList);
   this.NamespaceListElement = (function(_super) {
-
     __extends(NamespaceListElement, _super);
 
     function NamespaceListElement() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.json_for_template = __bind(this.json_for_template, this);
       return NamespaceListElement.__super__.constructor.apply(this, arguments);
     }
@@ -2689,7 +2601,6 @@ module('NamespaceView', function() {
 
   })(UIComponents.CheckboxListElement);
   this.AddDatabaseModal = (function(_super) {
-
     __extends(AddDatabaseModal, _super);
 
     function AddDatabaseModal() {
@@ -2785,20 +2696,14 @@ module('NamespaceView', function() {
 
   })(UIComponents.AbstractModal);
   this.AddNamespaceModal = (function(_super) {
-
     __extends(AddNamespaceModal, _super);
 
     function AddNamespaceModal() {
       this.on_success = __bind(this.on_success, this);
-
       this.on_submit = __bind(this.on_submit, this);
-
       this.check_if_can_create_table = __bind(this.check_if_can_create_table, this);
-
       this.hide_advanced_settings = __bind(this.hide_advanced_settings, this);
-
       this.show_advanced_settings = __bind(this.show_advanced_settings, this);
-
       this.initialize = __bind(this.initialize, this);
       return AddNamespaceModal.__super__.constructor.apply(this, arguments);
     }
@@ -2940,7 +2845,7 @@ module('NamespaceView', function() {
           }
         }
       }
-      if (!(formdata.database != null) || formdata.database === '') {
+      if ((formdata.database == null) || formdata.database === '') {
         input_error = true;
         template_error.no_database = true;
       }
@@ -3005,7 +2910,6 @@ module('NamespaceView', function() {
 
   })(UIComponents.AbstractModal);
   return this.RemoveNamespaceModal = (function(_super) {
-
     __extends(RemoveNamespaceModal, _super);
 
     function RemoveNamespaceModal() {
@@ -3046,7 +2950,7 @@ module('NamespaceView', function() {
       _ref = this.namespaces_to_delete;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         namespace = _ref[_i];
-        if (!(data[namespace.get('protocol') + '_namespaces'] != null)) {
+        if (data[namespace.get('protocol') + '_namespaces'] == null) {
           data[namespace.get('protocol') + '_namespaces'] = {};
         }
         data[namespace.get('protocol') + '_namespaces'][namespace.get('id')] = null;
@@ -3096,36 +3000,22 @@ module('NamespaceView', function() {
 
 module('NamespaceView', function() {
   this.Replicas = (function(_super) {
-
     __extends(Replicas, _super);
 
     function Replicas() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.render_universe = __bind(this.render_universe, this);
-
       this.toggle_mdc = __bind(this.toggle_mdc, this);
-
       this.render_acks_greater_than_replicas = __bind(this.render_acks_greater_than_replicas, this);
-
       this.render_primary_not_found = __bind(this.render_primary_not_found, this);
-
       this.render_datacenter = __bind(this.render_datacenter, this);
-
       this.handle_click_datacenter = __bind(this.handle_click_datacenter, this);
-
       this.render_list = __bind(this.render_list, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render_progress = __bind(this.render_progress, this);
-
       this.render_progress_server_update = __bind(this.render_progress_server_update, this);
-
       this.global_trigger_for_replica = __bind(this.global_trigger_for_replica, this);
-
       this.initialize = __bind(this.initialize, this);
       return Replicas.__super__.constructor.apply(this, arguments);
     }
@@ -3200,11 +3090,11 @@ module('NamespaceView', function() {
 
     Replicas.prototype.render_status = function(progress_bar_info) {
       var activities, activity, activity_id, backfilling_info, blueprint, expected_num_replicas, expected_status, found_shard, machine_id, num_replicas, num_replicas_not_ready, num_replicas_ready, role, shard, shard_ready, _ref, _ref1, _ref2;
-      if (!(progress_bar_info != null) || typeof progress_bar_info !== 'object') {
+      if ((progress_bar_info == null) || typeof progress_bar_info !== 'object') {
         progress_bar_info = {};
       }
       blueprint = this.model.get('blueprint').peers_roles;
-      if (!(blueprint != null)) {
+      if (blueprint == null) {
         return '';
       }
       num_replicas_not_ready = 0;
@@ -3340,7 +3230,7 @@ module('NamespaceView', function() {
         id: this.model.get('id'),
         datacenters: this.ordered_datacenters
       }));
-      if (!(this.datacenter_view != null) && (this.active_datacenter_id != null)) {
+      if ((this.datacenter_view == null) && (this.active_datacenter_id != null)) {
         this.render_datacenter(this.active_datacenter_id);
       }
       if (this.ordered_datacenters.length === 0) {
@@ -3375,7 +3265,7 @@ module('NamespaceView', function() {
     };
 
     Replicas.prototype.render_primary_not_found = function() {
-      if (this.model.get('primary_uuid') !== universe_datacenter.get('id') && !(datacenters.get(this.model.get('primary_uuid')) != null)) {
+      if (this.model.get('primary_uuid') !== universe_datacenter.get('id') && (datacenters.get(this.model.get('primary_uuid')) == null)) {
         if (this.$('.no_datacenter_found').css('display') === 'none' || this.$('.no_datacenter_found').css('display') === 'hidden' || this.$('.no_datacenter_found').css('display') === '') {
           return this.$('.no_datacenter_found').show();
         }
@@ -3477,42 +3367,25 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   this.DatacenterReplicas = (function(_super) {
-
     __extends(DatacenterReplicas, _super);
 
     function DatacenterReplicas() {
       this.destroy = __bind(this.destroy, this);
-
       this.on_success = __bind(this.on_success, this);
-
       this.make_primary = __bind(this.make_primary, this);
-
       this.on_error = __bind(this.on_error, this);
-
       this.on_success_replicas_and_acks = __bind(this.on_success_replicas_and_acks, this);
-
       this.submit_replicas_acks = __bind(this.submit_replicas_acks, this);
-
       this.check_replicas_acks = __bind(this.check_replicas_acks, this);
-
       this.remove_alert_replicas_acks = __bind(this.remove_alert_replicas_acks, this);
-
       this.alert_replicas_acks = __bind(this.alert_replicas_acks, this);
-
       this.compute_max_machines = __bind(this.compute_max_machines, this);
-
       this.render = __bind(this.render, this);
-
       this.render_progress = __bind(this.render_progress, this);
-
       this.render_acks_replica = __bind(this.render_acks_replica, this);
-
       this.cancel_edit = __bind(this.cancel_edit, this);
-
       this.edit = __bind(this.edit, this);
-
       this.initialize = __bind(this.initialize, this);
-
       this.keypress_replicas_acks = __bind(this.keypress_replicas_acks, this);
       return DatacenterReplicas.__super__.constructor.apply(this, arguments);
     }
@@ -3608,7 +3481,7 @@ module('NamespaceView', function() {
 
     DatacenterReplicas.prototype.render_progress = function() {
       var progress_data;
-      if (!(this.datacenter != null)) {
+      if (this.datacenter == null) {
         return '';
       }
       progress_data = DataUtils.get_backfill_progress_agg(this.model.get('id'), this.datacenter.get('id'));
@@ -3628,7 +3501,7 @@ module('NamespaceView', function() {
 
     DatacenterReplicas.prototype.render = function() {
       var data, max_machines, replicas_count;
-      if (!(this.datacenter != null)) {
+      if (this.datacenter == null) {
         return '';
       }
       replicas_count = DataUtils.get_replica_affinities(this.model.get('id'), this.datacenter.get('id'));
@@ -3834,7 +3707,7 @@ module('NamespaceView', function() {
     DatacenterReplicas.prototype.make_primary = function() {
       var data, new_affinities, new_dc, old_dc, primary_pinnings, shard;
       new_dc = this.datacenter;
-      if (!(this.model.get('replica_affinities')[new_dc.get('id')] != null) || this.model.get('replica_affinities')[new_dc.get('id')] < 1) {
+      if ((this.model.get('replica_affinities')[new_dc.get('id')] == null) || this.model.get('replica_affinities')[new_dc.get('id')] < 1) {
         this.$('.make_primary-alert-content').html(this.error_msg_template({
           need_replica_for_primary: true
         }));
@@ -3892,44 +3765,26 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   return this.PrimaryDatacenter = (function(_super) {
-
     __extends(PrimaryDatacenter, _super);
 
     function PrimaryDatacenter() {
       this.destroy = __bind(this.destroy, this);
-
       this.cancel_change_primary = __bind(this.cancel_change_primary, this);
-
       this.on_error_pin = __bind(this.on_error_pin, this);
-
       this.on_success_pin = __bind(this.on_success_pin, this);
-
       this.set_new_primary = __bind(this.set_new_primary, this);
-
       this.submit_change_primary = __bind(this.submit_change_primary, this);
-
       this.change_primary = __bind(this.change_primary, this);
-
       this.turn_primary_on = __bind(this.turn_primary_on, this);
-
       this.turn_primary_off = __bind(this.turn_primary_off, this);
-
       this.render_content = __bind(this.render_content, this);
-
       this.render = __bind(this.render, this);
-
       this.on_error_off = __bind(this.on_error_off, this);
-
       this.on_success_off = __bind(this.on_success_off, this);
-
       this.submit_confirm_off = __bind(this.submit_confirm_off, this);
-
       this.cancel_confirm_off = __bind(this.cancel_confirm_off, this);
-
       this.edit_primary = __bind(this.edit_primary, this);
-
       this.change_pin = __bind(this.change_pin, this);
-
       this.initialize = __bind(this.initialize, this);
       return PrimaryDatacenter.__super__.constructor.apply(this, arguments);
     }
@@ -4001,7 +3856,7 @@ module('NamespaceView', function() {
       _ref = this.model.get('replica_affinities');
       for (dc in _ref) {
         value = _ref[dc];
-        if (!(data_to_set['replica_affinities'][dc] != null)) {
+        if (data_to_set['replica_affinities'][dc] == null) {
           data_to_set['replica_affinities'][dc] = value;
         }
       }
@@ -4030,7 +3885,7 @@ module('NamespaceView', function() {
 
     PrimaryDatacenter.prototype.render_content = function(data) {
       var datacenter_name, primary_name, that;
-      if (!(data != null)) {
+      if (data == null) {
         data = {};
       }
       if (this.model.get('primary_uuid') === universe_datacenter) {
@@ -4141,7 +3996,7 @@ module('NamespaceView', function() {
         new_replica_affinities[new_primary] = 0;
       }
       new_ack = this.model.get('ack_expectations');
-      if ((!(this.model.get('ack_expectations')[new_primary] != null)) || this.model.get('ack_expectations')[new_primary].expectation === 0) {
+      if ((this.model.get('ack_expectations')[new_primary] == null) || this.model.get('ack_expectations')[new_primary].expectation === 0) {
         new_ack[new_primary] = {
           expectation: 1,
           hard_durability: this.model.get_durability()
@@ -4170,7 +4025,7 @@ module('NamespaceView', function() {
       _ref = this.model.get('replica_affinities');
       for (dc in _ref) {
         value = _ref[dc];
-        if (!(data_to_set['replica_affinities'][dc] != null)) {
+        if (data_to_set['replica_affinities'][dc] == null) {
           data_to_set['replica_affinities'][dc] = value;
         }
       }
@@ -4205,40 +4060,24 @@ module('NamespaceView', function() {
   var MAX_SHARD_COUNT;
   MAX_SHARD_COUNT = 32;
   this.Sharding = (function(_super) {
-
     __extends(Sharding, _super);
 
     function Sharding() {
       this.destroy = __bind(this.destroy, this);
-
       this.render_data_repartition = __bind(this.render_data_repartition, this);
-
       this.switch_to_edit = __bind(this.switch_to_edit, this);
-
       this.switch_to_read = __bind(this.switch_to_read, this);
-
       this.render = __bind(this.render, this);
-
       this.check_can_change_shards = __bind(this.check_can_change_shards, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render_status_server_update = __bind(this.render_status_server_update, this);
-
       this.global_trigger_for_shards = __bind(this.global_trigger_for_shards, this);
-
       this.on_error = __bind(this.on_error, this);
-
       this.on_success = __bind(this.on_success, this);
-
       this.shard_table = __bind(this.shard_table, this);
-
       this.display_msg = __bind(this.display_msg, this);
-
       this.check_shards_changes = __bind(this.check_shards_changes, this);
-
       this.keypress_shards_changes = __bind(this.keypress_shards_changes, this);
-
       this.initialize = __bind(this.initialize, this);
       return Sharding.__super__.constructor.apply(this, arguments);
     }
@@ -4295,8 +4134,7 @@ module('NamespaceView', function() {
     };
 
     Sharding.prototype.check_shards_changes = function() {
-      var current_count, data, distr_keys, error_msg, i, key, new_num_shards, no_more_splits, rows_per_shard, shard_set, splitIndex, split_points, total_rows, _i, _j, _len, _ref,
-        _this = this;
+      var current_count, data, distr_keys, error_msg, i, key, new_num_shards, no_more_splits, rows_per_shard, shard_set, splitIndex, split_points, total_rows, _i, _j, _len, _ref;
       new_num_shards = this.$('.num-shards').val();
       if (DataUtils.is_integer(new_num_shards) === false) {
         error_msg = "The number of shards must be an integer.";
@@ -4310,11 +4148,13 @@ module('NamespaceView', function() {
       }
       data = this.model.get('key_distr');
       distr_keys = this.model.get('key_distr_sorted');
-      total_rows = _.reduce(distr_keys, (function(agg, key) {
-        return agg + data[key];
-      }), 0);
+      total_rows = _.reduce(distr_keys, ((function(_this) {
+        return function(agg, key) {
+          return agg + data[key];
+        };
+      })(this)), 0);
       rows_per_shard = total_rows / new_num_shards;
-      if (!(data != null) || !(distr_keys != null)) {
+      if ((data == null) || (distr_keys == null)) {
         error_msg = "The distribution of keys has not been loaded yet. Please try again.";
         this.display_msg(error_msg);
         return;
@@ -4458,11 +4298,11 @@ module('NamespaceView', function() {
 
     Sharding.prototype.render_status = function(progress_bar_info) {
       var activities, activity, activity_id, blueprint, datacenter_id, expected_status, machine, machine_id, master, num_shards, num_shards_in_blueprint, num_shards_not_ready, num_shards_ready, role, shard, shards, _i, _j, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
-      if (!(progress_bar_info != null) || typeof progress_bar_info !== 'object') {
+      if ((progress_bar_info == null) || typeof progress_bar_info !== 'object') {
         progress_bar_info = {};
       }
       blueprint = this.model.get('blueprint').peers_roles;
-      if (!(blueprint != null)) {
+      if (blueprint == null) {
         return '';
       }
       shards = {};
@@ -4491,7 +4331,7 @@ module('NamespaceView', function() {
       }
       for (machine_id in blueprint) {
         for (shard in blueprint[machine_id]) {
-          if (!(shards[shard] != null)) {
+          if (shards[shard] == null) {
             this.$('.shard-status').html(this.progress_bar.render(0, this.expected_num_shards, progress_bar_info).$el);
             return '';
           }
@@ -4527,9 +4367,9 @@ module('NamespaceView', function() {
         for (_j = 0, _len1 = _ref4.length; _j < _len1; _j++) {
           machine = _ref4[_j];
           machine_id = machine.get('id');
-          if (!(shards[shard]['machines_not_ready'][machine_id] != null)) {
+          if (shards[shard]['machines_not_ready'][machine_id] == null) {
             datacenter_id = machine.get('datacenter_uuid');
-            if ((!(shards[shard]['acks_expected'][datacenter_id] != null)) || shards[shard]['acks_expected'][datacenter_id] <= 0) {
+            if ((shards[shard]['acks_expected'][datacenter_id] == null) || shards[shard]['acks_expected'][datacenter_id] <= 0) {
               shards[shard]['acks_expected'][universe_datacenter.get('id')]--;
             } else {
               shards[shard]['acks_expected'][datacenter_id]--;
@@ -4610,7 +4450,7 @@ module('NamespaceView', function() {
 
     Sharding.prototype.switch_to_edit = function() {
       var max_shards;
-      if (!(this.model.get('key_distr_sorted') != null)) {
+      if (this.model.get('key_distr_sorted') == null) {
         max_shards = 1;
       } else {
         max_shards = Math.min(32, this.model.get('key_distr_sorted').length);
@@ -4775,29 +4615,23 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   return this.ChangeShardsModal = (function(_super) {
-
     __extends(ChangeShardsModal, _super);
 
     function ChangeShardsModal() {
       this.on_success = __bind(this.on_success, this);
-
       this.on_submit = __bind(this.on_submit, this);
-
       this.display_error = __bind(this.display_error, this);
-
       this.render = __bind(this.render, this);
-
       this.set_num_shards = __bind(this.set_num_shards, this);
-
       this.initialize = __bind(this.initialize, this);
       return ChangeShardsModal.__super__.constructor.apply(this, arguments);
     }
 
-    /*
-            template: Handlebars.templates['change_shards-modal-template']
-            change_shards_success_alert_template: Handlebars.templates['change_shards-success-alert-template']
-    */
 
+    /*
+    template: Handlebars.templates['change_shards-modal-template']
+    change_shards_success_alert_template: Handlebars.templates['change_shards-success-alert-template']
+     */
 
     ChangeShardsModal.prototype["class"] = 'change_shards';
 
@@ -4846,28 +4680,18 @@ module('NamespaceView', function() {
 
 module('NamespaceView', function() {
   return this.ServerAssignments = (function(_super) {
-
     __extends(ServerAssignments, _super);
 
     function ServerAssignments() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.get_shards = __bind(this.get_shards, this);
-
       this.hide_details = __bind(this.hide_details, this);
-
       this.clean_dom_listeners = __bind(this.clean_dom_listeners, this);
-
       this.set_listeners = __bind(this.set_listeners, this);
-
       this.show_secondary = __bind(this.show_secondary, this);
-
       this.position_popup = __bind(this.position_popup, this);
-
       this.show_primary = __bind(this.show_primary, this);
-
       this.initialize = __bind(this.initialize, this);
       return ServerAssignments.__super__.constructor.apply(this, arguments);
     }
@@ -5075,7 +4899,6 @@ module('NamespaceView', function() {
 
 module('NamespaceView', function() {
   this.NotFound = (function(_super) {
-
     __extends(NotFound, _super);
 
     function NotFound() {
@@ -5103,22 +4926,15 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.rename_namespace = __bind(this.rename_namespace, this);
-
       this.change_pinning = __bind(this.change_pinning, this);
-
       this.change_shards = __bind(this.change_shards, this);
-
       this.render = __bind(this.render, this);
-
       this.change_route = __bind(this.change_route, this);
-
       this.check_if_still_exists = __bind(this.check_if_still_exists, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -5235,18 +5051,19 @@ module('NamespaceView', function() {
     };
 
     Container.prototype.delete_namespace = function(event) {
-      var namespace_to_delete, remove_namespace_dialog,
-        _this = this;
+      var namespace_to_delete, remove_namespace_dialog;
       event.preventDefault();
       remove_namespace_dialog = new NamespaceView.RemoveNamespaceModal;
       namespace_to_delete = this.model;
-      remove_namespace_dialog.on_success = function(response) {
-        window.router.navigate('#tables');
-        window.app.index_namespaces({
-          alert_message: "The table " + (_this.model.get('name')) + " was successfully deleted."
-        });
-        return namespaces.remove(_this.model.get('id'));
-      };
+      remove_namespace_dialog.on_success = (function(_this) {
+        return function(response) {
+          window.router.navigate('#tables');
+          window.app.index_namespaces({
+            alert_message: "The table " + (_this.model.get('name')) + " was successfully deleted."
+          });
+          return namespaces.remove(_this.model.get('id'));
+        };
+      })(this);
       return remove_namespace_dialog.render([this.model]);
     };
 
@@ -5266,14 +5083,11 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   this.Title = (function(_super) {
-
     __extends(Title, _super);
 
     function Title() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.update = __bind(this.update, this);
       return Title.__super__.constructor.apply(this, arguments);
     }
@@ -5309,12 +5123,10 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   this.Profile = (function(_super) {
-
     __extends(Profile, _super);
 
     function Profile() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
       return Profile.__super__.constructor.apply(this, arguments);
     }
@@ -5373,46 +5185,27 @@ module('NamespaceView', function() {
 
   })(Backbone.View);
   return this.SecondaryIndexesView = (function(_super) {
-
     __extends(SecondaryIndexesView, _super);
 
     function SecondaryIndexesView() {
       this.destroy = __bind(this.destroy, this);
-
       this.on_create = __bind(this.on_create, this);
-
       this.create_index = __bind(this.create_index, this);
-
       this.handle_keypress = __bind(this.handle_keypress, this);
-
       this.on_fail_to_connect = __bind(this.on_fail_to_connect, this);
-
       this.on_index_list_repeat = __bind(this.on_index_list_repeat, this);
-
       this.on_index_list = __bind(this.on_index_list, this);
-
       this.get_indexes = __bind(this.get_indexes, this);
-
       this.set_interval_get_indexes = __bind(this.set_interval_get_indexes, this);
-
       this.render = __bind(this.render, this);
-
       this.render_content = __bind(this.render_content, this);
-
       this.hide_add_index = __bind(this.hide_add_index, this);
-
       this.show_add_index = __bind(this.show_add_index, this);
-
       this.on_drop = __bind(this.on_drop, this);
-
       this.delete_secondary_index = __bind(this.delete_secondary_index, this);
-
       this.confirm_delete = __bind(this.confirm_delete, this);
-
       this.save_name = __bind(this.save_name, this);
-
       this.init_connection = __bind(this.init_connection, this);
-
       this.initialize = __bind(this.initialize, this);
       return SecondaryIndexesView.__super__.constructor.apply(this, arguments);
     }
@@ -5529,7 +5322,7 @@ module('NamespaceView', function() {
     SecondaryIndexesView.prototype.render_content = function(args) {
       var mapped_secondary_indexes, template_args, that;
       that = this;
-      if (!(args != null)) {
+      if (args == null) {
         args = {};
       }
       mapped_secondary_indexes = _.map(this.secondary_indexes, function(d) {
@@ -5691,26 +5484,17 @@ module('NamespaceView', function() {
 
 module('ServerView', function() {
   this.DatacenterList = (function(_super) {
-
     __extends(DatacenterList, _super);
 
     function DatacenterList() {
       this.destroy = __bind(this.destroy, this);
-
       this.update_toolbar_buttons = __bind(this.update_toolbar_buttons, this);
-
       this.add_element = __bind(this.add_element, this);
-
       this.get_callbacks = __bind(this.get_callbacks, this);
-
       this.get_selected_machines = __bind(this.get_selected_machines, this);
-
       this.set_datacenter = __bind(this.set_datacenter, this);
-
       this.add_datacenter = __bind(this.add_datacenter, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return DatacenterList.__super__.constructor.apply(this, arguments);
     }
@@ -5825,14 +5609,11 @@ module('ServerView', function() {
 
   })(UIComponents.AbstractList);
   this.DatacenterListElement = (function(_super) {
-
     __extends(DatacenterListElement, _super);
 
     function DatacenterListElement() {
       this.register_machine_callbacks = __bind(this.register_machine_callbacks, this);
-
       this.render_summary = __bind(this.render_summary, this);
-
       this.render = __bind(this.render, this);
       return DatacenterListElement.__super__.constructor.apply(this, arguments);
     }
@@ -5950,24 +5731,16 @@ module('ServerView', function() {
 
   })(UIComponents.CollapsibleListElement);
   this.MachineList = (function(_super) {
-
     __extends(MachineList, _super);
 
     function MachineList() {
       this.call_all_callback = __bind(this.call_all_callback, this);
-
       this.bind_callbacks_to_machine = __bind(this.bind_callbacks_to_machine, this);
-
       this.register_machine_callbacks = __bind(this.register_machine_callbacks, this);
-
       this.add_element = __bind(this.add_element, this);
-
       this.render = __bind(this.render, this);
-
       this.check_machines = __bind(this.check_machines, this);
-
       this.get_selected_elements = __bind(this.get_selected_elements, this);
-
       this.get_length = __bind(this.get_length, this);
       return MachineList.__super__.constructor.apply(this, arguments);
     }
@@ -6010,7 +5783,7 @@ module('ServerView', function() {
       _ref = machines.models;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         machine = _ref[_i];
-        if (machine.get('datacenter_uuid') === this.datacenter_uuid && !(this.machines_in_datacenter[machine.get('id')] != null)) {
+        if (machine.get('datacenter_uuid') === this.datacenter_uuid && (this.machines_in_datacenter[machine.get('id')] == null)) {
           this.machines_in_datacenter[machine.get('id')] = true;
           this.machine_views.push(new ServerView.MachineListElement({
             model: machine
@@ -6021,7 +5794,7 @@ module('ServerView', function() {
       _ref1 = this.machines_in_datacenter;
       for (machine_id in _ref1) {
         machine = _ref1[machine_id];
-        if (!(machines.get(machine_id) != null) || machines.get(machine_id).get('datacenter_uuid') !== this.datacenter_uuid) {
+        if ((machines.get(machine_id) == null) || machines.get(machine_id).get('datacenter_uuid') !== this.datacenter_uuid) {
           this.machines_in_datacenter[machine_id] = void 0;
           _ref2 = this.machine_views;
           for (i = _j = 0, _len1 = _ref2.length; _j < _len1; i = ++_j) {
@@ -6101,22 +5874,15 @@ module('ServerView', function() {
 
   })(Backbone.View);
   this.MachineListElement = (function(_super) {
-
     __extends(MachineListElement, _super);
 
     function MachineListElement() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render_info = __bind(this.render_info, this);
-
       this.render_name = __bind(this.render_name, this);
-
       this.json_for_template = __bind(this.json_for_template, this);
-
       this.initialize = __bind(this.initialize, this);
       return MachineListElement.__super__.constructor.apply(this, arguments);
     }
@@ -6207,14 +5973,11 @@ module('ServerView', function() {
 
   })(UIComponents.CheckboxListElement);
   this.UnassignedMachinesListElement = (function(_super) {
-
     __extends(UnassignedMachinesListElement, _super);
 
     function UnassignedMachinesListElement() {
       this.destroy = __bind(this.destroy, this);
-
       this.register_machine_callbacks = __bind(this.register_machine_callbacks, this);
-
       this.render = __bind(this.render, this);
       return UnassignedMachinesListElement.__super__.constructor.apply(this, arguments);
     }
@@ -6252,7 +6015,6 @@ module('ServerView', function() {
 
   })(UIComponents.CollapsibleListElement);
   this.AddDatacenterModal = (function(_super) {
-
     __extends(AddDatacenterModal, _super);
 
     function AddDatacenterModal() {
@@ -6346,16 +6108,12 @@ module('ServerView', function() {
 
   })(UIComponents.AbstractModal);
   this.RemoveDatacenterModal = (function(_super) {
-
     __extends(RemoveDatacenterModal, _super);
 
     function RemoveDatacenterModal() {
       this.on_success_with_error = __bind(this.on_success_with_error, this);
-
       this.delete_datacenter = __bind(this.delete_datacenter, this);
-
       this.remove_responsabilities = __bind(this.remove_responsabilities, this);
-
       this.unassign_machines_in_datacenter = __bind(this.unassign_machines_in_datacenter, this);
       return RemoveDatacenterModal.__super__.constructor.apply(this, arguments);
     }
@@ -6443,10 +6201,10 @@ module('ServerView', function() {
           namespaces_to_update[namespace.get('id')] = {};
         }
         if (namespace.get('primary_uuid') === this.datacenter.get('id')) {
-          if (!(new_replica_affinities[universe_datacenter.get('id')] != null)) {
+          if (new_replica_affinities[universe_datacenter.get('id')] == null) {
             new_replica_affinities[universe_datacenter.get('id')] = 0;
           }
-          if (!(new_ack_expectations[universe_datacenter.get('id')] != null) || new_ack_expectations[universe_datacenter.get('id')].expectation === 0) {
+          if ((new_ack_expectations[universe_datacenter.get('id')] == null) || new_ack_expectations[universe_datacenter.get('id')].expectation === 0) {
             new_ack_expectations[universe_datacenter.get('id')] = {
               expectation: 1,
               hard_durability: namespace.get_durability()
@@ -6516,7 +6274,6 @@ module('ServerView', function() {
 
   })(UIComponents.AbstractModal);
   return this.SetDatacenterModal = (function(_super) {
-
     __extends(SetDatacenterModal, _super);
 
     function SetDatacenterModal() {
@@ -6623,12 +6380,10 @@ module('ServerView', function() {
 
 module('MachineView', function() {
   this.NotFound = (function(_super) {
-
     __extends(NotFound, _super);
 
     function NotFound() {
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return NotFound.__super__.constructor.apply(this, arguments);
     }
@@ -6676,26 +6431,17 @@ module('MachineView', function() {
 
   })(Backbone.View);
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.unassign_datacenter = __bind(this.unassign_datacenter, this);
-
       this.change_datacenter = __bind(this.change_datacenter, this);
-
       this.rename_machine = __bind(this.rename_machine, this);
-
       this.render_can_unassign_button = __bind(this.render_can_unassign_button, this);
-
       this.render = __bind(this.render, this);
-
       this.change_route = __bind(this.change_route, this);
-
       this.check_if_still_exists = __bind(this.check_if_still_exists, this);
-
       this.initialize = __bind(this.initialize, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -6829,14 +6575,11 @@ module('MachineView', function() {
 
   })(Backbone.View);
   this.Title = (function(_super) {
-
     __extends(Title, _super);
 
     function Title() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.update = __bind(this.update, this);
       return Title.__super__.constructor.apply(this, arguments);
     }
@@ -6872,14 +6615,11 @@ module('MachineView', function() {
 
   })(Backbone.View);
   this.Profile = (function(_super) {
-
     __extends(Profile, _super);
 
     function Profile() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Profile.__super__.constructor.apply(this, arguments);
     }
@@ -6930,14 +6670,11 @@ module('MachineView', function() {
 
   })(Backbone.View);
   this.UnassignModal = (function(_super) {
-
     __extends(UnassignModal, _super);
 
     function UnassignModal() {
       this.on_success = __bind(this.on_success, this);
-
       this.on_submit = __bind(this.on_submit, this);
-
       this.render = __bind(this.render, this);
       return UnassignModal.__super__.constructor.apply(this, arguments);
     }
@@ -6990,14 +6727,11 @@ module('MachineView', function() {
 
   })(UIComponents.AbstractModal);
   return this.Data = (function(_super) {
-
     __extends(Data, _super);
 
     function Data() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Data.__super__.constructor.apply(this, arguments);
     }
@@ -7015,41 +6749,42 @@ module('MachineView', function() {
     };
 
     Data.prototype.render = function() {
-      var data, data_by_namespace,
-        _this = this;
+      var data, data_by_namespace;
       data_by_namespace = [];
-      namespaces.each(function(namespace) {
-        var json_shard, keys, machine_id, ns, peer_roles, role, shard, _ref;
-        ns = {
-          name: namespace.get('name'),
-          id: namespace.get('id'),
-          shards: []
-        };
-        _ref = namespace.get('blueprint').peers_roles;
-        for (machine_id in _ref) {
-          peer_roles = _ref[machine_id];
-          if (machine_id === _this.model.get('id')) {
-            for (shard in peer_roles) {
-              role = peer_roles[shard];
-              if (role !== 'role_nothing') {
-                keys = namespace.compute_shard_rows_approximation(shard);
-                json_shard = $.parseJSON(shard);
-                ns.shards.push({
-                  name: human_readable_shard(shard),
-                  shard: human_readable_shard_obj(shard),
-                  num_keys: keys,
-                  role: role,
-                  secondary: role === 'role_secondary',
-                  primary: role === 'role_primary'
-                });
+      namespaces.each((function(_this) {
+        return function(namespace) {
+          var json_shard, keys, machine_id, ns, peer_roles, role, shard, _ref;
+          ns = {
+            name: namespace.get('name'),
+            id: namespace.get('id'),
+            shards: []
+          };
+          _ref = namespace.get('blueprint').peers_roles;
+          for (machine_id in _ref) {
+            peer_roles = _ref[machine_id];
+            if (machine_id === _this.model.get('id')) {
+              for (shard in peer_roles) {
+                role = peer_roles[shard];
+                if (role !== 'role_nothing') {
+                  keys = namespace.compute_shard_rows_approximation(shard);
+                  json_shard = $.parseJSON(shard);
+                  ns.shards.push({
+                    name: human_readable_shard(shard),
+                    shard: human_readable_shard_obj(shard),
+                    num_keys: keys,
+                    role: role,
+                    secondary: role === 'role_secondary',
+                    primary: role === 'role_primary'
+                  });
+                }
               }
             }
           }
-        }
-        if (ns.shards.length > 0) {
-          return data_by_namespace.push(ns);
-        }
-      });
+          if (ns.shards.length > 0) {
+            return data_by_namespace.push(ns);
+          }
+        };
+      })(this));
       data = {
         has_data: data_by_namespace.length > 0,
         tables: _.sortBy(data_by_namespace, function(namespace) {
@@ -7075,7 +6810,6 @@ module('MachineView', function() {
 
 module('DatacenterView', function() {
   this.NotFound = (function(_super) {
-
     __extends(NotFound, _super);
 
     function NotFound() {
@@ -7103,20 +6837,14 @@ module('DatacenterView', function() {
 
   })(Backbone.View);
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.rename_datacenter = __bind(this.rename_datacenter, this);
-
       this.render = __bind(this.render, this);
-
       this.change_route = __bind(this.change_route, this);
-
       this.check_if_still_exists = __bind(this.check_if_still_exists, this);
-
       this.initialize = __bind(this.initialize, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -7193,8 +6921,7 @@ module('DatacenterView', function() {
     };
 
     Container.prototype.render = function(tab) {
-      var machines_in_datacenter,
-        _this = this;
+      var machines_in_datacenter;
       log_render('(rendering) datacenter view: container');
       this.$el.html(this.template({
         datacenter_id: this.model.get('id')
@@ -7204,9 +6931,11 @@ module('DatacenterView', function() {
       this.$('.performance-graph').html(this.performance_graph.render().$el);
       this.$('.server-list').html(this.machine_list.render().$el);
       this.$('.performance-graph').html(this.performance_graph.render().$el);
-      machines_in_datacenter = machines.filter(function(machine) {
-        return machine.get('datacenter_uuid') === _this.model.get('id');
-      });
+      machines_in_datacenter = machines.filter((function(_this) {
+        return function(machine) {
+          return machine.get('datacenter_uuid') === _this.model.get('id');
+        };
+      })(this));
       this.$('.recent-log-entries').html(this.logs.render().$el);
       return this;
     };
@@ -7245,14 +6974,11 @@ module('DatacenterView', function() {
 
   })(Backbone.View);
   this.Title = (function(_super) {
-
     __extends(Title, _super);
 
     function Title() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.update = __bind(this.update, this);
       return Title.__super__.constructor.apply(this, arguments);
     }
@@ -7288,14 +7014,11 @@ module('DatacenterView', function() {
 
   })(Backbone.View);
   this.Profile = (function(_super) {
-
     __extends(Profile, _super);
 
     function Profile() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Profile.__super__.constructor.apply(this, arguments);
     }
@@ -7312,11 +7035,12 @@ module('DatacenterView', function() {
     };
 
     Profile.prototype.render = function() {
-      var json, machine, machine_uuid, machines_in_datacenter, machines_returned, namespace, peer_roles, role, shard, shard_repr, stats, stats_up_to_date, status, total_replicas, total_shards, __shards, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _namespaces, _o, _ref, _ref1, _ref2, _s, _shards,
-        _this = this;
-      machines_in_datacenter = machines.filter(function(machine) {
-        return machine.get('datacenter_uuid') === _this.model.get('id');
-      });
+      var json, machine, machine_uuid, machines_in_datacenter, machines_returned, namespace, peer_roles, role, shard, shard_repr, stats, stats_up_to_date, status, total_replicas, total_shards, __shards, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n, _namespaces, _o, _ref, _ref1, _ref2, _s, _shards;
+      machines_in_datacenter = machines.filter((function(_this) {
+        return function(machine) {
+          return machine.get('datacenter_uuid') === _this.model.get('id');
+        };
+      })(this));
       _namespaces = [];
       _ref = namespaces.models;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -7343,7 +7067,7 @@ module('DatacenterView', function() {
           for (_j = 0, _len1 = _shards.length; _j < _len1; _j++) {
             shard = _shards[_j];
             shard_repr = shard.shard.toString();
-            if (!(__shards[shard_repr] != null)) {
+            if (__shards[shard_repr] == null) {
               __shards[shard_repr] = {
                 shard: shard.shard,
                 name: human_readable_shard(shard.shard),
@@ -7434,14 +7158,11 @@ module('DatacenterView', function() {
 
   })(Backbone.View);
   this.MachineList = (function(_super) {
-
     __extends(MachineList, _super);
 
     function MachineList() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return MachineList.__super__.constructor.apply(this, arguments);
     }
@@ -7456,11 +7177,12 @@ module('DatacenterView', function() {
     };
 
     MachineList.prototype.render = function() {
-      var data, data_on_machines, machine, machines_in_dc, servers, _i, _len,
-        _this = this;
-      machines_in_dc = machines.filter(function(machine) {
-        return machine.get('datacenter_uuid') === _this.model.get('id');
-      });
+      var data, data_on_machines, machine, machines_in_dc, servers, _i, _len;
+      machines_in_dc = machines.filter((function(_this) {
+        return function(machine) {
+          return machine.get('datacenter_uuid') === _this.model.get('id');
+        };
+      })(this));
       data_on_machines = {};
       for (_i = 0, _len = machines_in_dc.length; _i < _len; _i++) {
         machine = machines_in_dc[_i];
@@ -7472,36 +7194,38 @@ module('DatacenterView', function() {
           status: DataUtils.get_machine_reachability(machine.get('id'))
         };
       }
-      namespaces.each(function(namespace) {
-        var machine_id, peer_roles, role, shard, _ref, _results;
-        _ref = namespace.get('blueprint').peers_roles;
-        _results = [];
-        for (machine_id in _ref) {
-          peer_roles = _ref[machine_id];
-          if (data_on_machines[machine_id] != null) {
-            _results.push((function() {
-              var _results1;
-              _results1 = [];
-              for (shard in peer_roles) {
-                role = peer_roles[shard];
-                machine = data_on_machines[machine_id];
-                if (role === 'role_primary') {
-                  machine.num_primaries += 1;
+      namespaces.each((function(_this) {
+        return function(namespace) {
+          var machine_id, peer_roles, role, shard, _ref, _results;
+          _ref = namespace.get('blueprint').peers_roles;
+          _results = [];
+          for (machine_id in _ref) {
+            peer_roles = _ref[machine_id];
+            if (data_on_machines[machine_id] != null) {
+              _results.push((function() {
+                var _results1;
+                _results1 = [];
+                for (shard in peer_roles) {
+                  role = peer_roles[shard];
+                  machine = data_on_machines[machine_id];
+                  if (role === 'role_primary') {
+                    machine.num_primaries += 1;
+                  }
+                  if (role === 'role_secondary') {
+                    _results1.push(machine.num_secondaries += 1);
+                  } else {
+                    _results1.push(void 0);
+                  }
                 }
-                if (role === 'role_secondary') {
-                  _results1.push(machine.num_secondaries += 1);
-                } else {
-                  _results1.push(void 0);
-                }
-              }
-              return _results1;
-            })());
-          } else {
-            _results.push(void 0);
+                return _results1;
+              })());
+            } else {
+              _results.push(void 0);
+            }
           }
-        }
-        return _results;
-      });
+          return _results;
+        };
+      })(this));
       servers = _.sortBy(data_on_machines, function(machine) {
         return machine.name;
       });
@@ -7526,14 +7250,11 @@ module('DatacenterView', function() {
 
   })(Backbone.View);
   return this.Data = (function(_super) {
-
     __extends(Data, _super);
 
     function Data() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Data.__super__.constructor.apply(this, arguments);
     }
@@ -7543,11 +7264,12 @@ module('DatacenterView', function() {
     };
 
     Data.prototype.render = function() {
-      var json, keys, machine_uuid, machines_in_datacenter, namespace, peer_roles, role, shard, shard_repr, stats, __shards, _i, _j, _len, _len1, _namespaces, _ref, _ref1, _shards,
-        _this = this;
-      machines_in_datacenter = machines.filter(function(machine) {
-        return machine.get('datacenter_uuid') === _this.model.get('id');
-      });
+      var json, keys, machine_uuid, machines_in_datacenter, namespace, peer_roles, role, shard, shard_repr, stats, __shards, _i, _j, _len, _len1, _namespaces, _ref, _ref1, _shards;
+      machines_in_datacenter = machines.filter((function(_this) {
+        return function(machine) {
+          return machine.get('datacenter_uuid') === _this.model.get('id');
+        };
+      })(this));
       _namespaces = [];
       _ref = namespaces.models;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -7570,7 +7292,7 @@ module('DatacenterView', function() {
           }
         }
         if (_shards.length > 0) {
-          if (!(this.namespaces_with_listeners[namespace.get('id')] != null)) {
+          if (this.namespaces_with_listeners[namespace.get('id')] == null) {
             this.namespaces_with_listeners[namespace.get('id')] = true;
             namespace.load_key_distr();
             namespace.on('change:key_distr', this.render);
@@ -7579,7 +7301,7 @@ module('DatacenterView', function() {
           for (_j = 0, _len1 = _shards.length; _j < _len1; _j++) {
             shard = _shards[_j];
             shard_repr = shard.shard.toString();
-            if (!(__shards[shard_repr] != null)) {
+            if (__shards[shard_repr] == null) {
               keys = namespace.compute_shard_rows_approximation(shard.shard);
               __shards[shard_repr] = {
                 shard: shard.shard,
@@ -7636,14 +7358,11 @@ module('DatacenterView', function() {
 
 module('DashboardView', function() {
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -7701,24 +7420,16 @@ module('DashboardView', function() {
 
   })(Backbone.View);
   this.ClusterStatusAvailability = (function(_super) {
-
     __extends(ClusterStatusAvailability, _super);
 
     function ClusterStatusAvailability() {
       this.destroy = __bind(this.destroy, this);
-
       this.hide_details = __bind(this.hide_details, this);
-
       this.show_details = __bind(this.show_details, this);
-
       this.clean_dom_listeners = __bind(this.clean_dom_listeners, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render = __bind(this.render, this);
-
       this.compute_data = __bind(this.compute_data, this);
-
       this.initialize = __bind(this.initialize, this);
       return ClusterStatusAvailability.__super__.constructor.apply(this, arguments);
     }
@@ -7766,7 +7477,7 @@ module('DashboardView', function() {
         blueprint = namespace.get('blueprint').peers_roles;
         for (machine_id in blueprint) {
           machine_name = machine_name = (_ref1 = machines.get(machine_id)) != null ? _ref1.get('name') : void 0;
-          if (!(machine_name != null)) {
+          if (machine_name == null) {
             machine_name = machine_id;
           }
           for (shard in blueprint[machine_id]) {
@@ -7775,7 +7486,7 @@ module('DashboardView', function() {
               num_masters++;
               if (!(directory_by_namespaces != null) || !(directory_by_namespaces[namespace_id] != null) || !(directory_by_namespaces[namespace_id][machine_id] != null)) {
                 num_masters_down++;
-                if (!(namespaces_down[namespace.get('id')] != null)) {
+                if (namespaces_down[namespace.get('id')] == null) {
                   namespaces_down[namespace.get('id')] = [];
                 }
                 namespaces_down[namespace.get('id')].push({
@@ -7789,7 +7500,7 @@ module('DashboardView', function() {
                 });
               } else if (directory_by_namespaces[namespace_id][machine_id][shard] !== this.convert_activity(value)) {
                 num_masters_down++;
-                if (!(namespaces_down[namespace.get('id')] != null)) {
+                if (namespaces_down[namespace.get('id')] == null) {
                   namespaces_down[namespace.get('id')] = [];
                 }
                 namespaces_down[namespace.get('id')].push({
@@ -7904,24 +7615,16 @@ module('DashboardView', function() {
 
   })(Backbone.View);
   this.ClusterStatusRedundancy = (function(_super) {
-
     __extends(ClusterStatusRedundancy, _super);
 
     function ClusterStatusRedundancy() {
       this.destroy = __bind(this.destroy, this);
-
       this.hide_details = __bind(this.hide_details, this);
-
       this.show_details = __bind(this.show_details, this);
-
       this.clean_dom_listeners = __bind(this.clean_dom_listeners, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render = __bind(this.render, this);
-
       this.compute_data = __bind(this.compute_data, this);
-
       this.initialize = __bind(this.initialize, this);
       return ClusterStatusRedundancy.__super__.constructor.apply(this, arguments);
     }
@@ -7969,7 +7672,7 @@ module('DashboardView', function() {
         blueprint = namespace.get('blueprint').peers_roles;
         for (machine_id in blueprint) {
           machine_name = machine_name = (_ref1 = machines.get(machine_id)) != null ? _ref1.get('name') : void 0;
-          if (!(machine_name != null)) {
+          if (machine_name == null) {
             machine_name = machine_id;
           }
           for (shard in blueprint[machine_id]) {
@@ -7978,7 +7681,7 @@ module('DashboardView', function() {
               num_replicas++;
               if (!(directory_by_namespaces != null) || !(directory_by_namespaces[namespace_id] != null) || !(directory_by_namespaces[namespace_id][machine_id] != null)) {
                 num_replicas_down++;
-                if (!(namespaces_down[namespace.get('id')] != null)) {
+                if (namespaces_down[namespace.get('id')] == null) {
                   namespaces_down[namespace.get('id')] = [];
                 }
                 namespaces_down[namespace.get('id')].push({
@@ -7992,7 +7695,7 @@ module('DashboardView', function() {
                 });
               } else if (directory_by_namespaces[namespace_id][machine_id][shard] !== this.convert_activity(value)) {
                 num_replicas_down++;
-                if (!(namespaces_down[namespace.get('id')] != null)) {
+                if (namespaces_down[namespace.get('id')] == null) {
                   namespaces_down[namespace.get('id')] = [];
                 }
                 namespaces_down[namespace.get('id')].push({
@@ -8146,24 +7849,16 @@ module('DashboardView', function() {
 
   })(Backbone.View);
   this.ClusterStatusReachability = (function(_super) {
-
     __extends(ClusterStatusReachability, _super);
 
     function ClusterStatusReachability() {
       this.destroy = __bind(this.destroy, this);
-
       this.hide_details = __bind(this.hide_details, this);
-
       this.show_details = __bind(this.show_details, this);
-
       this.clean_dom_listeners = __bind(this.clean_dom_listeners, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render = __bind(this.render, this);
-
       this.compute_data = __bind(this.compute_data, this);
-
       this.initialize = __bind(this.initialize, this);
       return ClusterStatusReachability.__super__.constructor.apply(this, arguments);
     }
@@ -8285,24 +7980,16 @@ module('DashboardView', function() {
 
   })(Backbone.View);
   this.ClusterStatusConsistency = (function(_super) {
-
     __extends(ClusterStatusConsistency, _super);
 
     function ClusterStatusConsistency() {
       this.destroy = __bind(this.destroy, this);
-
       this.hide_details = __bind(this.hide_details, this);
-
       this.show_details = __bind(this.show_details, this);
-
       this.clean_dom_listeners = __bind(this.clean_dom_listeners, this);
-
       this.render_status = __bind(this.render_status, this);
-
       this.render = __bind(this.render, this);
-
       this.compute_data = __bind(this.compute_data, this);
-
       this.initialize = __bind(this.initialize, this);
       return ClusterStatusConsistency.__super__.constructor.apply(this, arguments);
     }
@@ -8380,7 +8067,7 @@ module('DashboardView', function() {
       num_types_conflicts = 0;
       for (_j = 0, _len1 = conflicts.length; _j < _len1; _j++) {
         conflict = conflicts[_j];
-        if (!(types[conflict.type] != null)) {
+        if (types[conflict.type] == null) {
           types[conflict.type] = 1;
           num_types_conflicts++;
         } else {
@@ -8462,16 +8149,12 @@ module('DashboardView', function() {
 
   })(Backbone.View);
   return this.Logs = (function(_super) {
-
     __extends(Logs, _super);
 
     function Logs() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.set_log_entries = __bind(this.set_log_entries, this);
-
       this.fetch_log = __bind(this.fetch_log, this);
       return Logs.__super__.constructor.apply(this, arguments);
     }
@@ -8586,154 +8269,81 @@ module('DataExplorerView', function() {
     last_query_has_profile: true
   };
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.display_full = __bind(this.display_full, this);
-
       this.display_normal = __bind(this.display_normal, this);
-
       this.toggle_size = __bind(this.toggle_size, this);
-
       this.handle_gutter_click = __bind(this.handle_gutter_click, this);
-
       this.reconnect = __bind(this.reconnect, this);
-
       this.error_on_connect = __bind(this.error_on_connect, this);
-
       this.success_on_connect = __bind(this.success_on_connect, this);
-
       this.clear_query = __bind(this.clear_query, this);
-
       this.separate_queries = __bind(this.separate_queries, this);
-
       this.evaluate = __bind(this.evaluate, this);
-
       this.generate_get_result_callback = __bind(this.generate_get_result_callback, this);
-
       this.generate_rdb_global_callback = __bind(this.generate_rdb_global_callback, this);
-
       this.execute_portion = __bind(this.execute_portion, this);
-
       this.execute_query = __bind(this.execute_query, this);
-
       this.show_more_results = __bind(this.show_more_results, this);
-
       this.extract_database_used = __bind(this.extract_database_used, this);
-
       this.extend_description = __bind(this.extend_description, this);
-
       this.mouseout_suggestion = __bind(this.mouseout_suggestion, this);
-
       this.mouseover_suggestion = __bind(this.mouseover_suggestion, this);
-
       this.select_suggestion = __bind(this.select_suggestion, this);
-
       this.write_suggestion = __bind(this.write_suggestion, this);
-
       this.remove_highlight_suggestion = __bind(this.remove_highlight_suggestion, this);
-
       this.highlight_suggestion = __bind(this.highlight_suggestion, this);
-
       this.move_suggestion = __bind(this.move_suggestion, this);
-
       this.show_or_hide_arrow = __bind(this.show_or_hide_arrow, this);
-
       this.hide_suggestion_and_description = __bind(this.hide_suggestion_and_description, this);
-
       this.hide_description = __bind(this.hide_description, this);
-
       this.hide_suggestion = __bind(this.hide_suggestion, this);
-
       this.show_description = __bind(this.show_description, this);
-
       this.show_suggestion_without_moving = __bind(this.show_suggestion_without_moving, this);
-
       this.show_suggestion = __bind(this.show_suggestion, this);
-
       this.create_safe_regex = __bind(this.create_safe_regex, this);
-
       this.create_suggestion = __bind(this.create_suggestion, this);
-
       this.extract_data_from_query = __bind(this.extract_data_from_query, this);
-
       this.get_last_key = __bind(this.get_last_key, this);
-
       this.last_element_type_if_incomplete = __bind(this.last_element_type_if_incomplete, this);
-
       this.handle_keypress = __bind(this.handle_keypress, this);
-
       this.count_not_closed_brackets = __bind(this.count_not_closed_brackets, this);
-
       this.count_char = __bind(this.count_char, this);
-
       this.move_cursor = __bind(this.move_cursor, this);
-
       this.remove_next = __bind(this.remove_next, this);
-
       this.insert_next = __bind(this.insert_next, this);
-
       this.get_previous_char = __bind(this.get_previous_char, this);
-
       this.get_next_char = __bind(this.get_next_char, this);
-
       this.pair_char = __bind(this.pair_char, this);
-
       this.handle_click = __bind(this.handle_click, this);
-
       this.on_blur = __bind(this.on_blur, this);
-
       this.init_after_dom_rendered = __bind(this.init_after_dom_rendered, this);
-
       this.render = __bind(this.render, this);
-
       this.handle_mousedown = __bind(this.handle_mousedown, this);
-
       this.handle_mouseup = __bind(this.handle_mouseup, this);
-
       this.handle_mousemove = __bind(this.handle_mousemove, this);
-
       this.initialize = __bind(this.initialize, this);
-
       this.clear_history = __bind(this.clear_history, this);
-
       this.save_query = __bind(this.save_query, this);
-
       this.set_docs = __bind(this.set_docs, this);
-
       this.set_doc_description = __bind(this.set_doc_description, this);
-
       this.expand_types = __bind(this.expand_types, this);
-
       this.convert_type = __bind(this.convert_type, this);
-
       this.activate_overflow = __bind(this.activate_overflow, this);
-
       this.deactivate_overflow = __bind(this.deactivate_overflow, this);
-
       this.adjust_collapsible_panel_height = __bind(this.adjust_collapsible_panel_height, this);
-
       this.move_arrow = __bind(this.move_arrow, this);
-
       this.hide_collapsible_panel = __bind(this.hide_collapsible_panel, this);
-
       this.toggle_options = __bind(this.toggle_options, this);
-
       this.toggle_history = __bind(this.toggle_history, this);
-
       this.toggle_pressed_buttons = __bind(this.toggle_pressed_buttons, this);
-
       this.clear_history_view = __bind(this.clear_history_view, this);
-
       this.start_resize_history = __bind(this.start_resize_history, this);
-
       this.mouse_up_description = __bind(this.mouse_up_description, this);
-
       this.stop_propagation = __bind(this.stop_propagation, this);
-
       this.mouse_down_description = __bind(this.mouse_down_description, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -9120,7 +8730,7 @@ module('DataExplorerView', function() {
       }
       if (full_tag !== '(') {
         for (parent_value in parents) {
-          if (!(suggestions[parent_value] != null)) {
+          if (suggestions[parent_value] == null) {
             suggestions[parent_value] = [];
           }
           suggestions[parent_value].push(full_tag);
@@ -9258,11 +8868,11 @@ module('DataExplorerView', function() {
         }));
         this.$('.reason_dataexplorer_broken').slideDown('fast');
         this.$('.button_query').prop('disabled', 'disabled');
-      } else if ((!(typeof DataView !== "undefined" && DataView !== null)) || (!(typeof Uint8Array !== "undefined" && Uint8Array !== null))) {
+      } else if ((typeof DataView === "undefined" || DataView === null) || (typeof Uint8Array === "undefined" || Uint8Array === null)) {
         this.$('.reason_dataexplorer_broken').html(this.reason_dataexplorer_broken_template);
         this.$('.reason_dataexplorer_broken').slideDown('fast');
         this.$('.button_query').prop('disabled', 'disabled');
-      } else if (!(window.r != null)) {
+      } else if (window.r == null) {
         this.$('.reason_dataexplorer_broken').html(this.reason_dataexplorer_broken_template({
           no_driver: true
         }));
@@ -9941,7 +9551,7 @@ module('DataExplorerView', function() {
       if ((event != null) && (event.which === 16 || event.which === 17 || event.which === 18 || event.which === 20 || (event.which === 91 && event.type !== 'keypress') || event.which === 92)) {
         return false;
       }
-      if (!(event != null) || (event.which !== 37 && event.which !== 38 && event.which !== 39 && event.which !== 40 && event.which !== 33 && event.which !== 34 && event.which !== 35 && event.which !== 36 && event.which !== 0)) {
+      if ((event == null) || (event.which !== 37 && event.which !== 38 && event.which !== 39 && event.which !== 40 && event.which !== 33 && event.which !== 34 && event.which !== 35 && event.which !== 36 && event.which !== 0)) {
         this.history_displayed_id = 0;
         this.draft = this.codemirror.getValue();
       }
@@ -10066,7 +9676,7 @@ module('DataExplorerView', function() {
 
     Container.prototype.uniq = function(ar) {
       var element, hash, key, result, _i, _len;
-      if (!(ar != null) || ar.length === 0) {
+      if ((ar == null) || ar.length === 0) {
         return ar;
       }
       result = [];
@@ -10119,7 +9729,7 @@ module('DataExplorerView', function() {
 
     Container.prototype.last_element_type_if_incomplete = function(stack) {
       var element;
-      if ((!(stack != null)) || stack.length === 0) {
+      if ((stack == null) || stack.length === 0) {
         return '';
       }
       element = stack[stack.length - 1];
@@ -10136,7 +9746,7 @@ module('DataExplorerView', function() {
 
     Container.prototype.get_last_key = function(stack) {
       var element;
-      if ((!(stack != null)) || stack.length === 0) {
+      if ((stack == null) || stack.length === 0) {
         return '';
       }
       element = stack[stack.length - 1];
@@ -10346,19 +9956,19 @@ module('DataExplorerView', function() {
                       to_skip = result_regex[0].length - 1;
                       continue;
                     }
-                    /*
-                                                            # This last condition is a special case for r(expr)
-                                                            else if position_opening_parenthesis isnt -1 and result_regex[0].slice(0, position_opening_parenthesis) is 'r'
-                                                                element.type = 'var'
-                                                                element.name = 'r'
-                                                                element.real_type = @types.value
-                                                                element.position = position+new_start
-                                                                start += new_start-i
-                                                                to_skip = result_regex[0].length-1+new_start-i
-                                                                stack_stop_char = ['(']
-                                                                continue
-                    */
 
+                    /*
+                     * This last condition is a special case for r(expr)
+                    else if position_opening_parenthesis isnt -1 and result_regex[0].slice(0, position_opening_parenthesis) is 'r'
+                        element.type = 'var'
+                        element.name = 'r'
+                        element.real_type = @types.value
+                        element.position = position+new_start
+                        start += new_start-i
+                        to_skip = result_regex[0].length-1+new_start-i
+                        stack_stop_char = ['(']
+                        continue
+                     */
                   }
                 }
               }
@@ -10589,7 +10199,7 @@ module('DataExplorerView', function() {
                   }
                 }
               }
-              if (!(element.next_key != null)) {
+              if (element.next_key == null) {
                 if (stack_stop_char.length === 1 && char === ':') {
                   new_element = {
                     type: 'object_key',
@@ -10727,7 +10337,7 @@ module('DataExplorerView', function() {
         } else if (element.type === 'string') {
           element.name = query.slice(start);
         } else if (element.type === 'object') {
-          if (!(element.next_key != null)) {
+          if (element.next_key == null) {
             new_element = {
               type: 'object_key',
               key: query.slice(element.current_key_start),
@@ -11123,17 +10733,18 @@ module('DataExplorerView', function() {
     };
 
     Container.prototype.select_suggestion = function(event) {
-      var suggestion_to_write,
-        _this = this;
+      var suggestion_to_write;
       suggestion_to_write = this.$(event.target).html();
       this.write_suggestion({
         suggestion_to_write: suggestion_to_write
       });
       this.hide_suggestion();
-      return setTimeout(function() {
-        _this.handle_keypress();
-        return _this.codemirror.focus();
-      }, 0);
+      return setTimeout((function(_this) {
+        return function() {
+          _this.handle_keypress();
+          return _this.codemirror.focus();
+        };
+      })(this), 0);
     };
 
     Container.prototype.mouseover_suggestion = function(event) {
@@ -11256,7 +10867,7 @@ module('DataExplorerView', function() {
     };
 
     Container.prototype.show_more_results = function(event) {
-      var get_result_callback;
+      var err, get_result_callback;
       event.preventDefault();
       this.skip_value += this.current_results.length;
       try {
@@ -11266,14 +10877,15 @@ module('DataExplorerView', function() {
         get_result_callback = this.generate_get_result_callback(this.id_execution);
         this.state.cursor.next(get_result_callback);
         return $(window).scrollTop(this.$('.results_container').offset().top);
-      } catch (err) {
+      } catch (_error) {
+        err = _error;
         this.$('.loading_query_img').css('display', 'none');
         return this.results_view.render_error(this.query, err);
       }
     };
 
     Container.prototype.execute_query = function() {
-      var error;
+      var err, error;
       this.$('.profiler_enabled').slideUp('fast');
       this.state.cursor_timed_out = false;
       this.state.show_query_warning = false;
@@ -11296,7 +10908,8 @@ module('DataExplorerView', function() {
           this.$('.loading_query_img').show();
           return this.execute_portion();
         }
-      } catch (err) {
+      } catch (_error) {
+        err = _error;
         this.$('.loading_query_img').hide();
         this.results_view.render_error(this.query, err, true);
         return this.save_query({
@@ -11307,14 +10920,15 @@ module('DataExplorerView', function() {
     };
 
     Container.prototype.execute_portion = function() {
-      var error, full_query, rdb_global_callback, rdb_query;
+      var err, error, full_query, rdb_global_callback, rdb_query;
       this.state.cursor = null;
       while (this.queries[this.index] != null) {
         full_query = this.non_rethinkdb_query;
         full_query += this.queries[this.index];
         try {
           rdb_query = this.evaluate(full_query);
-        } catch (err) {
+        } catch (_error) {
+          err = _error;
           this.$('.loading_query_img').hide();
           if (this.queries.length > 1) {
             this.results_view.render_error(this.raw_queries[this.index], err, true);
@@ -11361,114 +10975,116 @@ module('DataExplorerView', function() {
     };
 
     Container.prototype.generate_rdb_global_callback = function(id_execution) {
-      var rdb_global_callback,
-        _this = this;
-      rdb_global_callback = function(error, results) {
-        var cursor, get_result_callback;
-        if (_this.id_execution === id_execution) {
-          get_result_callback = _this.generate_get_result_callback(id_execution);
-          if (error != null) {
-            _this.$('.loading_query_img').hide();
-            if (_this.queries.length > 1) {
-              _this.results_view.render_error(_this.raw_queries[_this.index - 1], error);
-            } else {
-              _this.results_view.render_error(null, error);
-            }
-            _this.save_query({
-              query: _this.raw_query,
-              broken_query: true
-            });
-            return false;
-          }
-          if (((results != null ? results.profile : void 0) != null) && _this.state.last_query_has_profile === true) {
-            cursor = results.value;
-            _this.profile = results.profile;
-            _this.state.profile = _this.profile;
-          } else {
-            cursor = results;
-            _this.profile = null;
-            _this.state.profile = _this.profile;
-          }
-          if (_this.index === _this.queries.length) {
-            if ((cursor != null ? cursor.hasNext : void 0) != null) {
-              _this.state.cursor = cursor;
-              if (cursor.hasNext() === true) {
-                return _this.state.cursor.next(get_result_callback);
+      var rdb_global_callback;
+      rdb_global_callback = (function(_this) {
+        return function(error, results) {
+          var cursor, get_result_callback;
+          if (_this.id_execution === id_execution) {
+            get_result_callback = _this.generate_get_result_callback(id_execution);
+            if (error != null) {
+              _this.$('.loading_query_img').hide();
+              if (_this.queries.length > 1) {
+                _this.results_view.render_error(_this.raw_queries[_this.index - 1], error);
               } else {
-                return get_result_callback();
+                _this.results_view.render_error(null, error);
+              }
+              _this.save_query({
+                query: _this.raw_query,
+                broken_query: true
+              });
+              return false;
+            }
+            if (((results != null ? results.profile : void 0) != null) && _this.state.last_query_has_profile === true) {
+              cursor = results.value;
+              _this.profile = results.profile;
+              _this.state.profile = _this.profile;
+            } else {
+              cursor = results;
+              _this.profile = null;
+              _this.state.profile = _this.profile;
+            }
+            if (_this.index === _this.queries.length) {
+              if ((cursor != null ? cursor.hasNext : void 0) != null) {
+                _this.state.cursor = cursor;
+                if (cursor.hasNext() === true) {
+                  return _this.state.cursor.next(get_result_callback);
+                } else {
+                  return get_result_callback();
+                }
+              } else {
+                _this.$('.loading_query_img').hide();
+                _this.current_results = cursor;
+                _this.state.query = _this.query;
+                _this.state.results = _this.current_results;
+                _this.state.metadata = {
+                  limit_value: Object.prototype.toString.call(_this.results) === '[object Array]' ? _this.current_results.length : 1,
+                  skip_value: _this.skip_value,
+                  execution_time: new Date() - _this.start_time,
+                  query: _this.query,
+                  has_more_data: false
+                };
+                _this.results_view.render_result({
+                  results: _this.current_results,
+                  metadata: _this.state.metadata,
+                  profile: _this.profile
+                });
+                return _this.save_query({
+                  query: _this.raw_query,
+                  broken_query: false
+                });
               }
             } else {
-              _this.$('.loading_query_img').hide();
-              _this.current_results = cursor;
-              _this.state.query = _this.query;
-              _this.state.results = _this.current_results;
-              _this.state.metadata = {
-                limit_value: Object.prototype.toString.call(_this.results) === '[object Array]' ? _this.current_results.length : 1,
-                skip_value: _this.skip_value,
-                execution_time: new Date() - _this.start_time,
-                query: _this.query,
-                has_more_data: false
-              };
-              _this.results_view.render_result({
-                results: _this.current_results,
-                metadata: _this.state.metadata,
-                profile: _this.profile
-              });
-              return _this.save_query({
-                query: _this.raw_query,
-                broken_query: false
-              });
+              return _this.execute_portion();
             }
-          } else {
-            return _this.execute_portion();
           }
-        }
-      };
+        };
+      })(this);
       return rdb_global_callback;
     };
 
     Container.prototype.generate_get_result_callback = function(id_execution) {
-      var get_result_callback,
-        _this = this;
-      return get_result_callback = function(error, data) {
-        var _ref;
-        if (_this.id_execution === id_execution) {
-          if (error != null) {
-            if (_this.queries.length > 1) {
-              _this.results_view.render_error(_this.query, error);
-            } else {
-              _this.results_view.render_error(null, error);
+      var get_result_callback;
+      return get_result_callback = (function(_this) {
+        return function(error, data) {
+          var _ref;
+          if (_this.id_execution === id_execution) {
+            if (error != null) {
+              if (_this.queries.length > 1) {
+                _this.results_view.render_error(_this.query, error);
+              } else {
+                _this.results_view.render_error(null, error);
+              }
+              return false;
             }
-            return false;
-          }
-          if (data !== void 0) {
-            _this.current_results.push(data);
-            if (_this.current_results.length < _this.limit && _this.state.cursor.hasNext() === true) {
-              _this.state.cursor.next(get_result_callback);
-              return true;
+            if (data !== void 0) {
+              _this.current_results.push(data);
+              if (_this.current_results.length < _this.limit && _this.state.cursor.hasNext() === true) {
+                _this.state.cursor.next(get_result_callback);
+                return true;
+              }
             }
+            _this.$('.loading_query_img').hide();
+            _this.state.query = _this.query;
+            _this.state.results = _this.current_results;
+            _this.state.metadata = {
+              limit_value: ((_ref = _this.current_results) != null ? _ref.length : void 0) != null ? _this.current_results.length : 1,
+              skip_value: _this.skip_value,
+              execution_time: new Date() - _this.start_time,
+              query: _this.query,
+              has_more_data: _this.state.cursor.hasNext()
+            };
+            _this.results_view.render_result({
+              results: _this.current_results,
+              metadata: _this.state.metadata,
+              profile: _this.profile
+            });
+            return _this.save_query({
+              query: _this.raw_query,
+              broken_query: false
+            });
           }
-          _this.$('.loading_query_img').hide();
-          _this.state.query = _this.query;
-          _this.state.results = _this.current_results;
-          _this.state.metadata = {
-            limit_value: ((_ref = _this.current_results) != null ? _ref.length : void 0) != null ? _this.current_results.length : 1,
-            skip_value: _this.skip_value,
-            execution_time: new Date() - _this.start_time,
-            query: _this.query,
-            has_more_data: _this.state.cursor.hasNext()
-          };
-          _this.results_view.render_result({
-            results: _this.current_results,
-            metadata: _this.state.metadata,
-            profile: _this.profile
-          });
-          return _this.save_query({
-            query: _this.raw_query,
-            broken_query: false
-          });
-        }
-      };
+        };
+      })(this);
     };
 
     Container.prototype.evaluate = function(query) {
@@ -11700,60 +11316,34 @@ module('DataExplorerView', function() {
 
   })(Backbone.View);
   this.SharedResultView = (function(_super) {
-
     __extends(SharedResultView, _super);
 
     function SharedResultView() {
       this.date_to_string = __bind(this.date_to_string, this);
-
       this.set_scrollbar = __bind(this.set_scrollbar, this);
-
       this.join_table = __bind(this.join_table, this);
-
       this.compute_data_for_type = __bind(this.compute_data_for_type, this);
-
       this.json_to_table_get_td_value = __bind(this.json_to_table_get_td_value, this);
-
       this.json_to_table_get_values = __bind(this.json_to_table_get_values, this);
-
       this.json_to_table_get_attr = __bind(this.json_to_table_get_attr, this);
-
       this.json_to_tree = __bind(this.json_to_tree, this);
-
       this.get_all_attr = __bind(this.get_all_attr, this);
-
       this.json_to_table = __bind(this.json_to_table, this);
-
       this.order_keys = __bind(this.order_keys, this);
-
       this.compute_occurrence = __bind(this.compute_occurrence, this);
-
       this.build_map_keys = __bind(this.build_map_keys, this);
-
       this.json_to_node = __bind(this.json_to_node, this);
-
       this.set_view = __bind(this.set_view, this);
-
       this.show_raw = __bind(this.show_raw, this);
-
       this.show_table = __bind(this.show_table, this);
-
       this.show_profile = __bind(this.show_profile, this);
-
       this.show_tree = __bind(this.show_tree, this);
-
       this.expand_tree_in_table = __bind(this.expand_tree_in_table, this);
-
       this.handle_mouseup = __bind(this.handle_mouseup, this);
-
       this.resize_column = __bind(this.resize_column, this);
-
       this.handle_mousemove = __bind(this.handle_mousemove, this);
-
       this.handle_mousedown = __bind(this.handle_mousedown, this);
-
       this.toggle_collapse = __bind(this.toggle_collapse, this);
-
       this.expand_raw_textarea = __bind(this.expand_raw_textarea, this);
       return SharedResultView.__super__.constructor.apply(this, arguments);
     }
@@ -11981,14 +11571,14 @@ module('DataExplorerView', function() {
       }
     };
 
-    /*
-            keys =
-                primitive_value_count: <int>
-                object:
-                    key_1: <keys>
-                    key_2: <keys>
-    */
 
+    /*
+    keys =
+        primitive_value_count: <int>
+        object:
+            key_1: <keys>
+            key_2: <keys>
+     */
 
     SharedResultView.prototype.build_map_keys = function(args) {
       var key, keys_count, result, row, _results;
@@ -12001,10 +11591,10 @@ module('DataExplorerView', function() {
           _results = [];
           for (key in result) {
             row = result[key];
-            if (!(keys_count['object'] != null)) {
+            if (keys_count['object'] == null) {
               keys_count['object'] = {};
             }
-            if (!(keys_count['object'][key] != null)) {
+            if (keys_count['object'][key] == null) {
               keys_count['object'][key] = {
                 primitive_value_count: 0
               };
@@ -12023,7 +11613,7 @@ module('DataExplorerView', function() {
 
     SharedResultView.prototype.compute_occurrence = function(keys_count) {
       var count_key, count_occurrence, key, row, _ref;
-      if (!(keys_count['object'] != null)) {
+      if (keys_count['object'] == null) {
         return keys_count.occurrence = keys_count.primitive_value_count;
       } else {
         count_key = keys_count.primitive_value_count > 0 ? 1 : 0;
@@ -12076,7 +11666,7 @@ module('DataExplorerView', function() {
 
     SharedResultView.prototype.json_to_table = function(result, primary_key, can_sort, indexes) {
       var flatten_attr, index, keys_count, result_entry, value, _i, _j, _len, _len1;
-      if (!(result.constructor != null) || result.constructor !== Array) {
+      if ((result.constructor == null) || result.constructor !== Array) {
         result = [result];
       }
       keys_count = {
@@ -12342,28 +11932,18 @@ module('DataExplorerView', function() {
 
   })(Backbone.View);
   this.ResultView = (function(_super) {
-
     __extends(ResultView, _super);
 
     function ResultView() {
       this.destroy = __bind(this.destroy, this);
-
       this.render_default = __bind(this.render_default, this);
-
       this.render = __bind(this.render, this);
-
       this.cursor_timed_out = __bind(this.cursor_timed_out, this);
-
       this.render_result = __bind(this.render_result, this);
-
       this.tag_record = __bind(this.tag_record, this);
-
       this.json_to_table = __bind(this.json_to_table, this);
-
       this.render_error = __bind(this.render_error, this);
-
       this.activate_profiler = __bind(this.activate_profiler, this);
-
       this.initialize = __bind(this.initialize, this);
       return ResultView.__super__.constructor.apply(this, arguments);
     }
@@ -12415,19 +11995,20 @@ module('DataExplorerView', function() {
     };
 
     ResultView.prototype.activate_profiler = function(event) {
-      var _this = this;
       event.preventDefault();
       if (this.container.options_view.state === 'hidden') {
         return this.container.toggle_options({
-          cb: function() {
-            return setTimeout(function() {
-              if (_this.container.state.options.profiler === false) {
-                _this.container.options_view.$('.option_description[data-option="profiler"]').click();
-              }
-              _this.container.options_view.$('.profiler_enabled').show();
-              return _this.container.options_view.$('.profiler_enabled').css('visibility', 'visible');
-            }, 100);
-          }
+          cb: (function(_this) {
+            return function() {
+              return setTimeout(function() {
+                if (_this.container.state.options.profiler === false) {
+                  _this.container.options_view.$('.option_description[data-option="profiler"]').click();
+                }
+                _this.container.options_view.$('.profiler_enabled').show();
+                return _this.container.options_view.$('.profiler_enabled').css('visibility', 'visible');
+              }, 100);
+            };
+          })(this)
         });
       } else {
         if (this.container.state.options.profiler === false) {
@@ -12550,7 +12131,7 @@ module('DataExplorerView', function() {
               this.$('.table_view').html(this.json_to_table(this.results));
             }
           } else {
-            if (!(this.results_array != null)) {
+            if (this.results_array == null) {
               this.results_array = [];
               this.results_array.push(this.results);
             }
@@ -12710,14 +12291,11 @@ module('DataExplorerView', function() {
 
   })(DataExplorerView.SharedResultView);
   this.OptionsView = (function(_super) {
-
     __extends(OptionsView, _super);
 
     function OptionsView() {
       this.render = __bind(this.render, this);
-
       this.toggle_option = __bind(this.toggle_option, this);
-
       this.initialize = __bind(this.initialize, this);
       return OptionsView.__super__.constructor.apply(this, arguments);
     }
@@ -12766,26 +12344,17 @@ module('DataExplorerView', function() {
 
   })(Backbone.View);
   this.HistoryView = (function(_super) {
-
     __extends(HistoryView, _super);
 
     function HistoryView() {
       this.clear_history = __bind(this.clear_history, this);
-
       this.add_query = __bind(this.add_query, this);
-
       this.delete_query = __bind(this.delete_query, this);
-
       this.load_query = __bind(this.load_query, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
-
       this.handle_mouseup = __bind(this.handle_mouseup, this);
-
       this.handle_mousemove = __bind(this.handle_mousemove, this);
-
       this.start_resize = __bind(this.start_resize, this);
       return HistoryView.__super__.constructor.apply(this, arguments);
     }
@@ -12872,20 +12441,21 @@ module('DataExplorerView', function() {
     };
 
     HistoryView.prototype.delete_query = function(event) {
-      var id, is_at_bottom, that,
-        _this = this;
+      var id, is_at_bottom, that;
       that = this;
       id = parseInt(this.$(event.target).data().id);
       this.history.splice(id, 1);
       window.localStorage.rethinkdb_history = JSON.stringify(this.history);
       is_at_bottom = this.$('.history_list').height() === $('.nano > .content').scrollTop() + $('.nano').height();
-      return this.$('#query_history_' + id).slideUp('fast', function() {
-        that.$(_this).remove();
-        that.render();
-        return that.container.adjust_collapsible_panel_height({
-          is_at_bottom: is_at_bottom
-        });
-      });
+      return this.$('#query_history_' + id).slideUp('fast', (function(_this) {
+        return function() {
+          that.$(_this).remove();
+          that.render();
+          return that.container.adjust_collapsible_panel_height({
+            is_at_bottom: is_at_bottom
+          });
+        };
+      })(this));
     };
 
     HistoryView.prototype.add_query = function(args) {
@@ -12942,22 +12512,16 @@ module('DataExplorerView', function() {
 
   })(Backbone.View);
   return this.DriverHandler = (function() {
-
     DriverHandler.prototype.ping_time = 5 * 60 * 1000;
 
     DriverHandler.prototype.query_error_template = Handlebars.templates['dataexplorer-query_error-template'];
 
     function DriverHandler(args) {
       this.destroy = __bind(this.destroy, this);
-
       this.ping = __bind(this.ping, this);
-
       this.connect_callback = __bind(this.connect_callback, this);
-
       this.connect = __bind(this.connect, this);
-
       this.hack_driver = __bind(this.hack_driver, this);
-
       var port;
       this.on_success = args.on_success;
       this.on_fail = args.on_fail;
@@ -12983,7 +12547,7 @@ module('DataExplorerView', function() {
     DriverHandler.prototype.hack_driver = function() {
       var TermBase, that;
       TermBase = r.expr(1).constructor.__super__.constructor.__super__;
-      if (!(TermBase.private_run != null)) {
+      if (TermBase.private_run == null) {
         that = this;
         TermBase.private_run = TermBase.run;
         return TermBase.run = function() {
@@ -12995,21 +12559,22 @@ module('DataExplorerView', function() {
     };
 
     DriverHandler.prototype.connect = function() {
-      var that;
+      var err, that;
       that = this;
       if (this.connection != null) {
         if (this.driver_status === 'connected') {
           try {
             this.connection.close();
-          } catch (err) {
-
+          } catch (_error) {
+            err = _error;
           }
         }
       }
       try {
         r.connect(this.server, this.connect_callback);
         return this.interval = setInterval(this.ping, this.ping_time);
-      } catch (err) {
+      } catch (_error) {
+        err = _error;
         return this.on_fail(err);
       }
     };
@@ -13032,10 +12597,11 @@ module('DataExplorerView', function() {
     };
 
     DriverHandler.prototype.destroy = function() {
+      var err;
       try {
         this.connection.close();
-      } catch (err) {
-
+      } catch (_error) {
+        err = _error;
       }
       return clearTimeout(this.interval);
     };
@@ -13047,20 +12613,14 @@ module('DataExplorerView', function() {
 
 module('Sidebar', function() {
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.issues_being_resolved = __bind(this.issues_being_resolved, this);
-
       this.remove_parent_alert = __bind(this.remove_parent_alert, this);
-
       this.toggle_showing_issues = __bind(this.toggle_showing_issues, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -13114,14 +12674,15 @@ module('Sidebar', function() {
     };
 
     Container.prototype.remove_parent_alert = function(event) {
-      var element,
-        _this = this;
+      var element;
       element = $(event.target).parent();
-      return element.slideUp('fast', function() {
-        element.remove();
-        _this.issues_being_resolved();
-        return _this.issues_banner.render();
-      });
+      return element.slideUp('fast', (function(_this) {
+        return function() {
+          element.remove();
+          _this.issues_being_resolved();
+          return _this.issues_banner.render();
+        };
+      })(this));
     };
 
     Container.prototype.issues_being_resolved = function() {
@@ -13147,14 +12708,11 @@ module('Sidebar', function() {
 
   })(Backbone.View);
   this.ClientConnectionStatus = (function(_super) {
-
     __extends(ClientConnectionStatus, _super);
 
     function ClientConnectionStatus() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return ClientConnectionStatus.__super__.constructor.apply(this, arguments);
     }
@@ -13192,14 +12750,11 @@ module('Sidebar', function() {
 
   })(Backbone.View);
   this.ServersConnected = (function(_super) {
-
     __extends(ServersConnected, _super);
 
     function ServersConnected() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return ServersConnected.__super__.constructor.apply(this, arguments);
     }
@@ -13244,16 +12799,12 @@ module('Sidebar', function() {
 
   })(Backbone.View);
   this.DatacentersConnected = (function(_super) {
-
     __extends(DatacentersConnected, _super);
 
     function DatacentersConnected() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.compute_connectivity = __bind(this.compute_connectivity, this);
-
       this.initialize = __bind(this.initialize, this);
       return DatacentersConnected.__super__.constructor.apply(this, arguments);
     }
@@ -13268,21 +12819,24 @@ module('Sidebar', function() {
     };
 
     DatacentersConnected.prototype.compute_connectivity = function() {
-      var conn, dc_visible,
-        _this = this;
+      var conn, dc_visible;
       dc_visible = [];
-      directory.each(function(m) {
-        var _m;
-        _m = machines.get(m.get('id'));
-        if (_m && _m.get('datacenter_uuid') && _m.get('datacenter_uuid') !== universe_datacenter.get('id')) {
-          return dc_visible.push(_m.get('datacenter_uuid'));
-        }
-      });
-      datacenters.each(function(dc) {
-        if (DataUtils.get_datacenter_machines(dc.get('id')).length === 0) {
-          return dc_visible.push(dc.get('id'));
-        }
-      });
+      directory.each((function(_this) {
+        return function(m) {
+          var _m;
+          _m = machines.get(m.get('id'));
+          if (_m && _m.get('datacenter_uuid') && _m.get('datacenter_uuid') !== universe_datacenter.get('id')) {
+            return dc_visible.push(_m.get('datacenter_uuid'));
+          }
+        };
+      })(this));
+      datacenters.each((function(_this) {
+        return function(dc) {
+          if (DataUtils.get_datacenter_machines(dc.get('id')).length === 0) {
+            return dc_visible.push(dc.get('id'));
+          }
+        };
+      })(this));
       dc_visible = _.uniq(dc_visible);
       conn = {
         datacenters_active: dc_visible.length,
@@ -13313,14 +12867,11 @@ module('Sidebar', function() {
 
   })(Backbone.View);
   this.Issues = (function(_super) {
-
     __extends(Issues, _super);
 
     function Issues() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return Issues.__super__.constructor.apply(this, arguments);
     }
@@ -13352,16 +12903,12 @@ module('Sidebar', function() {
 
   })(Backbone.View);
   return this.IssuesBanner = (function(_super) {
-
     __extends(IssuesBanner, _super);
 
     function IssuesBanner() {
       this.destroy = __bind(this.destroy, this);
-
       this.set_showing_issues = __bind(this.set_showing_issues, this);
-
       this.render = __bind(this.render, this);
-
       this.initialize = __bind(this.initialize, this);
       return IssuesBanner.__super__.constructor.apply(this, arguments);
     }
@@ -13415,7 +12962,6 @@ module('Sidebar', function() {
 
 module('ResolveIssuesView', function() {
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
@@ -13443,7 +12989,6 @@ module('ResolveIssuesView', function() {
 
   })(UIComponents.AbstractList);
   this.IssueList = (function(_super) {
-
     __extends(IssueList, _super);
 
     function IssueList() {
@@ -13460,7 +13005,6 @@ module('ResolveIssuesView', function() {
 
   })(UIComponents.AbstractList);
   this.DeclareMachineDeadModal = (function(_super) {
-
     __extends(DeclareMachineDeadModal, _super);
 
     function DeclareMachineDeadModal() {
@@ -13547,12 +13091,10 @@ module('ResolveIssuesView', function() {
 
   })(UIComponents.AbstractModal);
   this.ResolveNameConflictModal = (function(_super) {
-
     __extends(ResolveNameConflictModal, _super);
 
     function ResolveNameConflictModal() {
       this.on_success_ = __bind(this.on_success_, this);
-
       this.render = __bind(this.render, this);
       return ResolveNameConflictModal.__super__.constructor.apply(this, arguments);
     }
@@ -13588,7 +13130,6 @@ module('ResolveIssuesView', function() {
 
   })(Backbone.View);
   this.ResolveVClockModal = (function(_super) {
-
     __extends(ResolveVClockModal, _super);
 
     function ResolveVClockModal() {
@@ -13648,7 +13189,6 @@ module('ResolveIssuesView', function() {
 
   })(UIComponents.AbstractModal);
   this.ResolveUnsatisfiableGoal = (function(_super) {
-
     __extends(ResolveUnsatisfiableGoal, _super);
 
     function ResolveUnsatisfiableGoal() {
@@ -13730,7 +13270,6 @@ module('ResolveIssuesView', function() {
 
   })(UIComponents.AbstractModal);
   return this.Issue = (function(_super) {
-
     __extends(Issue, _super);
 
     function Issue() {
@@ -13753,8 +13292,7 @@ module('ResolveIssuesView', function() {
     Issue.prototype.unknown_issue_template = Handlebars.templates['resolve_issues-unknown-template'];
 
     Issue.prototype.render_machine_down = function(_template) {
-      var json, machine, masters, replicas,
-        _this = this;
+      var json, machine, masters, replicas;
       machine = machines.get(this.model.get('victim'));
       masters = [];
       replicas = [];
@@ -13805,43 +13343,47 @@ module('ResolveIssuesView', function() {
       };
       this.$('.solve-issue').off("click");
       this.$el.html(_template(json));
-      return this.$('.solve-issue').click(function() {
-        var declare_dead_modal;
-        declare_dead_modal = new ResolveIssuesView.DeclareMachineDeadModal;
-        return declare_dead_modal.render(machine);
-      });
+      return this.$('.solve-issue').click((function(_this) {
+        return function() {
+          var declare_dead_modal;
+          declare_dead_modal = new ResolveIssuesView.DeclareMachineDeadModal;
+          return declare_dead_modal.render(machine);
+        };
+      })(this));
     };
 
     Issue.prototype.render_name_conflict_issue = function(_template) {
-      var json,
-        _this = this;
+      var json;
       json = {
         name: this.model.get('contested_name'),
         type: this.model.get('contested_type'),
         num_contestants: this.model.get('contestants').length,
-        contestants: _.map(this.model.get('contestants'), function(uuid) {
-          return {
-            uuid: uuid,
-            type: _this.model.get('contested_type')
+        contestants: _.map(this.model.get('contestants'), (function(_this) {
+          return function(uuid) {
+            return {
+              uuid: uuid,
+              type: _this.model.get('contested_type')
+            };
           };
-        }),
+        })(this)),
         datetime: iso_date_from_unix_time(this.model.get('time')),
         critical: this.model.get('critical')
       };
       this.$el.html(_template(json));
-      return _.each(this.model.get('contestants'), function(uuid) {
-        return _this.$("a#rename_" + uuid).click(function(e) {
-          var rename_modal;
-          e.preventDefault();
-          rename_modal = new ResolveIssuesView.ResolveNameConflictModal();
-          return rename_modal.render(uuid, _this.model.get('contested_type'));
-        });
-      });
+      return _.each(this.model.get('contestants'), (function(_this) {
+        return function(uuid) {
+          return _this.$("a#rename_" + uuid).click(function(e) {
+            var rename_modal;
+            e.preventDefault();
+            rename_modal = new ResolveIssuesView.ResolveNameConflictModal();
+            return rename_modal.render(uuid, _this.model.get('contested_type'));
+          });
+        };
+      })(this));
     };
 
     Issue.prototype.render_logfile_write_issue = function(_template) {
-      var json, _machine,
-        _this = this;
+      var json, _machine;
       _machine = machines.get(this.model.get('location'));
       json = {
         datetime: iso_date_from_unix_time(this.model.get('time')),
@@ -13851,29 +13393,34 @@ module('ResolveIssuesView', function() {
       };
       this.$('.solve-issue').off("click");
       this.$el.html(_template(json));
-      return this.$('.solve-issue').click(function() {
-        var declare_dead_modal;
-        declare_dead_modal = new ResolveIssuesView.DeclareMachineDeadModal;
-        return declare_dead_modal.render(machines.get(_machine));
-      });
+      return this.$('.solve-issue').click((function(_this) {
+        return function() {
+          var declare_dead_modal;
+          declare_dead_modal = new ResolveIssuesView.DeclareMachineDeadModal;
+          return declare_dead_modal.render(machines.get(_machine));
+        };
+      })(this));
     };
 
     Issue.prototype.render_vclock_conflict = function(_template) {
-      var get_resolution_url, json, name, object_type, object_type_url,
-        _this = this;
-      get_resolution_url = function() {
-        if (_this.model.get('field') === 'auth_key') {
-          return 'ajax/auth/auth_key/resolve';
-        } else if (_this.model.get('object_type') === 'namespace') {
-          return 'ajax/semilattice/rdb_' + _this.model.get('object_type') + 's/' + _this.model.get('object_id') + '/' + _this.model.get('field') + '/resolve';
-        } else {
-          return 'ajax/semilattice/' + _this.model.get('object_type') + 's/' + _this.model.get('object_id') + '/' + _this.model.get('field') + '/resolve';
-        }
-      };
+      var get_resolution_url, json, name, object_type, object_type_url;
+      get_resolution_url = (function(_this) {
+        return function() {
+          if (_this.model.get('field') === 'auth_key') {
+            return 'ajax/auth/auth_key/resolve';
+          } else if (_this.model.get('object_type') === 'namespace') {
+            return 'ajax/semilattice/rdb_' + _this.model.get('object_type') + 's/' + _this.model.get('object_id') + '/' + _this.model.get('field') + '/resolve';
+          } else {
+            return 'ajax/semilattice/' + _this.model.get('object_type') + 's/' + _this.model.get('object_id') + '/' + _this.model.get('field') + '/resolve';
+          }
+        };
+      })(this);
       if (this.contestants != null) {
-        _.each(this.contestants, function(contestant) {
-          return _this.$('#resolve_' + contestant.contestant_id).off('click');
-        });
+        _.each(this.contestants, (function(_this) {
+          return function(contestant) {
+            return _this.$('#resolve_' + contestant.contestant_id).off('click');
+          };
+        })(this));
       }
       if (this.model.get('field') === 'blueprint') {
         this.contestants = [];
@@ -13883,14 +13430,16 @@ module('ResolveIssuesView', function() {
           type: 'GET',
           contentType: 'application/json',
           async: false,
-          success: function(response) {
-            return _this.contestants = _.map(response, function(x, index) {
-              return {
-                value: JSON.stringify(x[1]),
-                contestant_id: index
-              };
-            });
-          }
+          success: (function(_this) {
+            return function(response) {
+              return _this.contestants = _.map(response, function(x, index) {
+                return {
+                  value: JSON.stringify(x[1]),
+                  contestant_id: index
+                };
+              });
+            };
+          })(this)
         });
       }
       switch (this.model.get('object_type')) {
@@ -13947,19 +13496,20 @@ module('ResolveIssuesView', function() {
         contestants: this.contestants
       };
       this.$el.html(_template(json));
-      return _.each(this.contestants, function(contestant) {
-        return _this.$('#resolve_' + contestant.contestant_id).click(function(event) {
-          var resolve_modal;
-          event.preventDefault();
-          resolve_modal = new ResolveIssuesView.ResolveVClockModal;
-          return resolve_modal.render(JSON.parse(contestant.value), get_resolution_url());
-        });
-      });
+      return _.each(this.contestants, (function(_this) {
+        return function(contestant) {
+          return _this.$('#resolve_' + contestant.contestant_id).click(function(event) {
+            var resolve_modal;
+            event.preventDefault();
+            resolve_modal = new ResolveIssuesView.ResolveVClockModal;
+            return resolve_modal.render(JSON.parse(contestant.value), get_resolution_url());
+          });
+        };
+      })(this));
     };
 
     Issue.prototype.render_unsatisfiable_goals = function(_template) {
-      var datacenter_id, datacenter_name, extra_replicas_accross_cluster, found_machine, json, machine, namespace, num_active_datacenters, num_replicas_requested, number_machines_in_datacenter, number_machines_requested_by_universe, number_machines_universe_can_use_if_no_known_issues, number_replicas, that, _i, _len, _ref, _ref1,
-        _this = this;
+      var datacenter_id, datacenter_name, extra_replicas_accross_cluster, found_machine, json, machine, namespace, num_active_datacenters, num_replicas_requested, number_machines_in_datacenter, number_machines_requested_by_universe, number_machines_universe_can_use_if_no_known_issues, number_replicas, that, _i, _len, _ref, _ref1;
       json = {
         datetime: iso_date_from_unix_time(this.model.get('time')),
         critical: this.model.get('critical'),
@@ -13968,7 +13518,7 @@ module('ResolveIssuesView', function() {
         datacenters_with_issues: []
       };
       namespace = namespaces.get(this.model.get('namespace_id'));
-      if (this.model.get('primary_datacenter') !== universe_datacenter.get('id') && !(datacenters.get(this.model.get('primary_datacenter')) != null)) {
+      if (this.model.get('primary_datacenter') !== universe_datacenter.get('id') && (datacenters.get(this.model.get('primary_datacenter')) == null)) {
         json.no_primary = true;
       } else {
         number_machines_universe_can_use_if_no_known_issues = machines.length;
@@ -13980,7 +13530,7 @@ module('ResolveIssuesView', function() {
           if (datacenter_id === this.model.get('primary_datacenter')) {
             number_replicas++;
           }
-          if (!(datacenters.get(datacenter_id) != null) && datacenter_id !== universe_datacenter.get('id')) {
+          if ((datacenters.get(datacenter_id) == null) && datacenter_id !== universe_datacenter.get('id')) {
             if (this.model.get('replica_affinities')[datacenter_id] !== 0) {
               json.datacenters_with_issues.push({
                 datacenter_removed: true,
@@ -14012,7 +13562,7 @@ module('ResolveIssuesView', function() {
             }
           }
         }
-        if (!(this.model.get('replica_affinities')[this.model.get('primary_datacenter')] != null) && this.model.get('primary_datacenter') !== universe_datacenter.get('id')) {
+        if ((this.model.get('replica_affinities')[this.model.get('primary_datacenter')] == null) && this.model.get('primary_datacenter') !== universe_datacenter.get('id')) {
           number_replicas = 1;
           found_machine = false;
           _ref = machines.models;
@@ -14055,7 +13605,7 @@ module('ResolveIssuesView', function() {
               num_active_datacenters++;
             }
           }
-          if ((!(this.model.get('replica_affinities')[this.model.get('primary_datacenter')] != null)) || this.model.get('replica_affinities')[this.model.get('primary_datacenter')] === 0) {
+          if ((this.model.get('replica_affinities')[this.model.get('primary_datacenter')] == null) || this.model.get('replica_affinities')[this.model.get('primary_datacenter')] === 0) {
             num_active_datacenters++;
           }
           if (num_active_datacenters === 1) {
@@ -14096,12 +13646,14 @@ module('ResolveIssuesView', function() {
       }
       this.$el.html(_template(json));
       if (json.can_solve_issue) {
-        return this.$('.solve-issue').click(function(event) {
-          var resolve_modal;
-          event.preventDefault();
-          resolve_modal = new ResolveIssuesView.ResolveUnsatisfiableGoal(namespace, json.datacenters_with_issues, !(json.extra_replicas_accross_cluster != null));
-          return resolve_modal.render();
-        });
+        return this.$('.solve-issue').click((function(_this) {
+          return function(event) {
+            var resolve_modal;
+            event.preventDefault();
+            resolve_modal = new ResolveIssuesView.ResolveUnsatisfiableGoal(namespace, json.datacenters_with_issues, json.extra_replicas_accross_cluster == null);
+            return resolve_modal.render();
+          };
+        })(this));
       } else {
         that = this;
         return this.$('.try-solve-issue').click(function() {
@@ -14184,26 +13736,17 @@ module('ResolveIssuesView', function() {
 
 module('LogView', function() {
   this.Container = (function(_super) {
-
     __extends(Container, _super);
 
     function Container() {
       this.destroy = __bind(this.destroy, this);
-
       this.parse_new_log = __bind(this.parse_new_log, this);
-
       this.update_log_entries = __bind(this.update_log_entries, this);
-
       this.render_header = __bind(this.render_header, this);
-
       this.check_for_new_updates = __bind(this.check_for_new_updates, this);
-
       this.next_entries = __bind(this.next_entries, this);
-
       this.parse_log = __bind(this.parse_log, this);
-
       this.fetch_log_entries = __bind(this.fetch_log_entries, this);
-
       this.render = __bind(this.render, this);
       return Container.__super__.constructor.apply(this, arguments);
     }
@@ -14281,7 +13824,7 @@ module('LogView', function() {
       this.max_timestamp = 0;
       for (machine_uuid in log_data_from_server) {
         log_entries = log_data_from_server[machine_uuid];
-        if ((this.filter != null) && !(this.filter[machine_uuid] != null)) {
+        if ((this.filter != null) && (this.filter[machine_uuid] == null)) {
           continue;
         }
         if (log_entries.length > 0) {
@@ -14297,7 +13840,7 @@ module('LogView', function() {
             log = _ref[i];
             is_same_log = true;
             for (attribute in log.attributes) {
-              if (!(json.attribute != null) || log.get(attribute) !== json.attribute) {
+              if ((json.attribute == null) || log.get(attribute) !== json.attribute) {
                 is_same_log = false;
               }
             }
@@ -14355,23 +13898,24 @@ module('LogView', function() {
     };
 
     Container.prototype.check_for_new_updates = function() {
-      var min_timestamp, route, _ref,
-        _this = this;
+      var min_timestamp, route, _ref;
       min_timestamp = (_ref = this.current_logs[0]) != null ? _ref.get('timestamp') : void 0;
       if (min_timestamp != null) {
         route = this.route + ("&min_timestamp=" + min_timestamp);
         this.num_new_entries = 0;
-        return $.getJSON(route, function(log_data_from_server) {
-          var log_entries, machine_uuid;
-          for (machine_uuid in log_data_from_server) {
-            log_entries = log_data_from_server[machine_uuid];
-            if ((_this.filter != null) && !(_this.filter[machine_uuid] != null)) {
-              continue;
+        return $.getJSON(route, (function(_this) {
+          return function(log_data_from_server) {
+            var log_entries, machine_uuid;
+            for (machine_uuid in log_data_from_server) {
+              log_entries = log_data_from_server[machine_uuid];
+              if ((_this.filter != null) && (_this.filter[machine_uuid] == null)) {
+                continue;
+              }
+              _this.num_new_entries += log_entries.length;
             }
-            _this.num_new_entries += log_entries.length;
-          }
-          return _this.render_header();
-        });
+            return _this.render_header();
+          };
+        })(this));
       }
     };
 
@@ -14408,7 +13952,7 @@ module('LogView', function() {
       var entry, i, json, log, log_entries, log_saved, machine_uuid, rendered_view, view, _i, _j, _k, _len, _len1, _ref, _ref1;
       for (machine_uuid in log_data_from_server) {
         log_entries = log_data_from_server[machine_uuid];
-        if ((this.filter != null) && !(this.filter[machine_uuid] != null)) {
+        if ((this.filter != null) && (this.filter[machine_uuid] == null)) {
           continue;
         }
         for (_i = 0, _len = log_entries.length; _i < _len; _i++) {
@@ -14456,16 +14000,12 @@ module('LogView', function() {
 
   })(Backbone.View);
   return this.LogEntry = (function(_super) {
-
     __extends(LogEntry, _super);
 
     function LogEntry() {
       this.format_msg_small = __bind(this.format_msg_small, this);
-
       this.format_msg = __bind(this.format_msg, this);
-
       this.render = __bind(this.render, this);
-
       this.display_details = __bind(this.display_details, this);
       return LogEntry.__super__.constructor.apply(this, arguments);
     }
@@ -15033,12 +14573,10 @@ module('Vis', function() {
     return res;
   };
   this.OpsPlotLegend = (function(_super) {
-
     __extends(OpsPlotLegend, _super);
 
     function OpsPlotLegend() {
       this.destroy = __bind(this.destroy, this);
-
       this.initialize = __bind(this.initialize, this);
       return OpsPlotLegend.__super__.constructor.apply(this, arguments);
     }
@@ -15048,17 +14586,18 @@ module('Vis', function() {
     OpsPlotLegend.prototype.template = Handlebars.templates['ops_plot_legend-template'];
 
     OpsPlotLegend.prototype.initialize = function(_read_metric, _write_metric, _context) {
-      var _this = this;
       log_initial('(initializing) ops plot legend');
       this.context = _context;
       this.reads = null;
       this.writes = null;
       this.read_metric = _read_metric;
-      return this.read_metric.on('change', function() {
-        _this.reads = _read_metric.valueAt(_this.context.size() - 1);
-        _this.writes = _write_metric.valueAt(_this.context.size() - 1);
-        return _this.render();
-      });
+      return this.read_metric.on('change', (function(_this) {
+        return function() {
+          _this.reads = _read_metric.valueAt(_this.context.size() - 1);
+          _this.writes = _write_metric.valueAt(_this.context.size() - 1);
+          return _this.render();
+        };
+      })(this));
     };
 
     OpsPlotLegend.prototype.render = function() {
@@ -15079,14 +14618,11 @@ module('Vis', function() {
 
   })(Backbone.View);
   this.OpsPlot = (function(_super) {
-
     __extends(OpsPlot, _super);
 
     function OpsPlot() {
       this.destroy = __bind(this.destroy, this);
-
       this.render = __bind(this.render, this);
-
       this.make_metric = __bind(this.make_metric, this);
       return OpsPlot.__super__.constructor.apply(this, arguments);
     }
@@ -15116,21 +14652,26 @@ module('Vis', function() {
     OpsPlot.prototype.VAXIS_MINOR_SUBDIVISION_COUNT = 2;
 
     OpsPlot.prototype.make_metric = function(name) {
-      var cache, _metric,
-        _this = this;
-      cache = new Vis.InterpolatingCache(this.WIDTH_IN_PIXELS, this.WIDTH_IN_PIXELS / this.WIDTH_IN_SECONDS, (function() {
-        return _this.stats_fn()[name];
-      }));
-      _metric = function(start, stop, step, callback) {
-        var num_desired;
-        start = +start;
-        stop = +stop;
-        num_desired = (stop - start) / step;
-        return callback(null, cache.step(num_desired));
-      };
-      this.context.on('focus', function(i) {
-        return d3.selectAll('.value').style('right', i === null ? null : _this.context.size() - i + 'px');
-      });
+      var cache, _metric;
+      cache = new Vis.InterpolatingCache(this.WIDTH_IN_PIXELS, this.WIDTH_IN_PIXELS / this.WIDTH_IN_SECONDS, ((function(_this) {
+        return function() {
+          return _this.stats_fn()[name];
+        };
+      })(this)));
+      _metric = (function(_this) {
+        return function(start, stop, step, callback) {
+          var num_desired;
+          start = +start;
+          stop = +stop;
+          num_desired = (stop - start) / step;
+          return callback(null, cache.step(num_desired));
+        };
+      })(this);
+      this.context.on('focus', (function(_this) {
+        return function(i) {
+          return d3.selectAll('.value').style('right', i === null ? null : _this.context.size() - i + 'px');
+        };
+      })(this));
       return this.context.metric(_metric, name);
     };
 
@@ -15178,7 +14719,6 @@ module('Vis', function() {
     };
 
     OpsPlot.prototype.render = function() {
-      var _this = this;
       log_render('(rendering) ops plot');
       this.$el.html(this.template({
         cluster: this.type === 'cluster',
@@ -15188,16 +14728,18 @@ module('Vis', function() {
         table: this.type === 'table'
       }));
       this.sensible_plot = this.context.sensible().height(this.HEIGHT_IN_PIXELS).colors(["#983434", "#729E51"]).extent([0, this.HEIGHT_IN_UNITS]);
-      d3.select(this.$('.plot')[0]).call(function(div) {
-        div.data([[_this.read_stats, _this.write_stats]]);
-        _this.selection = div.append('div').attr('class', 'chart');
-        _this.selection.call(_this.sensible_plot);
-        div.append('div').attr('class', 'haxis').call(_this.context.axis().orient('bottom').ticks(d3.time.seconds, _this.HAXIS_TICK_INTERVAL_IN_SECS).tickSubdivide(_this.HAXIS_MINOR_SUBDIVISION_COUNT - 1).tickSize(6, 3, 0).tickFormat(d3.time.format('%I:%M:%S')));
-        div.append('div').attr('class', 'hgrid').call(_this.context.axis().orient('bottom').ticks(d3.time.seconds, _this.HAXIS_TICK_INTERVAL_IN_SECS).tickSize(_this.HEIGHT_IN_PIXELS + 4, 0, 0).tickFormat(""));
-        div.append('div').attr('class', 'vaxis').call(_this.context.axis(_this.HEIGHT_IN_PIXELS, [_this.read_stats, _this.write_stats], _this.sensible_plot.scale()).orient('left').ticks(_this.VAXIS_TICK_SUBDIVISION_COUNT).tickSubdivide(_this.VAXIS_MINOR_SUBDIVISION_COUNT - 1).tickSize(6, 3, 0).tickFormat(Vis.num_formatter));
-        div.append('div').attr('class', 'vgrid').call(_this.context.axis(_this.HEIGHT_IN_PIXELS, [_this.read_stats, _this.write_stats], _this.sensible_plot.scale()).orient('left').ticks(_this.VAXIS_TICK_SUBDIVISION_COUNT).tickSize(-(_this.WIDTH_IN_PIXELS + 35), 0, 0).tickFormat(""));
-        return _this.$('.legend-container').html(_this.legend.render().el);
-      });
+      d3.select(this.$('.plot')[0]).call((function(_this) {
+        return function(div) {
+          div.data([[_this.read_stats, _this.write_stats]]);
+          _this.selection = div.append('div').attr('class', 'chart');
+          _this.selection.call(_this.sensible_plot);
+          div.append('div').attr('class', 'haxis').call(_this.context.axis().orient('bottom').ticks(d3.time.seconds, _this.HAXIS_TICK_INTERVAL_IN_SECS).tickSubdivide(_this.HAXIS_MINOR_SUBDIVISION_COUNT - 1).tickSize(6, 3, 0).tickFormat(d3.time.format('%I:%M:%S')));
+          div.append('div').attr('class', 'hgrid').call(_this.context.axis().orient('bottom').ticks(d3.time.seconds, _this.HAXIS_TICK_INTERVAL_IN_SECS).tickSize(_this.HEIGHT_IN_PIXELS + 4, 0, 0).tickFormat(""));
+          div.append('div').attr('class', 'vaxis').call(_this.context.axis(_this.HEIGHT_IN_PIXELS, [_this.read_stats, _this.write_stats], _this.sensible_plot.scale()).orient('left').ticks(_this.VAXIS_TICK_SUBDIVISION_COUNT).tickSubdivide(_this.VAXIS_MINOR_SUBDIVISION_COUNT - 1).tickSize(6, 3, 0).tickFormat(Vis.num_formatter));
+          div.append('div').attr('class', 'vgrid').call(_this.context.axis(_this.HEIGHT_IN_PIXELS, [_this.read_stats, _this.write_stats], _this.sensible_plot.scale()).orient('left').ticks(_this.VAXIS_TICK_SUBDIVISION_COUNT).tickSize(-(_this.WIDTH_IN_PIXELS + 35), 0, 0).tickFormat(""));
+          return _this.$('.legend-container').html(_this.legend.render().el);
+        };
+      })(this));
       return this;
     };
 
@@ -15211,7 +14753,6 @@ module('Vis', function() {
 
   })(Backbone.View);
   this.SizeBoundedCache = (function() {
-
     function SizeBoundedCache(num_data_points, _stat) {
       this.values = [];
       this.ndp = num_data_points;
@@ -15253,7 +14794,6 @@ module('Vis', function() {
 
   })();
   return this.InterpolatingCache = (function() {
-
     function InterpolatingCache(num_data_points, num_interpolation_points, get_data_fn) {
       var i, _i, _ref;
       this.ndp = num_data_points;
@@ -15311,12 +14851,10 @@ module('Vis', function() {
 });
 
 Database = (function(_super) {
-
   __extends(Database, _super);
 
   function Database() {
     this.get_stats_for_performance = __bind(this.get_stats_for_performance, this);
-
     this.get_namespaces = __bind(this.get_namespaces, this);
     return Database.__super__.constructor.apply(this, arguments);
   }
@@ -15345,7 +14883,7 @@ Database = (function(_super) {
       namespace = _ref[_i];
       if (namespace.get('database') === this.get('id')) {
         _s = namespace.get_stats();
-        if (!(_s != null)) {
+        if (_s == null) {
           continue;
         }
         __s.keys_read += _s.keys_read;
@@ -15360,26 +14898,17 @@ Database = (function(_super) {
 })(Backbone.Model);
 
 Namespace = (function(_super) {
-
   __extends(Namespace, _super);
 
   function Namespace() {
     this.get_durability = __bind(this.get_durability, this);
-
     this.get_stats_for_performance = __bind(this.get_stats_for_performance, this);
-
     this.get_stats = __bind(this.get_stats, this);
-
     this.splitpoint_between = __bind(this.splitpoint_between, this);
-
     this.compute_shard_rows_approximation = __bind(this.compute_shard_rows_approximation, this);
-
     this.clear_timeout = __bind(this.clear_timeout, this);
-
     this.load_key_distr = __bind(this.load_key_distr, this);
-
     this.compare_keys = __bind(this.compare_keys, this);
-
     this.compute_shards = __bind(this.compute_shards, this);
     return Namespace.__super__.constructor.apply(this, arguments);
   }
@@ -15456,29 +14985,32 @@ Namespace = (function(_super) {
   };
 
   Namespace.prototype.load_key_distr = function() {
-    var _this = this;
     return $.ajax({
       processData: false,
       url: "ajax/distribution?namespace=" + (this.get('id')) + "&depth=2",
       type: 'GET',
       contentType: 'application/json',
-      success: function(distr_data) {
-        var count, distr_keys, key;
-        distr_keys = [];
-        for (key in distr_data) {
-          count = distr_data[key];
-          distr_keys.push(key);
-        }
-        distr_keys.sort(_this.compare_keys);
-        _this.set('key_distr_sorted', distr_keys);
-        _this.set('key_distr', distr_data);
-        return _this.timeout = setTimeout(_this.load_key_distr, 5000);
-      },
-      error: function() {
-        if (namespaces.get(_this.get('id')) != null) {
-          return _this.timeout = setTimeout(_this.load_key_distr, 1000);
-        }
-      }
+      success: (function(_this) {
+        return function(distr_data) {
+          var count, distr_keys, key;
+          distr_keys = [];
+          for (key in distr_data) {
+            count = distr_data[key];
+            distr_keys.push(key);
+          }
+          distr_keys.sort(_this.compare_keys);
+          _this.set('key_distr_sorted', distr_keys);
+          _this.set('key_distr', distr_data);
+          return _this.timeout = setTimeout(_this.load_key_distr, 5000);
+        };
+      })(this),
+      error: (function(_this) {
+        return function() {
+          if (namespaces.get(_this.get('id')) != null) {
+            return _this.timeout = setTimeout(_this.load_key_distr, 1000);
+          }
+        };
+      })(this)
     });
   };
 
@@ -15491,7 +15023,7 @@ Namespace = (function(_super) {
   Namespace.prototype.compute_shard_rows_approximation = function(shard) {
     var count, end_key, key, start_key, _i, _len, _ref;
     shard = $.parseJSON(shard);
-    if (!(this.get('key_distr') != null) || !(this.get('key_distr_sorted') != null)) {
+    if ((this.get('key_distr') == null) || (this.get('key_distr_sorted') == null)) {
       return null;
     }
     start_key = shard[0];
@@ -15518,42 +15050,43 @@ Namespace = (function(_super) {
   };
 
   Namespace.prototype.get_stats = function() {
-    var __s,
-      _this = this;
+    var __s;
     __s = {
       keys_read: 0,
       keys_set: 0
     };
-    _.each(DataUtils.get_namespace_machines(this.get('id')), function(mid) {
-      var keys_read, keys_set, serializer, serializer_id, _m, _results, _s;
-      _m = machines.get(mid);
-      if (_m != null) {
-        _s = _m.get_stats()[_this.get('id')];
-      }
-      if ((_s != null ? _s.serializers : void 0) != null) {
-        keys_read = 0;
-        keys_set = 0;
-        _results = [];
-        for (serializer_id in _s.serializers) {
-          serializer = _s.serializers[serializer_id];
-          if (serializer['btree-primary'] != null) {
-            keys_read = parseFloat(serializer['btree-primary'].keys_read);
-            keys_set = parseFloat(serializer['btree-primary'].keys_set);
-            if (!isNaN(keys_read)) {
-              __s.keys_read += keys_read;
-            }
-            if (!isNaN(keys_set)) {
-              _results.push(__s.keys_set += keys_set);
+    _.each(DataUtils.get_namespace_machines(this.get('id')), (function(_this) {
+      return function(mid) {
+        var keys_read, keys_set, serializer, serializer_id, _m, _results, _s;
+        _m = machines.get(mid);
+        if (_m != null) {
+          _s = _m.get_stats()[_this.get('id')];
+        }
+        if ((_s != null ? _s.serializers : void 0) != null) {
+          keys_read = 0;
+          keys_set = 0;
+          _results = [];
+          for (serializer_id in _s.serializers) {
+            serializer = _s.serializers[serializer_id];
+            if (serializer['btree-primary'] != null) {
+              keys_read = parseFloat(serializer['btree-primary'].keys_read);
+              keys_set = parseFloat(serializer['btree-primary'].keys_set);
+              if (!isNaN(keys_read)) {
+                __s.keys_read += keys_read;
+              }
+              if (!isNaN(keys_set)) {
+                _results.push(__s.keys_set += keys_set);
+              } else {
+                _results.push(void 0);
+              }
             } else {
               _results.push(void 0);
             }
-          } else {
-            _results.push(void 0);
           }
+          return _results;
         }
-        return _results;
-      }
-    });
+      };
+    })(this));
     return __s;
   };
 
@@ -15602,16 +15135,12 @@ Namespace = (function(_super) {
 })(Backbone.Model);
 
 Datacenter = (function(_super) {
-
   __extends(Datacenter, _super);
 
   function Datacenter() {
     this.get_stats_for_performance = __bind(this.get_stats_for_performance, this);
-
     this.get_stats = __bind(this.get_stats, this);
-
     this.get_machines = __bind(this.get_machines, this);
-
     this.compute_num_machines_not_used_by_other_datacenters = __bind(this.compute_num_machines_not_used_by_other_datacenters, this);
     return Datacenter.__super__.constructor.apply(this, arguments);
   }
@@ -15631,10 +15160,11 @@ Datacenter = (function(_super) {
   };
 
   Datacenter.prototype.get_machines = function() {
-    var _this = this;
-    return machines.filter(function(machine) {
-      return machine.get('datacenter_uuid') === _this.get('id');
-    });
+    return machines.filter((function(_this) {
+      return function(machine) {
+        return machine.get('datacenter_uuid') === _this.get('id');
+      };
+    })(this));
   };
 
   Datacenter.prototype.get_stats = function() {
@@ -15662,12 +15192,12 @@ Datacenter = (function(_super) {
     _ref = namespaces.models;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       namespace = _ref[_i];
-      if (!(namespace.get('blueprint') != null) || !(namespace.get('blueprint').peers_roles != null)) {
+      if ((namespace.get('blueprint') == null) || (namespace.get('blueprint').peers_roles == null)) {
         continue;
       }
       for (machine_id in namespace.get('blueprint').peers_roles) {
         machine = machines.get(machine_id);
-        if (!(machine != null)) {
+        if (machine == null) {
           continue;
         }
         has_data = false;
@@ -15685,7 +15215,7 @@ Datacenter = (function(_super) {
       }
       if (has_data === true) {
         _s = namespace.get_stats();
-        if (!(_s != null)) {
+        if (_s == null) {
           continue;
         }
         __s.keys_read += _s.keys_read;
@@ -15709,20 +15239,14 @@ Datacenter = (function(_super) {
 })(Backbone.Model);
 
 Machine = (function(_super) {
-
   __extends(Machine, _super);
 
   function Machine() {
     this.get_data_for_moving = __bind(this.get_data_for_moving, this);
-
     this.is_master_for_namespaces = __bind(this.is_master_for_namespaces, this);
-
     this.is_reachable = __bind(this.is_reachable, this);
-
     this.get_stats_for_performance = __bind(this.get_stats_for_performance, this);
-
     this.get_used_disk_space = __bind(this.get_used_disk_space, this);
-
     this.get_stats = __bind(this.get_stats, this);
     return Machine.__super__.constructor.apply(this, arguments);
   }
@@ -15730,10 +15254,10 @@ Machine = (function(_super) {
   Machine.prototype.get_stats = function() {
     var stats;
     stats = this.get('stats');
-    if (!(stats != null)) {
+    if (stats == null) {
       stats = {};
     }
-    if (!(stats.proc != null)) {
+    if (stats.proc == null) {
       stats.proc = {};
     }
     return stats;
@@ -15767,7 +15291,7 @@ Machine = (function(_super) {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       namespace = _ref[_i];
       _s = namespace.get_stats();
-      if (!(_s != null)) {
+      if (_s == null) {
         continue;
       }
       if (namespace.get('id') in stats_full) {
@@ -15785,36 +15309,38 @@ Machine = (function(_super) {
   };
 
   Machine.prototype.is_master_for_namespaces = function() {
-    var _this = this;
-    return namespaces.filter(function(namespace) {
-      var machine_uuid, peer_roles, role, shard, _ref;
-      _ref = namespace.get('blueprint').peers_roles;
-      for (machine_uuid in _ref) {
-        peer_roles = _ref[machine_uuid];
-        if (machine_uuid === _this.get('id')) {
-          for (shard in peer_roles) {
-            role = peer_roles[shard];
-            if (role === 'role_primary') {
-              return true;
+    return namespaces.filter((function(_this) {
+      return function(namespace) {
+        var machine_uuid, peer_roles, role, shard, _ref;
+        _ref = namespace.get('blueprint').peers_roles;
+        for (machine_uuid in _ref) {
+          peer_roles = _ref[machine_uuid];
+          if (machine_uuid === _this.get('id')) {
+            for (shard in peer_roles) {
+              role = peer_roles[shard];
+              if (role === 'role_primary') {
+                return true;
+              }
             }
           }
         }
-      }
-    });
+      };
+    })(this));
   };
 
   Machine.prototype.get_data_for_moving = function() {
-    var data, dc_uuid, namespace, namespaces_with_critical_issue, namespaces_with_unsatisfiable_goals, num_machines_in_dc, num_replicas, _i, _len, _ref,
-      _this = this;
+    var data, dc_uuid, namespace, namespaces_with_critical_issue, namespaces_with_unsatisfiable_goals, num_machines_in_dc, num_replicas, _i, _len, _ref;
     data = {};
     dc_uuid = this.get('datacenter_uuid');
     if (dc_uuid !== universe_datacenter.get('id')) {
       num_machines_in_dc = 0;
-      machines.each(function(machine) {
-        if (dc_uuid === machine.get('datacenter_uuid')) {
-          return num_machines_in_dc++;
-        }
-      });
+      machines.each((function(_this) {
+        return function(machine) {
+          if (dc_uuid === machine.get('datacenter_uuid')) {
+            return num_machines_in_dc++;
+          }
+        };
+      })(this));
       namespaces_with_critical_issue = [];
       namespaces_with_unsatisfiable_goals = [];
       _ref = namespaces.models;
@@ -15870,12 +15396,10 @@ Machine = (function(_super) {
 })(Backbone.Model);
 
 LogEntry = (function(_super) {
-
   __extends(LogEntry, _super);
 
   function LogEntry() {
     this.get_formatted_message = __bind(this.get_formatted_message, this);
-
     this.get_iso_8601_timestamp = __bind(this.get_iso_8601_timestamp, this);
     return LogEntry.__super__.constructor.apply(this, arguments);
   }
@@ -15894,7 +15418,6 @@ LogEntry = (function(_super) {
 })(Backbone.Model);
 
 Issue = (function(_super) {
-
   __extends(Issue, _super);
 
   function Issue() {
@@ -15906,7 +15429,6 @@ Issue = (function(_super) {
 })(Backbone.Model);
 
 IssueRedundancy = (function(_super) {
-
   __extends(IssueRedundancy, _super);
 
   function IssueRedundancy() {
@@ -15918,7 +15440,6 @@ IssueRedundancy = (function(_super) {
 })(Backbone.Model);
 
 Progress = (function(_super) {
-
   __extends(Progress, _super);
 
   function Progress() {
@@ -15930,7 +15451,6 @@ Progress = (function(_super) {
 })(Backbone.Model);
 
 MachineAttributes = (function(_super) {
-
   __extends(MachineAttributes, _super);
 
   function MachineAttributes() {
@@ -15942,7 +15462,6 @@ MachineAttributes = (function(_super) {
 })(Backbone.Model);
 
 ConnectionStatus = (function(_super) {
-
   __extends(ConnectionStatus, _super);
 
   function ConnectionStatus() {
@@ -15954,7 +15473,6 @@ ConnectionStatus = (function(_super) {
 })(Backbone.Model);
 
 ComputedCluster = (function(_super) {
-
   __extends(ComputedCluster, _super);
 
   function ComputedCluster() {
@@ -15978,7 +15496,7 @@ ComputedCluster = (function(_super) {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       namespace = _ref[_i];
       _s = namespace.get_stats();
-      if (!(_s != null)) {
+      if (_s == null) {
         continue;
       }
       __s.keys_read += _s.keys_read;
@@ -15997,7 +15515,6 @@ ComputedCluster = (function(_super) {
 })(Backbone.Model);
 
 Databases = (function(_super) {
-
   __extends(Databases, _super);
 
   function Databases() {
@@ -16013,7 +15530,6 @@ Databases = (function(_super) {
 })(Backbone.Collection);
 
 Namespaces = (function(_super) {
-
   __extends(Namespaces, _super);
 
   function Namespaces() {
@@ -16029,7 +15545,6 @@ Namespaces = (function(_super) {
 })(Backbone.Collection);
 
 Datacenters = (function(_super) {
-
   __extends(Datacenters, _super);
 
   function Datacenters() {
@@ -16045,7 +15560,6 @@ Datacenters = (function(_super) {
 })(Backbone.Collection);
 
 Machines = (function(_super) {
-
   __extends(Machines, _super);
 
   function Machines() {
@@ -16061,7 +15575,6 @@ Machines = (function(_super) {
 })(Backbone.Collection);
 
 Issues = (function(_super) {
-
   __extends(Issues, _super);
 
   function Issues() {
@@ -16077,7 +15590,6 @@ Issues = (function(_super) {
 })(Backbone.Collection);
 
 IssuesRedundancy = (function(_super) {
-
   __extends(IssuesRedundancy, _super);
 
   function IssuesRedundancy() {
@@ -16167,7 +15679,6 @@ IssuesRedundancy = (function(_super) {
 })(Backbone.Collection);
 
 ProgressList = (function(_super) {
-
   __extends(ProgressList, _super);
 
   function ProgressList() {
@@ -16183,7 +15694,6 @@ ProgressList = (function(_super) {
 })(Backbone.Collection);
 
 Directory = (function(_super) {
-
   __extends(Directory, _super);
 
   function Directory() {
@@ -16200,18 +15710,13 @@ Directory = (function(_super) {
 
 module('DataUtils', function() {
   this.Shard = (function(_super) {
-
     __extends(Shard, _super);
 
     function Shard() {
       this.destroy = __bind(this.destroy, this);
-
       this.set_uuids = __bind(this.set_uuids, this);
-
       this.initialize = __bind(this.initialize, this);
-
       this.get_secondary_uuids = __bind(this.get_secondary_uuids, this);
-
       this.get_primary_uuid = __bind(this.get_primary_uuid, this);
       return Shard.__super__.constructor.apply(this, arguments);
     }
@@ -16253,16 +15758,12 @@ module('DataUtils', function() {
 
   })(Backbone.Model);
   this.Shards = (function(_super) {
-
     __extends(Shards, _super);
 
     function Shards() {
       this.destroy = __bind(this.destroy, this);
-
       this.compute_shards = __bind(this.compute_shards, this);
-
       this.compute_shards_without_args = __bind(this.compute_shards_without_args, this);
-
       this.initialize = __bind(this.initialize, this);
       return Shards.__super__.constructor.apply(this, arguments);
     }
@@ -16325,20 +15826,23 @@ module('DataUtils', function() {
     return json;
   };
   this.get_datacenter_reachability = function(datacenter_uuid) {
-    var json, last_seen, machine, reachable, total, _i, _last_seen, _len, _ref,
-      _this = this;
-    total = (_.filter(machines.models, function(m) {
-      return m.get('datacenter_uuid') === datacenter_uuid;
-    })).length;
-    reachable = (_.filter(directory.models, function(m) {
-      var _m;
-      _m = machines.get(m.get('id'));
-      if (_m != null) {
-        return _m.get('datacenter_uuid') === datacenter_uuid;
-      } else {
-        return false;
-      }
-    })).length;
+    var json, last_seen, machine, reachable, total, _i, _last_seen, _len, _ref;
+    total = (_.filter(machines.models, (function(_this) {
+      return function(m) {
+        return m.get('datacenter_uuid') === datacenter_uuid;
+      };
+    })(this))).length;
+    reachable = (_.filter(directory.models, (function(_this) {
+      return function(m) {
+        var _m;
+        _m = machines.get(m.get('id'));
+        if (_m != null) {
+          return _m.get('datacenter_uuid') === datacenter_uuid;
+        } else {
+          return false;
+        }
+      };
+    })(this))).length;
     if (reachable === 0 && total > 0) {
       _ref = machines.models;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -16383,14 +15887,14 @@ module('DataUtils', function() {
     _ref = namespaces.get(namespace_uuid).get('blueprint').peers_roles;
     for (machine_uuid in _ref) {
       peers_roles = _ref[machine_uuid];
-      if (!(machines.get(machine_uuid) != null)) {
+      if (machines.get(machine_uuid) == null) {
         continue;
       }
       datacenter_uuid = machines.get(machine_uuid).get('datacenter_uuid');
       for (_shard in peers_roles) {
         role = peers_roles[_shard];
         if (shard.toString() === _shard.toString() && role === 'role_secondary') {
-          if (!(secondaries[datacenter_uuid] != null)) {
+          if (secondaries[datacenter_uuid] == null) {
             secondaries[datacenter_uuid] = [];
           }
           secondaries[datacenter_uuid][secondaries[datacenter_uuid].length] = machine_uuid;
@@ -16451,7 +15955,7 @@ module('DataUtils', function() {
   };
   this.get_directory_activities = function() {
     var activity, activity_id, activity_map, bcards, machine, namespace_id, _i, _len, _ref;
-    if (!(this.directory_activities != null)) {
+    if (this.directory_activities == null) {
       this.directory_activities = {};
       _ref = directory.models;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -16475,7 +15979,7 @@ module('DataUtils', function() {
   };
   this.get_directory_activities_by_namespaces = function() {
     var activity, activity_id, activity_map, bcards, machine, namespace_id, _i, _len, _ref;
-    if (!(this.directory_activities_by_namespaces != null)) {
+    if (this.directory_activities_by_namespaces == null) {
       this.directory_activities_by_namespaces = {};
       _ref = directory.models;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -16483,13 +15987,13 @@ module('DataUtils', function() {
         bcards = machine.get('rdb_namespaces')['reactor_bcards'];
         for (namespace_id in bcards) {
           activity_map = bcards[namespace_id];
-          if (!(this.directory_activities_by_namespaces[namespace_id] != null)) {
+          if (this.directory_activities_by_namespaces[namespace_id] == null) {
             this.directory_activities_by_namespaces[namespace_id] = {};
           }
           activity_map = activity_map['activity_map'];
           for (activity_id in activity_map) {
             activity = activity_map[activity_id];
-            if (!(this.directory_activities_by_namespaces[namespace_id][machine.get('id')] != null)) {
+            if (this.directory_activities_by_namespaces[namespace_id][machine.get('id')] == null) {
               this.directory_activities_by_namespaces[namespace_id][machine.get('id')] = {};
             }
             this.directory_activities_by_namespaces[namespace_id][machine.get('id')][activity[0]] = activity[1]['type'];
@@ -16507,17 +16011,17 @@ module('DataUtils', function() {
       shard = JSON.stringify(shard);
     }
     progress = progress_list.get(machine_uuid);
-    if (!(progress != null)) {
+    if (progress == null) {
       return null;
     }
     progress = progress.get(namespace_uuid);
-    if (!(progress != null)) {
+    if (progress == null) {
       return null;
     }
     for (activity_uuid in progress) {
       shard_map = progress[activity_uuid];
       activity = activity_map[activity_uuid];
-      if (!(activity != null)) {
+      if (activity == null) {
         return null;
       }
       activity_type = activity.value[1].type;
@@ -16628,7 +16132,7 @@ module('DataUtils', function() {
       ratio_available: false
     };
     agg_json = _.reduce(backfills, (function(agg, val) {
-      if (!(val != null)) {
+      if (val == null) {
         return agg;
       }
       if (val.block_info_available) {
@@ -16663,7 +16167,7 @@ module('DataUtils', function() {
       nashards: 0,
       nareplicas: 0
     };
-    if (!(namespace != null)) {
+    if (namespace == null) {
       return null;
     }
     _machines = [];
@@ -16671,7 +16175,7 @@ module('DataUtils', function() {
     _ref = namespace.get('blueprint').peers_roles;
     for (machine_uuid in _ref) {
       role = _ref[machine_uuid];
-      if (!(machines.get(machine_uuid) != null)) {
+      if (machines.get(machine_uuid) == null) {
         continue;
       }
       if ((datacenter_uuid != null) && ((_ref1 = machines.get(machine_uuid)) != null ? _ref1.get('datacenter_uuid') : void 0) !== datacenter_uuid) {
@@ -16700,7 +16204,7 @@ module('DataUtils', function() {
       }
       if (machine_active_for_namespace) {
         _machines.push(machine_uuid);
-        if (!(datacenter_uuid != null) || datacenter_uuid !== universe_datacenter.get('id')) {
+        if ((datacenter_uuid == null) || datacenter_uuid !== universe_datacenter.get('id')) {
           _datacenters.push(machines.get(machine_uuid).get('datacenter_uuid'));
         }
       }
@@ -16775,18 +16279,13 @@ module('DataUtils', function() {
 });
 
 NavBarView = (function(_super) {
-
   __extends(NavBarView, _super);
 
   function NavBarView() {
     this.update_cog_icon = __bind(this.update_cog_icon, this);
-
     this.set_active_tab = __bind(this.set_active_tab, this);
-
     this.render = __bind(this.render, this);
-
     this.init_typeahead = __bind(this.init_typeahead, this);
-
     this.initialize = __bind(this.initialize, this);
     return NavBarView.__super__.constructor.apply(this, arguments);
   }
@@ -16898,7 +16397,6 @@ NavBarView = (function(_super) {
 Backbone.View.prototype.destroy = function() {};
 
 BackboneCluster = (function(_super) {
-
   __extends(BackboneCluster, _super);
 
   function BackboneCluster() {
@@ -17129,7 +16627,7 @@ apply_to_collection = function(collection, collection_data) {
       if ((data.protocol != null) && data.protocol === 'rdb') {
         if ((collection_data[id].blueprint != null) && (collection_data[id].blueprint.peers_roles != null)) {
           for (machine_uuid in collection_data[id].blueprint.peers_roles) {
-            if (!(machines.get(machine_uuid) != null)) {
+            if (machines.get(machine_uuid) == null) {
               delete collection_data[id].blueprint.peers_roles[machine_uuid];
             }
           }
@@ -17288,15 +16786,15 @@ set_stats = function(stat_data) {
         }
         return _results1;
       })());
-      /*
-                  # Ignore these cases for the time being. When we'll consider these, 
-                  # we might need an integer instead of a boolean
-                  for mid in data.dead
-                      machines.get(mid)?.set('stats_up_to_date', false)
-                  for mid in data.ghosts
-                      machines.get(mid)?.set('stats_up_to_date', false)
-      */
 
+      /*
+       * Ignore these cases for the time being. When we'll consider these, 
+       * we might need an integer instead of a boolean
+      for mid in data.dead
+          machines.get(mid)?.set('stats_up_to_date', false)
+      for mid in data.ghosts
+          machines.get(mid)?.set('stats_up_to_date', false)
+       */
     } else {
       _results.push(void 0);
     }
