@@ -4,7 +4,7 @@ var AlertUpdates, BackboneCluster, ComputedCluster, ConnectionStatus, Database, 
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-window.VERSION = '1.11.3-511-g6e0e87';
+window.VERSION = '1.11.3-514-g6062ea';
 
 Handlebars.registerHelper('debug', function() {
   var input, inputs, options, _i, _j, _len, _results;
