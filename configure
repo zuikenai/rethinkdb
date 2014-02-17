@@ -75,7 +75,7 @@ configure () {
     esac
     case "${MACHINE%%-*}" in
         x86_64|i?86) true ;;
-        arm) final_warning="ARM support is still experimental";;
+        arm*) final_warning="ARM support is still experimental";;
         *) error "unsopported architecture: $MACHINE"
     esac
     var M_LIBS -lm

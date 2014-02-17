@@ -20,7 +20,7 @@ pkg_install () (
 
     if [[ "$CROSS_COMPILING" = 1 ]]; then
         cross_build_dir=$build_dir/cross_build
-        configure_flags=--with-protoc=$cross_build_dir/src/protoc
+        configure_flags="--with-protoc=$cross_build_dir/src/protoc --host=$($CXX -dumpmachine)"
         if ! test -e $cross_build_dir/src/protoc; then
             cp -a "$src_dir/." "$cross_build_dir"
             (
