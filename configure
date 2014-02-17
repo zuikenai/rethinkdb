@@ -959,7 +959,7 @@ niceabspath () {
 test_protobuf () {
     require "Test protobuf"
     if any "protoc protobuf" contains "$FETCH_LIST"; then
-        if [[ -z "${PROTOC_BIN_DEP}" ]]; then
+        if [[ -z "${PROTOC_BIN_DEP:-}" ]]; then
             fetch_bin protoc
         fi
         show fetch
