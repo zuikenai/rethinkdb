@@ -350,7 +350,7 @@ tests:
     - js: tbl4.group('time').coerce_to('array')
       runopts:
         timeFormat: '"raw"'
-      ot: ({})
+      ot: ({"$reql_type$":"GROUPED_DATA","data":[[{"$reql_type$":"TIME","epoch_time":1375115782.24,"timezone":"+00:00"},{"id":0,"time":{"$reql_type$":"TIME","epoch_time":1375115782.24,"timezone":"+00:00"}}],[{"$reql_type$":"TIME","epoch_time":1375147296.68,"timezone":"+00:00"},{"id":1,"time":{"$reql_type$":"TIME","epoch_time":1375147296.68,"timezone":"+00:00"}}]]})
 
     # Distinct
     - py: tbl.map(lambda row:row['a']).distinct().count()
