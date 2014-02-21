@@ -29,6 +29,6 @@ pkg_install () {
         arm*)   arch=arm ;;
         *)      arch=native ;;
     esac
-    pkg_make $arch.release CXX=$CXX LINK=$CXX werror=no $makeflags
+    pkg_make $arch.release CXX=$CXX LINK=$CXX LINK.target=$CXX werror=no $makeflags CXXFLAGS="${CXXFLAGS:-} -Wno-error"
     find "$build_dir/out/$arch.release/obj.target" -iname "*.o" | grep -v '\/preparser_lib\/' | xargs ${AR:-ar} cqs "$install_dir/lib/libv8.a"
 }

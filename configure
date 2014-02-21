@@ -912,18 +912,9 @@ check_cross_compiling () {
 }
 
 check_static_lib () {
-    local path=$(static_lib_lookup $1)
-    if [[ -n "$path" ]]; then
-        var_append $(uc $2)_LIBS "$path"
-        var HAS_$(uc $2) 1
-    fi
-}
-
-# Find a static library and print it's path
-static_lib_lookup () {
     for path in $try_lib_paths; do
         local l=$path/lib$1.a
-        test -f $l && echo $l && return 0
+        check_lib_compile "$l" "$2"
     done
 }
 
