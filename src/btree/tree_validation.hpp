@@ -7,8 +7,7 @@
 #include "buffer_cache/types.hpp"
 
 class superblock_t;
-class signal_t;
 
-void validate_btree(superblock_t *superblock);
+void validate_btree(value_sizer_t<void> *sizer, superblock_t *superblock);
 
 #endif  // BTREE_TREE_VALIDATION_HPP_

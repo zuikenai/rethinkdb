@@ -3,6 +3,7 @@
 
 #include "buffer_cache/alt/alt.hpp"
 #include "btree/leaf_node.hpp"
+#include "btree/internal_node.hpp"
 #include "btree/node.hpp"
 #include "btree/parallel_traversal.hpp"
 #include "btree/slice.hpp"
@@ -10,7 +11,8 @@
 
 class validate_tree_helper_t : public btree_traversal_helper_t {
 public:
-    validate_tree_helper_t()
+    explicit validate_tree_helper_t(value_sizer_t<void> *_sizer)
+        : sizer(_sizer)
     { }
 
     void process_a_leaf(buf_lock_t *leaf_node_buf,
@@ -18,8 +20,9 @@ public:
                         const btree_key_t *r_incl,
                         signal_t *,
                         int *population_change_out) THROWS_ONLY(interrupted_exc_t) {
-        buf_write_t write(leaf_node_buf);
-        leaf_node_t *node = static_cast<leaf_node_t *>(write.get_data_write());
+        buf_read_t read(leaf_node_buf);
+        const leaf_node_t *node = static_cast<const leaf_node_t *>(read.get_data_read());
+        leaf::validate(sizer, node);
 
         for (auto it = leaf::begin(*node); it != leaf::end(*node); ++it) {
             const btree_key_t *k = (*it).first;
@@ -34,8 +37,11 @@ public:
         *population_change_out = 0;
     }
 
-    void postprocess_internal_node(UNUSED buf_lock_t *internal_node_buf) {
-        // We don't want to do anything here.
+    void postprocess_internal_node(buf_lock_t *internal_node_buf) {
+        buf_read_t read(internal_node_buf);
+        uint32_t block_size;
+        const internal_node_t *node = static_cast<const internal_node_t *>(read.get_data_read(&block_size));
+        internal_node::validate(block_size_t::make_from_cache(block_size), node);
     }
 
     void filter_interesting_children(buf_parent_t,
@@ -78,12 +84,13 @@ public:
     }
 
 private:
+    value_sizer_t<void> *sizer;
 
     DISABLE_COPYING(validate_tree_helper_t);
 };
 
-void validate_btree(superblock_t *superblock) {
-    validate_tree_helper_t helper;
+void validate_btree(value_sizer_t<void> *sizer, superblock_t *superblock) {
+    validate_tree_helper_t helper(sizer);
     cond_t dummy_interruptor;
     btree_parallel_traversal(superblock, &helper, &dummy_interruptor,
                              false);
