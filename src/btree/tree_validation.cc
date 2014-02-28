@@ -82,7 +82,7 @@ private:
     DISABLE_COPYING(validate_tree_helper_t);
 };
 
-void btree_erase_range_generic(superblock_t *superblock, signal_t *interruptor,
+void validate_btree(superblock_t *superblock, signal_t *interruptor,
                                bool release_superblock) {
     validate_tree_helper_t helper;
     btree_parallel_traversal(superblock, &helper, interruptor,

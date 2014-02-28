@@ -11,6 +11,6 @@ class signal_t;
 
 void validate_btree(superblock_t *superblock,
                     signal_t *interruptor,
-                    bool release_superblock = true);
+                    bool release_superblock = false);
 
 #endif  // BTREE_TREE_VALIDATION_HPP_
