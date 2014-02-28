@@ -9,8 +9,6 @@
 class superblock_t;
 class signal_t;
 
-void validate_btree(superblock_t *superblock,
-                    signal_t *interruptor,
-                    bool release_superblock = false);
+void validate_btree(superblock_t *superblock);
 
 #endif  // BTREE_TREE_VALIDATION_HPP_

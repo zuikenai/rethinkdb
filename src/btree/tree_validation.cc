@@ -82,9 +82,9 @@ private:
     DISABLE_COPYING(validate_tree_helper_t);
 };
 
-void validate_btree(superblock_t *superblock, signal_t *interruptor,
-                               bool release_superblock) {
+void validate_btree(superblock_t *superblock) {
     validate_tree_helper_t helper;
-    btree_parallel_traversal(superblock, &helper, interruptor,
-                             release_superblock);
+    cond_t dummy_interruptor;
+    btree_parallel_traversal(superblock, &helper, &dummy_interruptor,
+                             false);
 }
