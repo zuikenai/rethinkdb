@@ -22,7 +22,9 @@ public:
                         int *population_change_out) THROWS_ONLY(interrupted_exc_t) {
         buf_read_t read(leaf_node_buf);
         const leaf_node_t *node = static_cast<const leaf_node_t *>(read.get_data_read());
-        leaf::validate(sizer, node);
+        if (sizer != NULL) {
+            leaf::validate(sizer, node);
+        }
 
         for (auto it = leaf::begin(*node); it != leaf::end(*node); ++it) {
             const btree_key_t *k = (*it).first;
@@ -69,7 +71,7 @@ public:
         return true;
     }
 
-    static void assert_key_in_range(DEBUG_VAR const btree_key_t *k, DEBUG_VAR const btree_key_t *left_excl, DEBUG_VAR const btree_key_t *right_incl) {
+    static void assert_key_in_range(const btree_key_t *k, const btree_key_t *left_excl, const btree_key_t *right_incl) {
         if (!key_in_range(k, left_excl, right_incl)) {
             printf_buffer_t buf;
             buf.appendf("Key out of range:\n");
