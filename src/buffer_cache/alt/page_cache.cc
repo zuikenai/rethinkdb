@@ -205,6 +205,14 @@ page_cache_t::~page_cache_t() {
                    current_pages_.size(), it->first, it->second.debug_value(), current_pages_[it->first]->last_write_acquirer_version_.debug_value());
         }
     }
+    for (auto it = crcs.begin(); it != crcs.end(); ++it) {
+        if (latest_written_crcs.find(it->first) != latest_written_crcs.end()) {
+            if (!(latest_written_crcs[it->first] == it->second)) {
+                debugf("A page has not been written to disk correctly. %u == %u (%lu)\nPage log:\n%s",
+                       latest_written_crcs[it->first], it->second, it->first, current_pages_[it->first]->print_log().c_str());
+            }
+        }
+    }
     for (auto it = current_pages_.begin(); it != current_pages_.end(); ++it) {
         delete *it;
     }
@@ -238,15 +246,6 @@ page_cache_t::~page_cache_t() {
             file << it->second;
         }
         file.close();
-    }
-
-    for (auto it = crcs.begin(); it != crcs.end(); ++it) {
-        if (latest_written_crcs.find(it->first) != latest_written_crcs.end()) {
-            if (!(latest_written_crcs[it->first] == it->second)) {
-                debugf("A page has not been written to disk correctly. %u == %u (%lu)\n",
-                       latest_written_crcs[it->first], it->second, it->first);
-            }
-        }
     }
 }
 
@@ -609,6 +608,7 @@ current_page_t::current_page_t()
     // current_page_acq_t::block_version_ values (which are 0) and assigned ones.
     rassert(last_write_acquirer_version_.debug_value() == 0);
     last_write_acquirer_version_ = last_write_acquirer_version_.subsequent();
+    push_log(NULL, "constructor1");
 }
 
 current_page_t::current_page_t(block_size_t block_size,
@@ -621,6 +621,7 @@ current_page_t::current_page_t(block_size_t block_size,
     // current_page_acq_t::block_version_ values (which are 0) and assigned ones.
     rassert(last_write_acquirer_version_.debug_value() == 0);
     last_write_acquirer_version_ = last_write_acquirer_version_.subsequent();
+    push_log(page_cache, "constructor2");
 }
 
 current_page_t::current_page_t(scoped_malloc_t<ser_buffer_t> buf,
@@ -637,11 +638,33 @@ current_page_t::current_page_t(scoped_malloc_t<ser_buffer_t> buf,
     // current_page_acq_t::block_version_ values (which are 0) and assigned ones.
     rassert(last_write_acquirer_version_.debug_value() == 0);
     last_write_acquirer_version_ = last_write_acquirer_version_.subsequent();
+    push_log(page_cache, "constructor3 (read ahead)");
 }
 
 current_page_t::~current_page_t() {
     rassert(acquirers_.empty());
     rassert(last_write_acquirer_ == NULL);
+}
+
+void current_page_t::push_log(const page_cache_t *cache, const std::string &type, uint32_t crc) {
+    // TODO! Add page version
+    std::stringstream str;
+    str << "cache: " << cache << " ";
+    if (crc == 0 && page_.has()) {
+        crc = page_.page_->compute_crc();
+    }
+    str << "crc: " << crc << " ";
+    str << "version: " << last_write_acquirer_version_.debug_value() << " ";
+    str << type;
+    page_log.push_back(str.str());
+}
+
+std::string current_page_t::print_log() const {
+    std::string output;
+    for (auto it = page_log.begin(); it != page_log.end(); ++it) {
+        output += *it + "\n";
+    }
+    return output;
 }
 
 void current_page_t::make_non_deleted(block_size_t block_size,
@@ -836,7 +859,9 @@ void current_page_t::mark_deleted(current_page_help_t help) {
 
     help.page_cache->set_recency_for_block_id(help.block_id,
                                               repli_timestamp_t::invalid);
+    page_cache_t *cache = page_.page_cache_;
     page_.reset();
+    push_log(cache, "deleted");
 }
 
 void current_page_t::convert_from_serializer_if_necessary(current_page_help_t help,
@@ -880,7 +905,8 @@ page_txn_t::page_txn_t(page_cache_t *page_cache,
       tracker_acq_(std::move(tracker_acq)),
       this_txn_recency_(txn_recency),
       began_waiting_for_flush_(false),
-      spawned_flush_(false) {
+      spawned_flush_(false),
+      drainer_acq(page_cache->drainer_.get()) {
     if (cache_conn != NULL) {
         page_txn_t *old_newest_txn = cache_conn->newest_txn_;
         cache_conn->newest_txn_ = this;
@@ -953,6 +979,8 @@ void page_txn_t::remove_acquirer(current_page_acq_t *acq) {
         // We know we hold an exclusive lock.
         rassert(acq->write_cond_.is_pulsed());
 
+        current_page_t *cur_p = acq->current_page_;
+        cur_p->push_log(page_cache_, "remove_acquirer before snapshot");
         // Declare readonly (so that we may declare acq snapshotted).
         acq->declare_readonly();
         acq->declare_snapshotted();
@@ -961,12 +989,25 @@ void page_txn_t::remove_acquirer(current_page_acq_t *acq) {
         rassert(acq->current_page_ == NULL);
         // Steal the snapshotted page_ptr_t.
         page_ptr_t local = std::move(acq->snapshotted_page_);
+        if (local.page_ != NULL) {
+            uint32_t snap_crc = local.page_->compute_crc();
+            cur_p->push_log(page_cache_, "remove_acquirer snapshot", snap_crc);
+            if (page_cache()->crcs.find(acq->block_id()) != page_cache()->crcs.end()) {
+                if (page_cache()->crcs[acq->block_id()] != snap_crc) {
+                    debugf("The snapshot I just took for %lu is already outdated\n", acq->block_id());
+                }
+            }
+        }
         // It's okay to have two dirtied_page_t's or touched_page_t's for the
         // same block id -- compute_changes handles this.
+        rassert(!began_waiting_for_flush_);
+        rassert(!spawned_flush_);
         snapshotted_dirtied_pages_.push_back(dirtied_page_t(block_version,
                                                             acq->block_id(),
                                                             std::move(local),
                                                             acq->recency()));
+        rassert(!began_waiting_for_flush_);
+        rassert(!spawned_flush_);
         // If you keep writing and reacquiring the same page, though, the count
         // might be off and you could excessively throttle new operations.
 
@@ -975,6 +1016,7 @@ void page_txn_t::remove_acquirer(current_page_acq_t *acq) {
         // pages for the same block id.
         tracker_acq_.update_dirty_page_count(snapshotted_dirtied_pages_.size());
     } else {
+        acq->current_page_->push_log(page_cache_, "remove_acquirer touched page");
         // It's okay to have two dirtied_page_t's or touched_page_t's for the
         // same block id -- compute_changes handles this.
         touched_pages_.push_back(touched_page_t(block_version, acq->block_id(),
@@ -1026,6 +1068,9 @@ page_cache_t::compute_changes(const std::set<page_txn_t *> &txns) {
                 }
             }
         }
+    }
+    for (auto it = txns.begin(); it != txns.end(); ++it) {
+        page_txn_t *txn = *it;
 
         for (size_t i = 0, e = txn->touched_pages_.size(); i < e; ++i) {
             const touched_page_t &t = txn->touched_pages_[i];
@@ -1175,7 +1220,8 @@ void page_cache_t::do_flush_changes(page_cache_t *page_cache,
                     // snapshotted_dirtied_pages_ a bit sooner than we do.
 
                     page_t *page = it->second.page;
-                    if (page->block_token_.has()) {
+                    // TODO!
+                    if (false && page->block_token_.has()) {
                         // It's already on disk, we're not going to flush it.
                         blocks_by_tokens.push_back(block_token_tstamp_t(it->first,
                                                                         false,
@@ -1203,9 +1249,11 @@ void page_cache_t::do_flush_changes(page_cache_t *page_cache,
                         uint32_t crc = page->compute_crc();
                         page_cache->latest_written_crcs[it->first] = crc;
                         page_cache->latest_written_block_version[it->first] = it->second.version;
+                        page_cache->current_pages_[it->first]->push_log(page_cache, "flushing snapshot", crc);
                     }
                 }
             } else {
+                rassert(it->second.page == NULL);
                 // We only touched the page.
                 blocks_by_tokens.push_back(block_token_tstamp_t(it->first,
                                                                 false,
@@ -1213,6 +1261,7 @@ void page_cache_t::do_flush_changes(page_cache_t *page_cache,
                                                                 it->second.tstamp,
                                                                 NULL));
                 page_cache->latest_written_block_version[it->first] = it->second.version;
+                page_cache->current_pages_[it->first]->push_log(page_cache, "touching page");
             }
         }
     }

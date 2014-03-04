@@ -265,6 +265,7 @@ private:
     // Keeps track of how many alt_buf_{read|write}_t have been created for
     // this lock, for assertion/guarantee purposes.
     intptr_t access_ref_count_;
+    intptr_t write_access_ref_count_;
 
     DISABLE_COPYING(buf_lock_t);
 };

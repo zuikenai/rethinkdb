@@ -86,6 +86,16 @@ public:
     current_page_t();
     ~current_page_t();
 
+    /*
+     * Implement these entries:
+     * Creating a write_t on a page
+     * Releasing the write_t on the page
+     *
+     * Each entry should have the cache ptr, version, crc
+     */
+    void push_log(const page_cache_t *cache, const std::string &type, uint32_t crc = 0);
+    std::string print_log() const;
+    std::vector<std::string> page_log;
 
 private:
     // current_page_acq_t should not access our fields directly.
@@ -186,7 +196,7 @@ public:
 
     page_cache_t *page_cache() const;
 
-private:
+//private:
     void init(page_txn_t *txn,
               block_id_t block_id,
               access_t access,
@@ -324,7 +334,7 @@ public:
     std::map<block_id_t, uint32_t> latest_written_crcs;
     std::map<block_id_t, block_version_t> latest_written_block_version;
 
-private:
+//private:
     friend class page_read_ahead_cb_t;
     void add_read_ahead_buf(block_id_t block_id,
                             ser_buffer_t *buf,
@@ -537,7 +547,7 @@ public:
 
     page_cache_t *page_cache() const { return page_cache_; }
 
-private:
+//private:
     // To set cache_conn_ to NULL.
     friend class ::cache_conn_t;
 
@@ -619,6 +629,8 @@ private:
     // This gets pulsed when the flush is complete or when the txn has no reason to
     // exist any more.
     cond_t flush_complete_cond_;
+
+    auto_drainer_t::lock_t drainer_acq;
 
     DISABLE_COPYING(page_txn_t);
 };

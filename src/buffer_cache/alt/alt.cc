@@ -256,7 +256,8 @@ buf_lock_t::buf_lock_t()
     : txn_(NULL),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) { }
+      access_ref_count_(0),
+      write_access_ref_count_(0) { }
 
 #if ALT_DEBUG
 const char *show(access_t access) {
@@ -420,7 +421,8 @@ buf_lock_t::buf_lock_t(buf_parent_t parent,
     : txn_(parent.txn()),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0) {
     help_construct(parent, block_id, access);
 }
 
@@ -430,7 +432,8 @@ buf_lock_t::buf_lock_t(buf_lock_t *parent,
     : txn_(parent->txn_),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0) {
     help_construct(buf_parent_t(parent), block_id, access);
 }
 
@@ -478,7 +481,8 @@ buf_lock_t::buf_lock_t(txn_t *txn,
     : txn_(txn),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0) {
     help_construct(buf_parent_t(txn), block_id, create);
 }
 
@@ -488,7 +492,8 @@ buf_lock_t::buf_lock_t(buf_parent_t parent,
     : txn_(parent.txn()),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0) {
     help_construct(parent, block_id, create);
 }
 
@@ -550,7 +555,8 @@ buf_lock_t::buf_lock_t(buf_parent_t parent,
     : txn_(parent.txn()),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0) {
     help_construct(parent, create);
 }
 
@@ -559,7 +565,8 @@ buf_lock_t::buf_lock_t(buf_lock_t *parent,
     : txn_(parent->txn_),
       current_page_acq_(),
       snapshot_node_(NULL),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0) {
     help_construct(buf_parent_t(parent), create);
 }
 
@@ -588,7 +595,8 @@ buf_lock_t::buf_lock_t(buf_lock_t &&movee)
     : txn_(movee.txn_),
       current_page_acq_(std::move(movee.current_page_acq_)),
       snapshot_node_(movee.snapshot_node_),
-      access_ref_count_(0) {
+      access_ref_count_(0),
+      write_access_ref_count_(0){
     guarantee(movee.access_ref_count_ == 0);
     movee.txn_ = NULL;
     movee.current_page_acq_.reset();
@@ -726,20 +734,28 @@ const void *buf_read_t::get_data_read(uint32_t *block_size_out) {
 buf_write_t::buf_write_t(buf_lock_t *lock)
     : lock_(lock) {
     guarantee(lock_->access() == access_t::write);
+    rassert(!lock->txn_->page_txn()->began_waiting_for_flush_);
+    if (lock_->write_access_ref_count_ > 0) {
+        debugf("Warning, multiple write accesses: %d (%d reads)\n", (int)(lock_->write_access_ref_count_ + 1), (int)(lock_->access_ref_count_ - lock_->write_access_ref_count_));
+    }
+    lock_->write_access_ref_count_++;
     lock_->access_ref_count_++;
 }
 
 buf_write_t::~buf_write_t() {
     guarantee(!lock_->empty());
-    if (lock_->access() == access_t::write) {
-        uint32_t crc = page_acq_.page_->compute_crc();
-        //debugf("Setting crc for block %lu to %u\n", page_acq_.block_id(), (unsigned int)crc);
-        page_acq_.page_cache_->crcs[page_acq_.block_id()] = crc;
-    }
+    rassert(!lock_->txn_->page_txn()->began_waiting_for_flush_);
+    rassert(lock_->access() == access_t::write);
+    uint32_t crc = page_acq_.page_->compute_crc();
+    page_acq_.page_cache_->crcs[page_acq_.block_id()] = crc;
+    page_acq_.page_cache_->current_pages_[page_acq_.block_id()]->push_log(page_acq_.page_cache_, "Releasing buf_write_t", crc);
+    rassert(lock_->current_page_acq()->dirtied_page_);
+    lock_->write_access_ref_count_--;
     lock_->access_ref_count_--;
 }
 
 void *buf_write_t::get_data_write(uint32_t block_size) {
+    rassert(!lock_->txn_->page_txn()->began_waiting_for_flush_);
     // KSI: Use block_size somehow.
     (void)block_size;
     page_t *page = lock_->get_held_page_for_write();
@@ -748,6 +764,7 @@ void *buf_write_t::get_data_write(uint32_t block_size) {
                        lock_->txn()->account());
     }
     page_acq_.buf_ready_signal()->wait();
+    page_acq_.page_cache_->current_pages_[page_acq_.block_id()]->push_log(page_acq_.page_cache_, "Get_data_write");
     return page_acq_.get_buf_write();
 }
 
