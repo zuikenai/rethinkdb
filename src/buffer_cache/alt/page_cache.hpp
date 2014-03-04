@@ -81,7 +81,7 @@ public:
                    page_cache_t *page_cache);
     current_page_t(scoped_malloc_t<ser_buffer_t> buf,
                    const counted_t<standard_block_token_t> &token,
-                   page_cache_t *page_cache);
+                   page_cache_t *page_cache, block_id_t block_id);
     // Constructs a page to be loaded from the serializer.
     current_page_t();
     ~current_page_t();

@@ -119,7 +119,7 @@ void page_cache_t::add_read_ahead_buf(block_id_t block_id,
         return;
     }
 
-    current_pages_[block_id] = new current_page_t(std::move(buf), token, this);
+    current_pages_[block_id] = new current_page_t(std::move(buf), token, this, block_id);
 }
 
 void page_cache_t::have_read_ahead_cb_destroyed() {
@@ -610,10 +610,14 @@ current_page_t::current_page_t(block_size_t block_size,
 
 current_page_t::current_page_t(scoped_malloc_t<ser_buffer_t> buf,
                                const counted_t<standard_block_token_t> &token,
-                               page_cache_t *page_cache)
+                               page_cache_t *page_cache, block_id_t block_id)
     : page_(new page_t(std::move(buf), token, page_cache), page_cache),
       is_deleted_(false),
       last_write_acquirer_(NULL) {
+    uint32_t crc = page_.page_->compute_crc();
+    if (page_cache->crcs.find(block_id) != page_cache->crcs.end()) {
+        rassert(page_cache->crcs[block_id] == crc, "Wrong data from disk (read ahead).");
+    }
     // Increment the block version so that we can distinguish between unassigned
     // current_page_acq_t::block_version_ values (which are 0) and assigned ones.
     rassert(last_write_acquirer_version_.debug_value() == 0);

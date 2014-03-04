@@ -157,6 +157,11 @@ void page_t::load_with_block_id(page_t *page, block_id_t block_id,
     page->destroy_ptr_ = NULL;
     page_cache->evicter().add_now_loaded_size(page->ser_buf_size_);
 
+    uint32_t crc = page->compute_crc();
+    if (page_cache->crcs.find(block_id) != page_cache->crcs.end()) {
+        rassert(page_cache->crcs[block_id] == crc, "Wrong data from disk.");
+    }
+
     page->pulse_waiters_or_make_evictable(page_cache);
 }
 

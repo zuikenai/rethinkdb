@@ -145,7 +145,7 @@ public:
         return page_ != NULL;
     }
 
-private:
+//private:
     page_t *page_;
     // KSI: Get rid of this variable.
     page_cache_t *page_cache_;
