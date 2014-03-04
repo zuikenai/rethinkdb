@@ -293,7 +293,8 @@ class page_cache_t : public home_thread_mixin_t {
 public:
     page_cache_t(serializer_t *serializer,
                  const page_cache_config_t &config,
-                 memory_tracker_t *tracker);
+                 memory_tracker_t *tracker,
+                 const std::string &table_id);
     ~page_cache_t();
 
     // Takes a txn to be flushed.  Calls on_flush_complete() (which resets the
@@ -318,6 +319,8 @@ public:
     cache_account_t *default_reads_account() {
         return &default_reads_account_;
     }
+
+    std::map<block_id_t, uint32_t> crcs;
 
 private:
     friend class page_read_ahead_cb_t;
@@ -392,6 +395,8 @@ private:
     free_list_t *free_list() { return &free_list_; }
 
     void resize_current_pages_to_id(block_id_t block_id);
+
+    std::string table_id_;
 
     const page_cache_config_t dynamic_config_;
 

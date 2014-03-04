@@ -84,7 +84,7 @@ public:
     void register_read_ahead_cb(serializer_read_ahead_callback_t *cb);
     void unregister_read_ahead_cb(serializer_read_ahead_callback_t *cb);
 
-private:
+//private:
     serializer_t *inner;
     int mod_count, mod_id;
     config_block_id_t cfgid;

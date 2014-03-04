@@ -3,12 +3,16 @@
 
 #include <algorithm>
 #include <stack>
+#include <sstream>
+#include <fstream>
 
 #include "arch/runtime/coroutines.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "do_on_thread.hpp"
 #include "serializer/serializer.hpp"
+#include "serializer/translator.hpp"
 #include "stl_utils.hpp"
+#include "debug.hpp"
 
 cache_conn_t::~cache_conn_t() {
     // The user could only be expected to make sure that txn_t objects don't have
@@ -140,13 +144,35 @@ void page_cache_t::read_ahead_cb_is_destroyed() {
 
 page_cache_t::page_cache_t(serializer_t *serializer,
                            const page_cache_config_t &config,
-                           memory_tracker_t *tracker)
-    : dynamic_config_(config),
+                           memory_tracker_t *tracker,
+                           const std::string &table_id)
+    : table_id_(table_id),
+      dynamic_config_(config),
       serializer_(serializer),
       free_list_(serializer),
       evicter_(tracker, config.memory_limit),
       read_ahead_cb_(NULL),
       drainer_(make_scoped<auto_drainer_t>()) {
+
+    {
+        std::stringstream filename;
+        filename << table_id;
+        filename << "_cache_";
+        filename << static_cast<translator_serializer_t *>(serializer)->mod_id;
+        filename << ".crcs";
+
+        debugf("Loading from file %s\n", filename.str().c_str());
+        std::ifstream file(filename.str());
+        while (file.good() && !file.eof()) {
+            block_id_t b;
+            uint32_t crc;
+            file >> b;
+            file >> crc;
+            // TODO! Do we have to truncate the too high ones?
+            crcs[b] = crc;
+        }
+        file.close();
+    }
 
     const bool start_read_ahead = config.memory_limit > 0;
     if (start_read_ahead) {
@@ -186,6 +212,26 @@ page_cache_t::~page_cache_t() {
         default_reads_account_.reset();
         writes_io_account_.reset();
         index_write_sink_.reset();
+    }
+
+    {
+        std::stringstream filename;
+        filename << table_id_;
+        filename << "_cache_";
+        filename << static_cast<translator_serializer_t *>(serializer_)->mod_id;
+        filename << ".crcs";
+
+        debugf("Writing to file %s\n", filename.str().c_str());
+        std::ofstream file(filename.str());
+        for (auto it = crcs.begin(); it != crcs.end(); ++it) {
+            if (it != crcs.begin()) {
+                file << std::endl;
+            }
+            file << it->first;
+            file << std::endl;
+            file << it->second;
+        }
+        file.close();
     }
 }
 
@@ -264,6 +310,7 @@ current_page_t *page_cache_t::page_for_block_id(block_id_t block_id) {
 current_page_t *page_cache_t::page_for_new_block_id(block_id_t *block_id_out) {
     assert_thread();
     block_id_t block_id = free_list_.acquire_block_id();
+    crcs.erase(block_id);
     current_page_t *ret = internal_page_for_new_chosen(block_id);
     *block_id_out = block_id;
     return ret;
@@ -273,6 +320,7 @@ current_page_t *page_cache_t::page_for_new_chosen_block_id(block_id_t block_id) 
     assert_thread();
     // Tell the free list this block id is taken.
     free_list_.acquire_chosen_block_id(block_id);
+    crcs.erase(block_id);
     return internal_page_for_new_chosen(block_id);
 }
 
@@ -719,7 +767,8 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq,
                 acquirers_.remove(cur);
                 // KSI: Dedup this with remove_acquirer.
                 if (is_deleted_) {
-                    cur->page_cache()->free_list()->release_block_id(acq->block_id());
+                    // TODO!
+                    //cur->page_cache()->free_list()->release_block_id(acq->block_id());
                 }
             }
             cur = next;
@@ -730,6 +779,7 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq,
             if (acquirers_.prev(cur) == NULL) {
                 // (It gets exclusive write access if there's no preceding reader.)
                 if (is_deleted_) {
+                    rassert(false);
                     // Also, if the block is in an "is_deleted_" state right now, we
                     // need to put it into a non-deleted state.  We initialize the
                     // page to a full-sized page.

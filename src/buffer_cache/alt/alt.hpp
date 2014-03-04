@@ -43,7 +43,8 @@ class cache_t : public home_thread_mixin_t {
 public:
     explicit cache_t(serializer_t *serializer,
                      const alt_cache_config_t &dynamic_config,
-                     perfmon_collection_t *perfmon_collection);
+                     perfmon_collection_t *perfmon_collection,
+                     const std::string &table_id);
     ~cache_t();
 
     block_size_t max_block_size() const;

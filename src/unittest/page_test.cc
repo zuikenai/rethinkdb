@@ -111,7 +111,7 @@ class test_acq_t : public page_acq_t {
 public:
     test_acq_t() : page_acq_t() { }
     void init(page_t *page, page_cache_t *page_cache) {
-        page_acq_t::init(page, page_cache, page_cache->default_reads_account());
+        page_acq_t::init(page, page_cache, NULL_BLOCK_ID, page_cache->default_reads_account());
     }
 };
 

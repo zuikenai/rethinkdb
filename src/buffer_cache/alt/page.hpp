@@ -1,6 +1,9 @@
 #ifndef BUFFER_CACHE_ALT_PAGE_HPP_
 #define BUFFER_CACHE_ALT_PAGE_HPP_
 
+#include "errors.hpp"
+#include <boost/crc.hpp>
+
 #include "concurrency/cond_var.hpp"
 #include "containers/backindex_bag.hpp"
 #include "serializer/types.hpp"
@@ -30,6 +33,14 @@ public:
 
     void add_waiter(page_acq_t *acq, cache_account_t *account);
     void remove_waiter(page_acq_t *acq);
+
+    uint32_t compute_crc() {
+        boost::crc_32_type crc_computer;
+        // We need to not crc BLOCK_META_DATA_SIZE because it's
+        // internal to the serializer.
+        crc_computer.process_bytes(buf_->cache_data, get_page_buf_size());
+        return crc_computer.checksum();
+    }
 
 private:
     friend class page_acq_t;
@@ -148,7 +159,7 @@ public:
     page_acq_t();
     ~page_acq_t();
 
-    void init(page_t *page, page_cache_t *page_cache, cache_account_t *account);
+    void init(page_t *page, page_cache_t *page_cache, block_id_t bid, cache_account_t *account);
 
     page_cache_t *page_cache() const {
         rassert(page_cache_ != NULL);
@@ -163,12 +174,15 @@ public:
     void *get_buf_write();
     const void *get_buf_read();
 
-private:
+    block_id_t block_id() const { return block_id_; }
+
+//private:
     friend class page_t;
 
     page_t *page_;
     page_cache_t *page_cache_;
     cond_t buf_ready_signal_;
+    block_id_t block_id_;
     DISABLE_COPYING(page_acq_t);
 };
 

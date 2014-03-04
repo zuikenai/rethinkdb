@@ -7,6 +7,7 @@
 #include "buffer_cache/alt/stats.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "utils.hpp"
+#include "debug.hpp"
 
 #define ALT_DEBUG 0
 
@@ -77,10 +78,10 @@ void alt_memory_tracker_t::end_txn(UNUSED tracker_acq_t acq) {
 }
 
 cache_t::cache_t(serializer_t *serializer, const alt_cache_config_t &config,
-                 perfmon_collection_t *perfmon_collection)
+                 perfmon_collection_t *perfmon_collection, const std::string &table_id)
     : stats_(make_scoped<alt_cache_stats_t>(perfmon_collection)),
       tracker_(),
-      page_cache_(serializer, config.page_config, &tracker_) { }
+      page_cache_(serializer, config.page_config, &tracker_, table_id) { }
 
 cache_t::~cache_t() { }
 
@@ -714,6 +715,7 @@ const void *buf_read_t::get_data_read(uint32_t *block_size_out) {
     page_t *page = lock_->get_held_page_for_read();
     if (!page_acq_.has()) {
         page_acq_.init(page, &lock_->cache()->page_cache_,
+                       lock_->block_id(),
                        lock_->txn()->account());
     }
     page_acq_.buf_ready_signal()->wait();
@@ -729,6 +731,11 @@ buf_write_t::buf_write_t(buf_lock_t *lock)
 
 buf_write_t::~buf_write_t() {
     guarantee(!lock_->empty());
+    if (lock_->access() == access_t::write) {
+        uint32_t crc = page_acq_.page_->compute_crc();
+        //debugf("Setting crc for block %lu to %u\n", page_acq_.block_id(), (unsigned int)crc);
+        page_acq_.page_cache_->crcs[page_acq_.block_id()] = crc;
+    }
     lock_->access_ref_count_--;
 }
 
@@ -737,7 +744,7 @@ void *buf_write_t::get_data_write(uint32_t block_size) {
     (void)block_size;
     page_t *page = lock_->get_held_page_for_write();
     if (!page_acq_.has()) {
-        page_acq_.init(page, &lock_->cache()->page_cache_,
+        page_acq_.init(page, &lock_->cache()->page_cache_, lock_->block_id(),
                        lock_->txn()->account());
     }
     page_acq_.buf_ready_signal()->wait();

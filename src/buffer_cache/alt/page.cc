@@ -3,6 +3,7 @@
 #include "arch/runtime/coroutines.hpp"
 #include "buffer_cache/alt/page_cache.hpp"
 #include "serializer/serializer.hpp"
+#include "debug.hpp"
 
 namespace alt {
 
@@ -73,6 +74,8 @@ page_t::~page_t() {
 void page_t::load_from_copyee(page_t *page, page_t *copyee,
                               page_cache_t *page_cache,
                               cache_account_t *account) {
+    // TODO! So this is heavily used. Is it broken?
+    //debugf("load_from_copyee\n");
     // This is called using spawn_now_dangerously.  We need to atomically set
     // destroy_ptr_ and do some other things.
     bool page_destroyed = false;
@@ -85,7 +88,8 @@ void page_t::load_from_copyee(page_t *page, page_t *copyee,
     // Okay, it's safe to block.
     {
         page_acq_t acq;
-        acq.init(copyee, page_cache, account);
+        // TODO!
+        acq.init(copyee, page_cache, NULL_BLOCK_ID, account);
         acq.buf_ready_signal()->wait();
 
         ASSERT_FINITE_CORO_WAITING;
@@ -301,19 +305,22 @@ void page_t::evict_self() {
 page_acq_t::page_acq_t() : page_(NULL), page_cache_(NULL) {
 }
 
-void page_acq_t::init(page_t *page, page_cache_t *page_cache,
+void page_acq_t::init(page_t *page, page_cache_t *page_cache, block_id_t bid,
                       cache_account_t *account) {
     rassert(page_ == NULL);
     rassert(page_cache_ == NULL);
     rassert(!buf_ready_signal_.is_pulsed());
     page_ = page;
     page_cache_ = page_cache;
+    block_id_ = bid;
     page_->add_waiter(this, account);
 }
 
 page_acq_t::~page_acq_t() {
     if (page_ != NULL) {
         rassert(page_cache_ != NULL);
+        //int32_t crc = page_->compute_crc();
+        //page_cache_->crcs[block_id()] = crc;
         page_->remove_waiter(this);
     }
 }
@@ -333,12 +340,23 @@ uint32_t page_acq_t::get_buf_size() {
 
 void *page_acq_t::get_buf_write() {
     buf_ready_signal_.wait();
+    uint32_t crc = page_->compute_crc();
+    if (page_cache_->crcs.find(block_id()) != page_cache_->crcs.end()) {
+        rassert(page_cache_->crcs[block_id()] == crc, "crc %u != %u for %lu", page_cache_->crcs[block_id()], crc, block_id());
+    } else {
+        //debugf("Setting(2) crc for block %lu to %u\n", block_id(), crc);
+        //page_cache_->crcs[block_id()] = crc;
+    }
     page_->reset_block_token();
     return page_->get_page_buf(page_cache_);
 }
 
 const void *page_acq_t::get_buf_read() {
     buf_ready_signal_.wait();
+    uint32_t crc = page_->compute_crc();
+    if (page_cache_->crcs.find(block_id()) != page_cache_->crcs.end()) {
+        rassert(page_cache_->crcs[block_id()] == crc);
+    }
     return page_->get_page_buf(page_cache_);
 }
 

@@ -34,7 +34,7 @@ internal_disk_backed_queue_t::internal_disk_backed_queue_t(io_backender_t *io_ba
     alt_cache_config_t cache_dynamic_config;
     cache_dynamic_config.page_config.memory_limit = MEGABYTE;
     cache.init(new cache_t(serializer.get(), cache_dynamic_config,
-                           &perfmon_collection));
+                           &perfmon_collection, filename.permanent_path()));
     cache_conn.init(new cache_conn_t(cache.get()));
     // Emulate cache_t::create behavior by zeroing the block with id SUPERBLOCK_ID.
     txn_t txn(cache_conn.get(), write_durability_t::HARD,
