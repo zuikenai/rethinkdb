@@ -321,6 +321,8 @@ public:
     }
 
     std::map<block_id_t, uint32_t> crcs;
+    std::map<block_id_t, uint32_t> latest_written_crcs;
+    std::map<block_id_t, block_version_t> latest_written_block_version;
 
 private:
     friend class page_read_ahead_cb_t;

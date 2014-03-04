@@ -168,11 +168,11 @@ page_cache_t::page_cache_t(serializer_t *serializer,
             uint32_t crc;
             file >> b;
             file >> crc;
-            // TODO! Do we have to truncate the too high ones?
             crcs[b] = crc;
         }
         file.close();
     }
+    latest_written_crcs = crcs;
 
     const bool start_read_ahead = config.memory_limit > 0;
     if (start_read_ahead) {
@@ -199,6 +199,12 @@ page_cache_t::~page_cache_t() {
     have_read_ahead_cb_destroyed();
 
     drainer_.reset();
+    for (auto it = latest_written_block_version.begin(); it != latest_written_block_version.end(); ++it) {
+        if (!(current_pages_.size() > it->first && it->second == current_pages_[it->first]->last_write_acquirer_version_)) {
+            debugf("A page has not been written to disk. %lu > %lu && %lu == %lu\n",
+                   current_pages_.size(), it->first, it->second.debug_value(), current_pages_[it->first]->last_write_acquirer_version_.debug_value());
+        }
+    }
     for (auto it = current_pages_.begin(); it != current_pages_.end(); ++it) {
         delete *it;
     }
@@ -232,6 +238,12 @@ page_cache_t::~page_cache_t() {
             file << it->second;
         }
         file.close();
+    }
+
+    for (auto it = crcs.begin(); it != crcs.end(); ++it) {
+        if (latest_written_crcs.find(it->first) != latest_written_crcs.end()) {
+            rassert(latest_written_crcs[it->first] == it->second, "A page has not been written to disk correctly.");
+        }
     }
 }
 
@@ -1153,6 +1165,8 @@ void page_cache_t::do_flush_changes(page_cache_t *page_cache,
                                                                     counted_t<standard_block_token_t>(),
                                                                     repli_timestamp_t::invalid,
                                                                     NULL));
+                    page_cache->latest_written_crcs.erase(it->first);
+                    page_cache->latest_written_block_version.erase(it->first);
                 } else {
                     // RSP: We could probably free the resources of
                     // snapshotted_dirtied_pages_ a bit sooner than we do.
@@ -1183,6 +1197,9 @@ void page_cache_t::do_flush_changes(page_cache_t *page_cache,
                                                                it->first));
                         ancillary_infos.push_back(ancillary_info_t(it->second.tstamp,
                                                                    page));
+                        uint32_t crc = page->compute_crc();
+                        page_cache->latest_written_crcs[it->first] = crc;
+                        page_cache->latest_written_block_version[it->first] = it->second.version;
                     }
                 }
             } else {
@@ -1192,6 +1209,7 @@ void page_cache_t::do_flush_changes(page_cache_t *page_cache,
                                                                 counted_t<standard_block_token_t>(),
                                                                 it->second.tstamp,
                                                                 NULL));
+                page_cache->latest_written_block_version[it->first] = it->second.version;
             }
         }
     }
@@ -1301,7 +1319,7 @@ void page_cache_t::do_flush_txn_set(page_cache_t *page_cache,
         = page_cache->index_write_source_.enter_write();
 
     // Okay, yield, thank you.
-    coro_t::yield();
+    //coro_t::yield();
     do_flush_changes(page_cache, changes, index_write_token);
 
     // Flush complete.

@@ -348,9 +348,6 @@ void *page_acq_t::get_buf_write() {
     uint32_t crc = page_->compute_crc();
     if (page_cache_->crcs.find(block_id()) != page_cache_->crcs.end()) {
         rassert(page_cache_->crcs[block_id()] == crc, "crc %u != %u for %lu", page_cache_->crcs[block_id()], crc, block_id());
-    } else {
-        //debugf("Setting(2) crc for block %lu to %u\n", block_id(), crc);
-        //page_cache_->crcs[block_id()] = crc;
     }
     page_->reset_block_token();
     return page_->get_page_buf(page_cache_);
