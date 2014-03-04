@@ -242,7 +242,10 @@ page_cache_t::~page_cache_t() {
 
     for (auto it = crcs.begin(); it != crcs.end(); ++it) {
         if (latest_written_crcs.find(it->first) != latest_written_crcs.end()) {
-            rassert(latest_written_crcs[it->first] == it->second, "A page has not been written to disk correctly.");
+            if (!(latest_written_crcs[it->first] == it->second)) {
+                debugf("A page has not been written to disk correctly. %u == %u (%lu)\n",
+                       latest_written_crcs[it->first], it->second, it->first);
+            }
         }
     }
 }
@@ -628,7 +631,7 @@ current_page_t::current_page_t(scoped_malloc_t<ser_buffer_t> buf,
       last_write_acquirer_(NULL) {
     uint32_t crc = page_.page_->compute_crc();
     if (page_cache->crcs.find(block_id) != page_cache->crcs.end()) {
-        rassert(page_cache->crcs[block_id] == crc, "Wrong data from disk (read ahead).");
+        rassert(page_cache->crcs[block_id] == crc, "Wrong data from disk (read ahead, %lu).", block_id);
     }
     // Increment the block version so that we can distinguish between unassigned
     // current_page_acq_t::block_version_ values (which are 0) and assigned ones.

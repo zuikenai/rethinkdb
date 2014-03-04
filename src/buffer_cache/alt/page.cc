@@ -159,7 +159,7 @@ void page_t::load_with_block_id(page_t *page, block_id_t block_id,
 
     uint32_t crc = page->compute_crc();
     if (page_cache->crcs.find(block_id) != page_cache->crcs.end()) {
-        rassert(page_cache->crcs[block_id] == crc, "Wrong data from disk.");
+        rassert(page_cache->crcs[block_id] == crc, "Wrong data from disk (%lu).", block_id);
     }
 
     page->pulse_waiters_or_make_evictable(page_cache);
@@ -324,8 +324,6 @@ void page_acq_t::init(page_t *page, page_cache_t *page_cache, block_id_t bid,
 page_acq_t::~page_acq_t() {
     if (page_ != NULL) {
         rassert(page_cache_ != NULL);
-        //int32_t crc = page_->compute_crc();
-        //page_cache_->crcs[block_id()] = crc;
         page_->remove_waiter(this);
     }
 }
@@ -357,7 +355,7 @@ const void *page_acq_t::get_buf_read() {
     buf_ready_signal_.wait();
     uint32_t crc = page_->compute_crc();
     if (page_cache_->crcs.find(block_id()) != page_cache_->crcs.end()) {
-        rassert(page_cache_->crcs[block_id()] == crc);
+        rassert(page_cache_->crcs[block_id()] == crc, "crc %u != %u for %lu", page_cache_->crcs[block_id()], crc, block_id());
     }
     return page_->get_page_buf(page_cache_);
 }
