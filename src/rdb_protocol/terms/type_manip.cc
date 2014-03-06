@@ -257,9 +257,15 @@ private:
         std::vector<counted_t<const datum_t> > v;
         v.reserve(groups->size());
         for (auto it = groups->begin(); it != groups->end(); ++it) {
-            r_sanity_check(it->first.has() && it->second.has());
+            counted_t<const datum_t> group_val;
+            try {
+                group_val = boost::get<counted_t<const datum_t> >(it->second);
+            } catch (boost::bad_get){
+                throw boost::get<exc_t>(it->second);
+            }
+            r_sanity_check(it->first.has() && group_val.has());
             std::map<std::string, counted_t<const datum_t> > m =
-                {{"group", std::move(it->first)}, {"reduction", std::move(it->second)}};
+                {{"group", std::move(it->first)}, {"reduction", std::move(group_val)}};
             v.push_back(make_counted<const datum_t>(std::move(m)));
         }
         return new_val(make_counted<const datum_t>(std::move(v)));

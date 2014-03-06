@@ -71,9 +71,16 @@ datum_t::datum_t(grouped_data_t &&gd)
     std::vector<counted_t<const datum_t> > v;
     v.reserve(gd.size());
     for (auto kv = gd.begin(); kv != gd.end(); ++kv) {
+        counted_t<const datum_t> group_val;
+        try {
+            group_val = boost::get<counted_t<const datum_t> >(kv->second);
+        } catch (boost::bad_get){
+            throw boost::get<exc_t>(kv->second);
+        }
+        rassert(group_val != NULL);
         v.push_back(make_counted<const datum_t>(
                         std::vector<counted_t<const datum_t> >{
-                            std::move(kv->first), std::move(kv->second)}));
+                            std::move(kv->first), std::move(group_val)}));
     }
     (*r_object)["data"] = make_counted<const datum_t>(std::move(v));
     // We don't sanitize the ptype because this is a fake ptype that should only

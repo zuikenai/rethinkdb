@@ -109,8 +109,12 @@ private:
             if (gd.has()) {
                 counted_t<grouped_data_t> out(new grouped_data_t());
                 for (auto kv = gd->begin(); kv != gd->end(); ++kv) {
-                    args[0] = kv->second;
-                    (*out)[kv->first] = f->call(env->env, args, flags)->as_datum();
+                    try {
+                        args[0] = boost::get<counted_t<const datum_t> >(kv->second);
+                        (*out)[kv->first] = f->call(env->env, args, flags)->as_datum();
+                    } catch (boost::bad_get){
+                        (*out)[kv->first] = boost::get<exc_t>(kv->second);
+                    }
                 }
                 return make_counted<val_t>(out, backtrace());
             } else {

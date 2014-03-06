@@ -116,11 +116,19 @@ private:
 size_t op_term_t::num_args() const { return args.size(); }
 counted_t<val_t> op_term_t::arg(scope_env_t *env, size_t i, eval_flags_t flags) {
     if (i == 0) {
-        if (!arg0.has()) arg0 = arg_verifier->consume(0)->eval(env, flags);
+        counted_t<val_t> arg0_val;
+        try {
+            arg0_val = boost::get<counted_t<val_t> >(arg0);
+        } catch (boost::bad_get) {
+            throw boost::get<exc_t>(arg0);
+        }
+        if (!arg0_val.has()) {
+            arg0_val = arg_verifier->consume(0)->eval(env, flags);
+        }
         counted_t<val_t> v;
-        v.swap(arg0);
-        r_sanity_check(!arg0.has());
-        return std::move(v);
+        v.swap(arg0_val);
+        r_sanity_check(!arg0_val.has());
+        return v;
     } else {
         r_sanity_check(arg_verifier != NULL);
         return arg_verifier->consume(i)->eval(env, flags);
@@ -131,15 +139,26 @@ counted_t<val_t> op_term_t::term_eval(scope_env_t *env, eval_flags_t eval_flags)
     scoped_ptr_t<arg_verifier_t> av(new arg_verifier_t(&args, &arg_verifier));
     counted_t<val_t> ret;
     if (num_args() != 0 && can_be_grouped()) {
-        arg0 = arg_verifier->consume(0)->eval(env, eval_flags);
+        counted_t<val_t> arg0_val = arg_verifier->consume(0)->eval(env, eval_flags);
+        arg0 = arg0_val;
         counted_t<grouped_data_t> gd = is_grouped_seq_op()
-            ? arg0->maybe_as_grouped_data()
-            : arg0->maybe_as_promiscuous_grouped_data(env->env);
+            ? arg0_val->maybe_as_grouped_data()
+            : arg0_val->maybe_as_promiscuous_grouped_data(env->env);
         if (gd.has()) {
             counted_t<grouped_data_t> out(new grouped_data_t());
             for (auto kv = gd->begin(); kv != gd->end(); ++kv) {
-                arg0 = make_counted<val_t>(kv->second, backtrace());
-                (*out)[kv->first] = eval_impl(env, eval_flags)->as_datum();
+                try {
+                    auto group_val = boost::get<counted_t<const datum_t> >(kv->second);
+                    rassert(group_val != NULL);
+                    arg0 = make_counted<val_t>(group_val, backtrace());
+                } catch (boost::bad_get) {
+                    arg0 = boost::get<exc_t>(kv->second);
+                }
+                try {
+                    (*out)[kv->first] = eval_impl(env, eval_flags)->as_datum();
+                } catch (const exc_t &e) {
+                    (*out)[kv->first] = e;
+                }
                 av.reset();
                 av.init(new arg_verifier_t(&args, &arg_verifier));
             }

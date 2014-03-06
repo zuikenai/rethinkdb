@@ -93,7 +93,9 @@ private:
 
     counted_t<term_t> consume(size_t i);
 
-    counted_t<val_t> arg0;
+
+
+    boost::variant<counted_t<val_t>, exc_t> arg0;
     std::vector<counted_t<term_t> > args;
     arg_verifier_t *arg_verifier; // Use this to access `args`.
 

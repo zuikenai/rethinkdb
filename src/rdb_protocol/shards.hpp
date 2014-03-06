@@ -196,7 +196,8 @@ private:
 // We need a separate class for this because inheriting from
 // `slow_atomic_countable_t` deletes our copy constructor, but boost variants
 // want us to have a copy constructor.
-class grouped_data_t : public grouped_t<counted_t<const datum_t> >,
+class grouped_data_t : public grouped_t<boost::variant<counted_t<const datum_t>,
+                                                       exc_t> >,
                        public slow_atomic_countable_t<grouped_data_t> { }; // NOLINT
 
 typedef boost::variant<
