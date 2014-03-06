@@ -6,37 +6,13 @@
 #include <utility>
 #include <algorithm>
 
+#include "errors.hpp"
 #include "rdb_protocol/env.hpp"
 #include "rdb_protocol/ql2.pb.h"
 #include "rdb_protocol/datum.hpp"
 #include "rdb_protocol/counted_term.hpp"
 #include "rdb_protocol/sym.hpp"
 #include "rdb_protocol/pb_utils.hpp"
-
-/** RVALUE_THIS
- *
- * This macro is used to annotate methods that treat *this as an
- * rvalue reference. On compilers that support it, it expands to &&
- * and all uses of the method on non-rvlaue *this are reported as
- * errors.
- *
- * The supported compilers are clang >= 2.9 and gcc >= 4.8.1
- *
- **/
-#if defined(__clang__)
-#if __has_extension(cxx_rvalue_references)
-#define RVALUE_THIS &&
-#else
-#define RVALUE_THIS
-#endif
-#elif __GNUC__ > 4 || (__GNUC__ == 4 && \
-    (__GNUC_MINOR__ > 8 || (__GNUC_MINOR__ == 8 && \
-                            __GNUC_PATCHLEVEL__ > 1)))
-#define RVALUE_THIS &&
-#else
-#define RVALUE_THIS
-#endif
-
 
 namespace ql {
 
