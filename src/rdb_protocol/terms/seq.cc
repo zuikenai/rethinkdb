@@ -92,6 +92,7 @@ public:
         : grouped_seq_op_term_t(env, term, argspec_t(2)) { }
 private:
     virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+        rassert(false);
         return new_val(env->env, arg(env, 0)->as_seq(env->env)->add_transformation(
             env->env, map_wire_func_t(arg(env, 1)->as_func()), backtrace()));
     }

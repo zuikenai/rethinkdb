@@ -110,10 +110,10 @@ private:
                 counted_t<grouped_data_t> out(new grouped_data_t());
                 for (auto kv = gd->begin(); kv != gd->end(); ++kv) {
                     try {
-                        args[0] = boost::get<counted_t<const datum_t> >(kv->second);
-                        (*out)[kv->first] = f->call(env->env, args, flags)->as_datum();
-                    } catch (boost::bad_get){
-                        (*out)[kv->first] = boost::get<exc_t>(kv->second);
+                        args[0] = kv->second.as_datum_or_throw();
+                        out->insert(std::pair<counted_t<const datum_t>, val_or_exc_t>(kv->first, f->call(env->env, args, flags)->as_datum()));
+                    } catch (const base_exc_t& e){
+                        out->insert(std::pair<counted_t<const datum_t>, val_or_exc_t>(kv->first, e));
                     }
                 }
                 return make_counted<val_t>(out, backtrace());

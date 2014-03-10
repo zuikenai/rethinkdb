@@ -193,11 +193,30 @@ private:
     std::map<counted_t<const datum_t>, T> m;
 };
 
+class val_or_exc_t {
+public:
+    val_or_exc_t() : datum(make_counted<const datum_t>()), exc() { }
+    val_or_exc_t(counted_t<const datum_t> datum_) : datum(datum_), exc() { }
+    val_or_exc_t(scoped_ptr_t<base_exc_t> &&exc_) : datum(), exc(std::move(exc_)) { }
+    val_or_exc_t(const base_exc_t &exc_) : datum(), exc(make_scoped<base_exc_t>(exc_)) { }
+
+    
+
+    counted_t<const datum_t> as_datum_or_throw() {
+        if (exc.has()) {
+            throw *exc;
+        }
+        return datum;
+    }
+private:
+    counted_t<const datum_t> datum;
+    scoped_ptr_t<base_exc_t> exc;
+};
+
 // We need a separate class for this because inheriting from
 // `slow_atomic_countable_t` deletes our copy constructor, but boost variants
 // want us to have a copy constructor.
-class grouped_data_t : public grouped_t<boost::variant<counted_t<const datum_t>,
-                                                       exc_t> >,
+class grouped_data_t : public grouped_t<val_or_exc_t>,
                        public slow_atomic_countable_t<grouped_data_t> { }; // NOLINT
 
 typedef boost::variant<

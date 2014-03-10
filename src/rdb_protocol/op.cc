@@ -117,11 +117,7 @@ size_t op_term_t::num_args() const { return args.size(); }
 counted_t<val_t> op_term_t::arg(scope_env_t *env, size_t i, eval_flags_t flags) {
     if (i == 0) {
         counted_t<val_t> arg0_val;
-        try {
-            arg0_val = boost::get<counted_t<val_t> >(arg0);
-        } catch (boost::bad_get) {
-            throw boost::get<exc_t>(arg0);
-        }
+        arg0_val = arg0.as_datum_or_throw();
         if (!arg0_val.has()) {
             arg0_val = arg_verifier->consume(0)->eval(env, flags);
         }
@@ -148,11 +144,11 @@ counted_t<val_t> op_term_t::term_eval(scope_env_t *env, eval_flags_t eval_flags)
             counted_t<grouped_data_t> out(new grouped_data_t());
             for (auto kv = gd->begin(); kv != gd->end(); ++kv) {
                 try {
-                    auto group_val = boost::get<counted_t<const datum_t> >(kv->second);
+                    auto group_val = kv->second.as_datum_or_throw();
                     rassert(group_val != NULL);
                     arg0 = make_counted<val_t>(group_val, backtrace());
-                } catch (boost::bad_get) {
-                    arg0 = boost::get<exc_t>(kv->second);
+                } catch (const base_exc_t& e) {
+                    arg0 = e;
                 }
                 try {
                     (*out)[kv->first] = eval_impl(env, eval_flags)->as_datum();

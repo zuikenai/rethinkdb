@@ -72,11 +72,7 @@ datum_t::datum_t(grouped_data_t &&gd)
     v.reserve(gd.size());
     for (auto kv = gd.begin(); kv != gd.end(); ++kv) {
         counted_t<const datum_t> group_val;
-        try {
-            group_val = boost::get<counted_t<const datum_t> >(kv->second);
-        } catch (boost::bad_get){
-            throw boost::get<exc_t>(kv->second);
-        }
+        group_val = kv->second.as_datum_or_throw();
         rassert(group_val != NULL);
         v.push_back(make_counted<const datum_t>(
                         std::vector<counted_t<const datum_t> >{

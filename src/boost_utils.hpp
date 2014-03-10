@@ -4,6 +4,7 @@
 
 #include "errors.hpp"
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 #include "containers/printf_buffer.hpp"
 
@@ -16,6 +17,42 @@ void debug_print(printf_buffer_t *buf, const boost::optional<T> &value) {
     } else {
         buf->appendf("none");
     }
+}
+
+template <class U, class ... Ts>
+class variant_contains;
+
+template <class U, class T, class ... Ts>
+class variant_contains<U, T, Ts ...> {
+    const bool value = variant_contains<U, Ts ...>::value;
+};
+
+template <class U, class ... Ts>
+class variant_contains<U, U, Ts ...> {
+    const bool value = true;
+};
+
+template <class U>
+class variant_contains<U> {
+    const bool value = false;
+};
+
+template <class U, class ... T>
+U &checked_boost_get(boost::variant<T ...> v) {
+    static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
+    return boost::get<U>(v);
+}
+
+template <class U, class ... T>
+const U &checked_boost_get(const boost::variant<T ...> v) {
+    static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
+    return boost::get<U>(v);
+}
+
+template <class U, class ... T>
+U *checked_boost_get(boost::variant<T ...> *v) {
+    static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
+    return boost::get<U>(v);
 }
 
 
