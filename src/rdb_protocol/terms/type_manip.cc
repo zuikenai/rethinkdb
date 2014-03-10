@@ -258,7 +258,7 @@ private:
         v.reserve(groups->size());
         for (auto it = groups->begin(); it != groups->end(); ++it) {
             counted_t<const datum_t> group_val;
-            group_val = it->second.as_datum_or_throw();
+            group_val = it->second.get_or_throw();
             r_sanity_check(it->first.has() && group_val.has());
             std::map<std::string, counted_t<const datum_t> > m =
                 {{"group", std::move(it->first)}, {"reduction", std::move(group_val)}};

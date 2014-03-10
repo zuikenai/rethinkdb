@@ -222,7 +222,10 @@ private:
         if (is_grouped) {
             counted_t<grouped_data_t> ret(new grouped_data_t());
             for (auto kv = groups.begin(); kv != groups.end(); ++kv) {
-                ret->insert(std::pair<counted_t<const datum_t>, val_or_exc_t>(kv->first, make_counted<const datum_t>(std::move(kv->second))));
+                ret->insert(std::pair<counted_t<const datum_t>,
+                                      counted_or_exc_t<const datum_t> >(
+                                kv->first,
+                                make_counted<const datum_t>(std::move(kv->second))));
             }
             return make_counted<val_t>(std::move(ret), bt);
         } else if (groups.size() == 0) {

@@ -193,30 +193,37 @@ private:
     std::map<counted_t<const datum_t>, T> m;
 };
 
-class val_or_exc_t {
+// counted_or_exc_t<T> represents either a counted_t<T> or
+// an exception derived from base_exc_t.
+template <class T>
+class counted_or_exc_t {
 public:
-    val_or_exc_t() : datum(make_counted<const datum_t>()), exc() { }
-    val_or_exc_t(counted_t<const datum_t> datum_) : datum(datum_), exc() { }
-    val_or_exc_t(scoped_ptr_t<base_exc_t> &&exc_) : datum(), exc(std::move(exc_)) { }
-    val_or_exc_t(const base_exc_t &exc_) : datum(), exc(make_scoped<base_exc_t>(exc_)) { }
+    counted_or_exc_t() : val(), exc() { }
+    counted_or_exc_t(counted_t<T> val_) : val(val_), exc() { }
+    counted_or_exc_t(scoped_ptr_t<base_exc_t> &&exc_) : val(), exc(std::move(exc_)) { }
+    counted_or_exc_t(const base_exc_t &exc_) : val(), exc(make_scoped<base_exc_t>(exc_)) { }
 
-    
+    counted_or_exc_t& operator= (counted_t<T> val_) {
+        val = val_;
+        exc.reset();
+        return *this;
+    }
 
-    counted_t<const datum_t> as_datum_or_throw() {
+    counted_t<T> get_or_throw() {
         if (exc.has()) {
             throw *exc;
         }
-        return datum;
+        return val;
     }
 private:
-    counted_t<const datum_t> datum;
+    counted_t<T> val;
     scoped_ptr_t<base_exc_t> exc;
 };
 
 // We need a separate class for this because inheriting from
 // `slow_atomic_countable_t` deletes our copy constructor, but boost variants
 // want us to have a copy constructor.
-class grouped_data_t : public grouped_t<val_or_exc_t>,
+class grouped_data_t : public grouped_t<counted_or_exc_t<const datum_t> >,
                        public slow_atomic_countable_t<grouped_data_t> { }; // NOLINT
 
 typedef boost::variant<

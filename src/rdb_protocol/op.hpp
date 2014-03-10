@@ -95,7 +95,7 @@ private:
 
 
 
-    val_or_exc_t arg0;
+    counted_or_exc_t<val_t> arg0;
     std::vector<counted_t<term_t> > args;
     arg_verifier_t *arg_verifier; // Use this to access `args`.
 

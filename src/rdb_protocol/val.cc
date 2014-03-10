@@ -548,7 +548,7 @@ counted_t<grouped_data_t> val_t::maybe_as_grouped_data() {
         : counted_t<grouped_data_t>();
 }
 
-scoped_ptr_t<grouped_data_t> val_t::maybe_as_promiscuous_grouped_data(env_t *env) {
+counted_t<grouped_data_t> val_t::maybe_as_promiscuous_grouped_data(env_t *env) {
     return ((type.raw_type == type_t::SEQUENCE) && sequence()->is_grouped())
         ? sequence()->to_array(env)->as_grouped_data()
         : maybe_as_grouped_data();

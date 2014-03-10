@@ -110,10 +110,14 @@ private:
                 counted_t<grouped_data_t> out(new grouped_data_t());
                 for (auto kv = gd->begin(); kv != gd->end(); ++kv) {
                     try {
-                        args[0] = kv->second.as_datum_or_throw();
-                        out->insert(std::pair<counted_t<const datum_t>, val_or_exc_t>(kv->first, f->call(env->env, args, flags)->as_datum()));
+                        args[0] = kv->second.get_or_throw();
+                        out->insert(std::pair<counted_t<const datum_t>,
+                                              counted_or_exc_t<const datum_t> >(
+                                        kv->first,
+                                        f->call(env->env, args, flags)->as_datum()));
                     } catch (const base_exc_t& e){
-                        out->insert(std::pair<counted_t<const datum_t>, val_or_exc_t>(kv->first, e));
+                        out->insert(std::pair<counted_t<const datum_t>,
+                                              counted_or_exc_t<const datum_t> >(kv->first, e));
                     }
                 }
                 return make_counted<val_t>(out, backtrace());
