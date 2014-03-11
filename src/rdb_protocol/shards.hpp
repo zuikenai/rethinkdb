@@ -230,14 +230,13 @@ private:
 class grouped_data_t : public grouped_t<exc_wrapper_t<counted_t<const datum_t> > >,
                        public slow_atomic_countable_t<grouped_data_t> { }; // NOLINT
 
-typedef const boost::variant<
+typedef boost::variant<
     grouped_t<uint64_t>, // Count.
     grouped_t<double>, // Sum.
     grouped_t<std::pair<double, uint64_t> >, // Avg.
     grouped_t<counted_t<const ql::datum_t> >, // Reduce (may be NULL)
     grouped_t<optimizer_t>, // min, max
-    grouped_t<stream_t>, // No terminal.,
-    exc_t // Don't re-order (we don't want this to initialize to an error.)
+    grouped_t<stream_t> // No terminal.,
     > result_t;
 
 typedef boost::variant<map_wire_func_t,

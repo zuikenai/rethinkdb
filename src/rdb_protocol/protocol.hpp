@@ -25,6 +25,7 @@
 #include "memcached/region.hpp"
 #include "protocol_api.hpp"
 #include "rdb_protocol/shards.hpp"
+#include "boost_utils.hpp"
 
 class extproc_pool_t;
 class cluster_directory_metadata_t;

@@ -11,6 +11,7 @@
 #include "logger.hpp"
 #include "math.hpp"
 #include "rdb_protocol/datum.hpp"
+#include "boost_utils.hpp"
 
 namespace profile {
 

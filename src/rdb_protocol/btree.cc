@@ -823,7 +823,7 @@ THROWS_ONLY(interrupted_exc_t) {
         return (*job.accumulator)(&data, std::move(key), std::move(sindex_val));
         //                                       NULL if no sindex ^^^^^^^^^^
     } catch (const ql::exc_t &e) {
-        io.response->result = e; // ATN HERE
+        io.response->result = e;
         return done_traversing_t::YES;
     } catch (const ql::datum_exc_t &e) {
 #ifndef NDEBUG
