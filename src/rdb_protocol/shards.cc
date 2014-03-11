@@ -46,7 +46,7 @@ void dprint(const char *s, const counted_t<const datum_t> &t) {
 }
 #endif // NDEBUG
 
-template<class T>
+template <class T>
 class grouped_acc_t : public accumulator_t {
 protected:
     explicit grouped_acc_t(T &&_default_val)
@@ -222,11 +222,7 @@ private:
         if (is_grouped) {
             counted_t<grouped_data_t> ret(new grouped_data_t());
             for (auto kv = groups.begin(); kv != groups.end(); ++kv) {
-                ret->insert(std::pair<counted_t<const datum_t>,
-                                      exc_wrapper_t<const datum_t> >(
-                                kv->first,
-                                exc_wrapper_t<const datum_t>(
-                                    make_counted<const datum_t>(std::move(kv->second)))));
+                (*ret)[kv->first] = exc_wrapper_t<counted_t<const datum_t> >(make_counted<const datum_t>(std::move(kv->second)));
             }
             return make_counted<val_t>(std::move(ret), bt);
         } else if (groups.size() == 0) {

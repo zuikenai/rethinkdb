@@ -111,16 +111,11 @@ private:
                 for (auto kv = gd->begin(); kv != gd->end(); ++kv) {
                     try {
                         args[0] = kv->second.get_or_throw();
-                        out->insert(std::pair<counted_t<const datum_t>,
-                                              exc_wrapper_t<const datum_t> >(
-                                        kv->first,
-                                        exc_wrapper_t<const datum_t>(
-                                            f->call(env->env, args, flags)->as_datum())));
+                        (*out)[kv->first] =
+                            exc_wrapper_t<counted_t<const datum_t> >(
+                                f->call(env->env, args, flags)->as_datum());
                     } catch (const exc_t& e){
-                        out->insert(std::pair<counted_t<const datum_t>,
-                                              exc_wrapper_t<const datum_t> >(
-                                        kv->first,
-                                        exc_wrapper_t<const datum_t>(e)));
+                        (*out)[kv->first] = exc_wrapper_t<counted_t<const datum_t> >(e);
                     }
                 }
                 return make_counted<val_t>(out, backtrace());
