@@ -522,7 +522,7 @@ struct rdb_r_shard_visitor_t : public boost::static_visitor<bool> {
     bool operator()(const rget_read_t &rg) const {
         bool do_read = rangey_read(rg);
         if (do_read) {
-            auto rg_out = boost::get<rget_read_t>(&read_out->read);
+            auto rg_out = checked_boost_get<rget_read_t>(&read_out->read);
             rg_out->batchspec = rg_out->batchspec.scale_down(CPU_SHARDING_FACTOR);
         }
         return do_read;
@@ -607,14 +607,14 @@ private:
 
 void rdb_r_unshard_visitor_t::operator()(const point_read_t &) {
     guarantee(count == 1);
-    guarantee(NULL != boost::get<point_read_response_t>(&responses[0].response));
+    guarantee(NULL != checked_boost_get<point_read_response_t>(&responses[0].response));
     *response_out = responses[0];
 }
 
 void rdb_r_unshard_visitor_t::operator()(const rget_read_t &rg) {
     // Initialize response.
     response_out->response = rget_read_response_t();
-    auto out = boost::get<rget_read_response_t>(&response_out->response);
+    auto out = checked_boost_get<rget_read_response_t>(&response_out->response);
     out->truncated = false;
     out->key_range = read_t(rg, profile_bool_t::DONT_PROFILE).get_region().inner;
 
@@ -623,7 +623,7 @@ void rdb_r_unshard_visitor_t::operator()(const rget_read_t &rg) {
     store_key_t *best = NULL;
     key_le_t key_le(rg.sorting);
     for (size_t i = 0; i < count; ++i) {
-        auto resp = boost::get<rget_read_response_t>(&responses[i].response);
+        auto resp = checked_boost_get<rget_read_response_t>(&responses[i].response);
         guarantee(resp);
         if (resp->truncated) {
             out->truncated = true;
@@ -631,7 +631,7 @@ void rdb_r_unshard_visitor_t::operator()(const rget_read_t &rg) {
                 best = &resp->last_key;
             }
         }
-        if (boost::get<ql::exc_t>(&resp->result) != NULL) {
+        if (checked_boost_get<ql::exc_t>(&resp->result) != NULL) {
             out->result = std::move(resp->result);
             return;
         }
@@ -654,8 +654,8 @@ void rdb_r_unshard_visitor_t::operator()(const distribution_read_t &dg) {
     guarantee(count > 0);
 
     for (size_t i = 0; i < count; ++i) {
-        auto result = boost::get<distribution_read_response_t>(&responses[i].response);
-        guarantee(result != NULL, "Bad boost::get\n");
+        auto result = checked_boost_get<distribution_read_response_t>(&responses[i].response);
+        guarantee(result != NULL, "Bad checked_boost_get\n");
         results[i] = *result; // TODO: move semantics.
     }
 
@@ -718,15 +718,15 @@ void rdb_r_unshard_visitor_t::operator()(const distribution_read_t &dg) {
 
 void rdb_r_unshard_visitor_t::operator()(UNUSED const sindex_list_t &sl) {
     guarantee(count == 1);
-    guarantee(boost::get<sindex_list_response_t>(&responses[0].response));
+    guarantee(checked_boost_get<sindex_list_response_t>(&responses[0].response));
     *response_out = responses[0];
 }
 
 void rdb_r_unshard_visitor_t::operator()(UNUSED const sindex_status_t &ss) {
     *response_out = read_response_t(sindex_status_response_t());
-    auto ss_response = boost::get<sindex_status_response_t>(&response_out->response);
+    auto ss_response = checked_boost_get<sindex_status_response_t>(&response_out->response);
     for (size_t i = 0; i < count; ++i) {
-        auto resp = boost::get<sindex_status_response_t>(&responses[0].response);
+        auto resp = checked_boost_get<sindex_status_response_t>(&responses[0].response);
         guarantee(resp != NULL);
         for (auto it = resp->statuses.begin(); it != resp->statuses.end(); ++it) {
             add_status(it->second, &ss_response->statuses[it->first]);
@@ -961,7 +961,7 @@ struct rdb_w_unshard_visitor_t : public boost::static_visitor<void> {
         counted_t<const ql::datum_t> stats(new ql::datum_t(ql::datum_t::R_OBJECT));
         for (size_t i = 0; i < count; ++i) {
             const counted_t<const ql::datum_t> *stats_i =
-                boost::get<counted_t<const ql::datum_t> >(&responses[i].response);
+                checked_boost_get<counted_t<const ql::datum_t> >(&responses[i].response);
             guarantee(stats_i != NULL);
             stats = stats->merge(*stats_i, ql::stats_merge);
         }
@@ -1089,7 +1089,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
     void operator()(const point_read_t &get) {
         response->response = point_read_response_t();
         point_read_response_t *res =
-            boost::get<point_read_response_t>(&response->response);
+            checked_boost_get<point_read_response_t>(&response->response);
         rdb_get(get.key, btree, superblock, res, ql_env.trace.get_or_null());
     }
 
@@ -1100,7 +1100,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
         ql_env.global_optargs.init_optargs(rget.optargs);
         response->response = rget_read_response_t();
         rget_read_response_t *res =
-            boost::get<rget_read_response_t>(&response->response);
+            checked_boost_get<rget_read_response_t>(&response->response);
 
         if (!rget.sindex) {
             // Normal rget
@@ -1154,7 +1154,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
 
     void operator()(const distribution_read_t &dg) {
         response->response = distribution_read_response_t();
-        distribution_read_response_t *res = boost::get<distribution_read_response_t>(&response->response);
+        distribution_read_response_t *res = checked_boost_get<distribution_read_response_t>(&response->response);
         rdb_distribution_get(dg.max_depth, dg.region.inner.left,
                              superblock, res);
         for (std::map<store_key_t, int64_t>::iterator it = res->key_counts.begin(); it != res->key_counts.end(); ) {
@@ -1177,7 +1177,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
 
     void operator()(UNUSED const sindex_list_t &sinner) {
         response->response = sindex_list_response_t();
-        sindex_list_response_t *res = &boost::get<sindex_list_response_t>(response->response);
+        sindex_list_response_t *res = &checked_boost_get<sindex_list_response_t>(response->response);
 
         buf_lock_t sindex_block
             = store->acquire_sindex_block_for_read(superblock->expose_buf(),
@@ -1196,7 +1196,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
 
     void operator()(const sindex_status_t &sindex_status) {
         response->response = sindex_status_response_t();
-        auto res = &boost::get<sindex_status_response_t>(response->response);
+        auto res = &checked_boost_get<sindex_status_response_t>(response->response);
 
         buf_lock_t sindex_block
             = store->acquire_sindex_block_for_read(superblock->expose_buf(),
@@ -1375,7 +1375,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
     void operator()(const point_write_t &w) {
         response->response = point_write_response_t();
         point_write_response_t *res =
-            boost::get<point_write_response_t>(&response->response);
+            checked_boost_get<point_write_response_t>(&response->response);
 
         rdb_modification_report_t mod_report(w.key);
         rdb_set(w.key, w.data, w.overwrite, btree, timestamp, superblock->get(),
@@ -1387,7 +1387,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
     void operator()(const point_delete_t &d) {
         response->response = point_delete_response_t();
         point_delete_response_t *res =
-            boost::get<point_delete_response_t>(&response->response);
+            checked_boost_get<point_delete_response_t>(&response->response);
 
         rdb_modification_report_t mod_report(d.key);
         rdb_delete(d.key, btree, timestamp, superblock->get(), res,

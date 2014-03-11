@@ -85,7 +85,7 @@ public:
     void operator()(start_t &start) const {  // NOLINT(runtime/references)
         (*begin_)++;
         counted_t<const ql::datum_t> sub_tasks = construct_datum(begin_, end_);
-        auto stop = boost::get<stop_t>(&**begin_);
+        auto stop = checked_boost_get<stop_t>(&**begin_);
         guarantee(stop);
         res_->push_back(construct_start(
             stop->when_ - start.when_, std::move(start.description_), sub_tasks));
@@ -96,7 +96,7 @@ public:
         std::vector<counted_t<const ql::datum_t> > parallel_tasks;
         for (size_t i = 0; i < split.n_parallel_jobs_; ++i) {
             parallel_tasks.push_back(construct_datum(begin_, end_));
-            guarantee(boost::get<stop_t>(&**begin_));
+            guarantee(checked_boost_get<stop_t>(&**begin_));
             (*begin_)++;
         }
         res_->push_back(construct_split(
@@ -122,7 +122,7 @@ counted_t<const ql::datum_t> construct_datum(
     std::vector<counted_t<const ql::datum_t> > res;
 
     construct_datum_visitor_t visitor(begin, end, &res);
-    while (*begin != end && !boost::get<stop_t>(&**begin)) {
+    while (*begin != end && !checked_boost_get<stop_t>(&**begin)) {
         boost::apply_visitor(visitor, **begin);
     }
 
@@ -222,8 +222,8 @@ void sampler_t::init(const std::string &description, trace_t *parent) {
 
 ticks_t duration(const event_log_t &event_log) {
     guarantee(!event_log.empty());
-    if (auto start = boost::get<start_t>(&event_log.at(0))) {
-        auto stop = boost::get<stop_t>(&event_log.back());
+    if (auto start = checked_boost_get<start_t>(&event_log.at(0))) {
+        auto stop = checked_boost_get<stop_t>(&event_log.back());
         guarantee(stop);
         return stop->when_ - start->when_;
     } else {
@@ -312,7 +312,7 @@ void trace_t::start_split() {
 void trace_t::stop_split(size_t n_parallel_jobs_, const event_log_t &par_event_log) {
     if (disabled()) { return; }
     //debugf("Stop split %zu, %p.\n", n_parallel_jobs_, this);
-    auto split = boost::get<split_t>(&event_log_target()->back());
+    auto split = checked_boost_get<split_t>(&event_log_target()->back());
     guarantee(split);
     split->n_parallel_jobs_ = n_parallel_jobs_;
     event_log_target()->insert(event_log_target()->end(), par_event_log.begin(), par_event_log.end());

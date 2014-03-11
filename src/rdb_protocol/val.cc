@@ -75,7 +75,7 @@ counted_t<const datum_t> table_t::do_batched_write(
     rdb_protocol_t::write_response_t response;
     access->get_namespace_if().write(
         &write, &response, order_token_t::ignore, env->interruptor);
-    auto dp = boost::get<counted_t<const datum_t> >(&response.response);
+    auto dp = checked_boost_get<counted_t<const datum_t> >(&response.response);
     r_sanity_check(dp != NULL);
     return *dp;
 }
@@ -185,7 +185,7 @@ MUST_USE bool table_t::sindex_create(env_t *env,
         &write, &res, order_token_t::ignore, env->interruptor);
 
     rdb_protocol_t::sindex_create_response_t *response =
-        boost::get<rdb_protocol_t::sindex_create_response_t>(&res.response);
+        checked_boost_get<rdb_protocol_t::sindex_create_response_t>(&res.response);
     r_sanity_check(response);
     return response->success;
 }
@@ -198,7 +198,7 @@ MUST_USE bool table_t::sindex_drop(env_t *env, const std::string &id) {
         &write, &res, order_token_t::ignore, env->interruptor);
 
     rdb_protocol_t::sindex_drop_response_t *response =
-        boost::get<rdb_protocol_t::sindex_drop_response_t>(&res.response);
+        checked_boost_get<rdb_protocol_t::sindex_drop_response_t>(&res.response);
     r_sanity_check(response);
     return response->success;
 }
@@ -211,7 +211,7 @@ counted_t<const datum_t> table_t::sindex_list(env_t *env) {
         access->get_namespace_if().read(
             read, &res, order_token_t::ignore, env->interruptor);
         rdb_protocol_t::sindex_list_response_t *s_res =
-            boost::get<rdb_protocol_t::sindex_list_response_t>(&res.response);
+            checked_boost_get<rdb_protocol_t::sindex_list_response_t>(&res.response);
         r_sanity_check(s_res);
 
         std::vector<counted_t<const datum_t> > array;
@@ -235,7 +235,7 @@ counted_t<const datum_t> table_t::sindex_status(env_t *env, std::set<std::string
         rdb_protocol_t::read_response_t res;
         access->get_namespace_if().read(
             read, &res, order_token_t::ignore, env->interruptor);
-        auto s_res = boost::get<rdb_protocol_t::sindex_status_response_t>(&res.response);
+        auto s_res = checked_boost_get<rdb_protocol_t::sindex_status_response_t>(&res.response);
         r_sanity_check(s_res);
 
         std::vector<counted_t<const datum_t> > array;
@@ -282,7 +282,7 @@ MUST_USE bool table_t::sync_depending_on_durability(env_t *env,
         &write, &res, order_token_t::ignore, env->interruptor);
 
     rdb_protocol_t::sync_response_t *response =
-        boost::get<rdb_protocol_t::sync_response_t>(&res.response);
+        checked_boost_get<rdb_protocol_t::sync_response_t>(&res.response);
     r_sanity_check(response);
     return true; // With our current implementation, a sync can never fail.
 }
@@ -301,7 +301,7 @@ counted_t<const datum_t> table_t::get_row(env_t *env, counted_t<const datum_t> p
             read, &res, order_token_t::ignore, env->interruptor);
     }
     rdb_protocol_t::point_read_response_t *p_res =
-        boost::get<rdb_protocol_t::point_read_response_t>(&res.response);
+        checked_boost_get<rdb_protocol_t::point_read_response_t>(&res.response);
     r_sanity_check(p_res);
     return p_res->data;
 }
@@ -533,7 +533,7 @@ counted_t<datum_stream_t> val_t::as_seq(env_t *env) {
 
 counted_t<grouped_data_t> val_t::as_grouped_data() {
     rcheck_literal_type(type_t::GROUPED_DATA);
-    return boost::get<counted_t<grouped_data_t> >(u);
+    return checked_boost_get<counted_t<grouped_data_t> >(u);
 }
 
 counted_t<grouped_data_t> val_t::as_promiscuous_grouped_data(env_t *env) {

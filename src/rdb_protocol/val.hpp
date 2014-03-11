@@ -229,18 +229,18 @@ private:
                    counted_t<grouped_data_t> > u;
 
     const counted_t<const db_t> &db() const {
-        return boost::get<counted_t<const db_t> >(u);
+        return checked_boost_get<counted_t<const db_t> >(u);
     }
     counted_t<datum_stream_t> &sequence() {
-        return boost::get<counted_t<datum_stream_t> >(u);
+        return checked_boost_get<counted_t<datum_stream_t> >(u);
     }
     counted_t<const datum_t> &datum() {
-        return boost::get<counted_t<const datum_t> >(u);
+        return checked_boost_get<counted_t<const datum_t> >(u);
     }
     const counted_t<const datum_t> &datum() const {
-        return boost::get<counted_t<const datum_t> >(u);
+        return checked_boost_get<counted_t<const datum_t> >(u);
     }
-    counted_t<func_t> &func() { return boost::get<counted_t<func_t> >(u); }
+    counted_t<func_t> &func() { return checked_boost_get<counted_t<func_t> >(u); }
 
     DISABLE_COPYING(val_t);
 };

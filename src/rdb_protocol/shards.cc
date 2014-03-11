@@ -24,7 +24,7 @@ void accumulator_t::mark_finished() { finished = true; }
 void accumulator_t::finish(result_t *out) {
     mark_finished();
     // We fill in the result if there have been no errors.
-    if (boost::get<exc_t>(out) == NULL) {
+    if (checked_boost_get<exc_t>(out) == NULL) {
         finish_impl(out);
     }
 }
@@ -80,7 +80,7 @@ private:
 
     virtual void finish_impl(result_t *out) {
         *out = grouped_t<T>();
-        boost::get<grouped_t<T> >(*out).swap(acc);
+        checked_boost_get<grouped_t<T> >(*out).swap(acc);
         guarantee(acc.size() == 0);
     }
 
@@ -90,7 +90,7 @@ private:
         std::map<counted_t<const datum_t>, std::vector<T *> > vecs;
         for (auto res = results.begin(); res != results.end(); ++res) {
             guarantee(*res);
-            grouped_t<T> *gres = boost::get<grouped_t<T> >(*res);
+            grouped_t<T> *gres = checked_boost_get<grouped_t<T> >(*res);
             guarantee(gres);
             for (auto kv = gres->begin(); kv != gres->end(); ++kv) {
                 vecs[kv->first].push_back(&kv->second);
@@ -205,7 +205,7 @@ private:
     }
 
     virtual void add_res(result_t *res) {
-        auto streams = boost::get<grouped_t<stream_t> >(res);
+        auto streams = checked_boost_get<grouped_t<stream_t> >(res);
         r_sanity_check(streams);
         for (auto kv = streams->begin(); kv != streams->end(); ++kv) {
             datums_t *lst = &groups[kv->first];
@@ -291,10 +291,10 @@ private:
     virtual void add_res(result_t *res) {
         grouped_t<T> *acc = grouped_acc_t<T>::get_acc();
         const T *default_val = grouped_acc_t<T>::get_default_val();
-        if (auto e = boost::get<exc_t>(res)) {
+        if (auto e = checked_boost_get<exc_t>(res)) {
             throw *e;
         }
-        grouped_t<T> *gres = boost::get<grouped_t<T> >(res);
+        grouped_t<T> *gres = checked_boost_get<grouped_t<T> >(res);
         r_sanity_check(gres);
         if (acc->size() == 0) {
             acc->swap(*gres);

@@ -126,7 +126,7 @@ void reader_t::accumulate_all(env_t *env, eager_acc_t *acc) {
     read_t read = readgen->next_read(active_range, transforms, batchspec);
     rget_read_response_t resp = do_read(env, std::move(read));
 
-    auto rr = boost::get<rget_read_t>(&read.read);
+    auto rr = checked_boost_get<rget_read_t>(&read.read);
     auto final_key = !reversed(rr->sorting) ? store_key_t::max() : store_key_t::min();
     r_sanity_check(resp.last_key == final_key);
     r_sanity_check(!resp.truncated);
@@ -147,9 +147,9 @@ rget_read_response_t reader_t::do_read(env_t *env, const read_t &read) {
     } catch (const cannot_perform_query_exc_t &e) {
         rfail_datum(ql::base_exc_t::GENERIC, "cannot perform read: %s", e.what());
     }
-    auto rget_res = boost::get<rget_read_response_t>(&res.response);
+    auto rget_res = checked_boost_get<rget_read_response_t>(&res.response);
     r_sanity_check(rget_res != NULL);
-    if (auto e = boost::get<ql::exc_t>(&rget_res->result)) {
+    if (auto e = checked_boost_get<ql::exc_t>(&rget_res->result)) {
         throw *e;
     }
     return std::move(*rget_res);
@@ -161,7 +161,7 @@ std::vector<rget_item_t> reader_t::do_range_read(env_t *env, const read_t &read)
     // It's called `do_range_read`.  If we have more than one type of range
     // read (which we might; rget_read_t should arguably be two types), this
     // will have to be a visitor.
-    auto rr = boost::get<rget_read_t>(&read.read);
+    auto rr = checked_boost_get<rget_read_t>(&read.read);
     r_sanity_check(rr);
     const key_range_t &rng = rr->sindex? rr->sindex->region.inner : rr->region.inner;
 
@@ -180,7 +180,7 @@ std::vector<rget_item_t> reader_t::do_range_read(env_t *env, const read_t &read)
     }
 
     shards_exhausted = readgen->update_range(&active_range, res.last_key);
-    grouped_t<stream_t> *gs = boost::get<grouped_t<stream_t> >(&res.result);
+    grouped_t<stream_t> *gs = checked_boost_get<grouped_t<stream_t> >(&res.result);
     return groups_to_batch(gs->get_underlying_map());
 }
 
