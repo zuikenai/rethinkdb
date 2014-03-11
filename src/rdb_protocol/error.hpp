@@ -24,7 +24,7 @@ public:
         NON_EXISTENCE // An error related to the absence of an expected value.
     };
     explicit base_exc_t(type_t type) : type_(type) { }
-    virtual ~base_exc_t() throw () { }
+    virtual ~base_exc_t() throw () = 0;
     type_t get_type() const { return type_; }
 protected:
     type_t type_;

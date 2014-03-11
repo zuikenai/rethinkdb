@@ -193,17 +193,15 @@ private:
     std::map<counted_t<const datum_t>, T> m;
 };
 
-// counted_or_exc_t<T> represents either a counted_t<T> or
-// an exception derived from base_exc_t.
+// exc_wrapper_t<T> represents either a counted_t<T> or an exc_t
 template <class T>
-class counted_or_exc_t {
+class exc_wrapper_t {
 public:
-    counted_or_exc_t() : val(), exc() { }
-    counted_or_exc_t(counted_t<T> val_) : val(val_), exc() { }
-    counted_or_exc_t(scoped_ptr_t<base_exc_t> &&exc_) : val(), exc(std::move(exc_)) { }
-    counted_or_exc_t(const base_exc_t &exc_) : val(), exc(make_scoped<base_exc_t>(exc_)) { }
+    exc_wrapper_t() : val(), exc() { }
+    explicit exc_wrapper_t(counted_t<T> val_) : val(val_), exc() { }
+    explicit exc_wrapper_t(const exc_t &exc_) : val(), exc(make_scoped<exc_t>(exc_)) { }
 
-    counted_or_exc_t& operator= (counted_t<T> val_) {
+    exc_wrapper_t& operator= (counted_t<T> val_) {
         val = val_;
         exc.reset();
         return *this;
@@ -215,26 +213,24 @@ public:
         }
         return val;
     }
+
+    bool has() { return exc.has(); }
+
+    const exc_t &get_exc() { return *exc; }
+
 private:
     counted_t<T> val;
-    scoped_ptr_t<base_exc_t> exc;
+    scoped_ptr_t<exc_t> exc;
 };
 
 // We need a separate class for this because inheriting from
 // `slow_atomic_countable_t` deletes our copy constructor, but boost variants
 // want us to have a copy constructor.
-class grouped_data_t : public grouped_t<counted_or_exc_t<const datum_t> >,
+class grouped_data_t : public grouped_t<exc_wrapper_t<const datum_t> >,
                        public slow_atomic_countable_t<grouped_data_t> { }; // NOLINT
 
-typedef boost::variant<
-    grouped_t<uint64_t>, // Count.
-    grouped_t<double>, // Sum.
-    grouped_t<std::pair<double, uint64_t> >, // Avg.
-    grouped_t<counted_t<const ql::datum_t> >, // Reduce (may be NULL)
-    grouped_t<optimizer_t>, // min, max
-    grouped_t<stream_t>, // No terminal.,
-    exc_t // Don't re-order (we don't want this to initialize to an error.)
-    > result_t;
+template <class T>
+typedef grouped_t<exc_wrapper_t<T> > result_t;
 
 typedef boost::variant<map_wire_func_t,
                        group_wire_func_t,

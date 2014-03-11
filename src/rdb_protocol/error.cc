@@ -42,6 +42,8 @@ void runtime_sanity_check_failed() {
                 backtrace_t());
 }
 
+base_exc_t::~base_exc_t() throw () { }
+
 base_exc_t::type_t exc_type(const datum_t *d) {
     r_sanity_check(d);
     return d->get_type() == datum_t::R_NULL
