@@ -60,16 +60,16 @@ bool is_blueprint_satisfied(const blueprint_t<protocol_t> &bp,
                  ++kt) {
                 if (jt->first == kt->second.region) {
                     if (jt->second == blueprint_role_primary &&
-                        boost::get<typename reactor_business_card_t<protocol_t>::primary_t>(&kt->second.activity) &&
-                        boost::get<typename reactor_business_card_t<protocol_t>::primary_t>(kt->second.activity).replier.is_initialized()) {
+                        checked_boost_get<typename reactor_business_card_t<protocol_t>::primary_t>(&kt->second.activity) &&
+                        checked_boost_get<typename reactor_business_card_t<protocol_t>::primary_t>(kt->second.activity).replier.is_initialized()) {
                         found = true;
                         break;
                     } else if (jt->second == blueprint_role_secondary &&
-                               boost::get<typename reactor_business_card_t<protocol_t>::secondary_up_to_date_t>(&kt->second.activity)) {
+                               checked_boost_get<typename reactor_business_card_t<protocol_t>::secondary_up_to_date_t>(&kt->second.activity)) {
                         found = true;
                         break;
                     } else if (jt->second == blueprint_role_nothing &&
-                               boost::get<typename reactor_business_card_t<protocol_t>::nothing_t>(&kt->second.activity)) {
+                               checked_boost_get<typename reactor_business_card_t<protocol_t>::nothing_t>(&kt->second.activity)) {
                         found = true;
                         break;
                     } else {

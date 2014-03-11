@@ -222,7 +222,7 @@ void run_backfill_test(size_t value_padding_length,
         cond_t non_interruptor;
         rdb_protocol_t::read_response_t response;
         broadcaster->get()->read(read, &response, &exiter, order_source->check_in("unittest::(rdb)run_partial_backfill_test").with_read_mode(), &non_interruptor);
-        rdb_protocol_t::point_read_response_t get_result = boost::get<rdb_protocol_t::point_read_response_t>(response.response);
+        rdb_protocol_t::point_read_response_t get_result = checked_boost_get<rdb_protocol_t::point_read_response_t>(response.response);
         EXPECT_TRUE(get_result.data.get() != NULL);
         EXPECT_EQ(*generate_document(value_padding_length,
                                      it->second),
@@ -343,8 +343,8 @@ void run_sindex_backfill_test(std::pair<io_backender_t *, simple_mailbox_cluster
         cond_t non_interruptor;
         rdb_protocol_t::read_response_t response;
         broadcaster->get()->read(read, &response, &exiter, order_source->check_in("unittest::(rdb)run_partial_backfill_test").with_read_mode(), &non_interruptor);
-        rdb_protocol_t::rget_read_response_t get_result = boost::get<rdb_protocol_t::rget_read_response_t>(response.response);
-        auto groups = boost::get<ql::grouped_t<ql::stream_t> >(&get_result.result);
+        rdb_protocol_t::rget_read_response_t get_result = checked_boost_get<rdb_protocol_t::rget_read_response_t>(response.response);
+        auto groups = checked_boost_get<ql::grouped_t<ql::stream_t> >(&get_result.result);
         ASSERT_TRUE(groups != NULL);
         ASSERT_EQ(1, groups->size());
         auto result_stream = &groups->begin()->second;

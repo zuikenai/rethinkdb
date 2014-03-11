@@ -133,7 +133,7 @@ void run_get_set_test(namespace_interface_t<rdb_protocol_t> *nsi, order_source_t
         cond_t interruptor;
         nsi->write(write, &response, osource->check_in("unittest::run_get_set_test(rdb_protocol.cc-A)"), &interruptor);
 
-        if (rdb_protocol_t::point_write_response_t *maybe_point_write_response_t = boost::get<rdb_protocol_t::point_write_response_t>(&response.response)) {
+        if (rdb_protocol_t::point_write_response_t *maybe_point_write_response_t = checked_boost_get<rdb_protocol_t::point_write_response_t>(&response.response)) {
             ASSERT_EQ(maybe_point_write_response_t->result, point_write_result_t::STORED);
         } else {
             ADD_FAILURE() << "got wrong type of result back";
@@ -148,7 +148,7 @@ void run_get_set_test(namespace_interface_t<rdb_protocol_t> *nsi, order_source_t
         cond_t interruptor;
         nsi->read(read, &response, osource->check_in("unittest::run_get_set_test(rdb_protocol.cc-B)"), &interruptor);
 
-        if (rdb_protocol_t::point_read_response_t *maybe_point_read_response = boost::get<rdb_protocol_t::point_read_response_t>(&response.response)) {
+        if (rdb_protocol_t::point_read_response_t *maybe_point_read_response = checked_boost_get<rdb_protocol_t::point_read_response_t>(&response.response)) {
             ASSERT_TRUE(maybe_point_read_response->data.has());
             ASSERT_EQ(ql::datum_t(ql::datum_t::R_NULL), *maybe_point_read_response->data);
         } else {
@@ -180,7 +180,7 @@ std::string create_sindex(namespace_interface_t<rdb_protocol_t> *nsi,
     cond_t interruptor;
     nsi->write(write, &response, osource->check_in("unittest::create_sindex(rdb_protocol_t.cc-A"), &interruptor);
 
-    if (!boost::get<rdb_protocol_t::sindex_create_response_t>(&response.response)) {
+    if (!checked_boost_get<rdb_protocol_t::sindex_create_response_t>(&response.response)) {
         ADD_FAILURE() << "got wrong type of result back";
     }
 
@@ -198,7 +198,7 @@ bool drop_sindex(namespace_interface_t<rdb_protocol_t> *nsi,
     nsi->write(write, &response, osource->check_in("unittest::drop_sindex(rdb_protocol_t.cc-A"), &interruptor);
 
     rdb_protocol_t::sindex_drop_response_t *res =
-        boost::get<rdb_protocol_t::sindex_drop_response_t>(&response.response);
+        checked_boost_get<rdb_protocol_t::sindex_drop_response_t>(&response.response);
 
     if (res == NULL) {
         ADD_FAILURE() << "got wrong type of result back";
@@ -239,7 +239,7 @@ void run_create_drop_sindex_test(namespace_interface_t<rdb_protocol_t> *nsi, ord
                    &interruptor);
 
         if (rdb_protocol_t::point_write_response_t *maybe_point_write_response
-            = boost::get<rdb_protocol_t::point_write_response_t>(&response.response)) {
+            = checked_boost_get<rdb_protocol_t::point_write_response_t>(&response.response)) {
             ASSERT_EQ(maybe_point_write_response->result, point_write_result_t::STORED);
         } else {
             ADD_FAILURE() << "got wrong type of result back";
@@ -254,8 +254,8 @@ void run_create_drop_sindex_test(namespace_interface_t<rdb_protocol_t> *nsi, ord
         cond_t interruptor;
         nsi->read(read, &response, osource->check_in("unittest::run_create_drop_sindex_test(rdb_protocol_t.cc-A"), &interruptor);
 
-        if (rdb_protocol_t::rget_read_response_t *rget_resp = boost::get<rdb_protocol_t::rget_read_response_t>(&response.response)) {
-            auto streams = boost::get<ql::grouped_t<ql::stream_t> >(
+        if (rdb_protocol_t::rget_read_response_t *rget_resp = checked_boost_get<rdb_protocol_t::rget_read_response_t>(&response.response)) {
+            auto streams = checked_boost_get<ql::grouped_t<ql::stream_t> >(
                 &rget_resp->result);
             ASSERT_TRUE(streams != NULL);
             ASSERT_EQ(1, streams->size());
@@ -278,7 +278,7 @@ void run_create_drop_sindex_test(namespace_interface_t<rdb_protocol_t> *nsi, ord
         cond_t interruptor;
         nsi->write(write, &response, osource->check_in("unittest::run_create_drop_sindex_test(rdb_protocol_t.cc-A"), &interruptor);
 
-        if (rdb_protocol_t::point_delete_response_t *maybe_point_delete_response = boost::get<rdb_protocol_t::point_delete_response_t>(&response.response)) {
+        if (rdb_protocol_t::point_delete_response_t *maybe_point_delete_response = checked_boost_get<rdb_protocol_t::point_delete_response_t>(&response.response)) {
             ASSERT_EQ(maybe_point_delete_response->result, point_delete_result_t::DELETED);
         } else {
             ADD_FAILURE() << "got wrong type of result back";
@@ -293,8 +293,8 @@ void run_create_drop_sindex_test(namespace_interface_t<rdb_protocol_t> *nsi, ord
         cond_t interruptor;
         nsi->read(read, &response, osource->check_in("unittest::run_create_drop_sindex_test(rdb_protocol_t.cc-A"), &interruptor);
 
-        if (rdb_protocol_t::rget_read_response_t *rget_resp = boost::get<rdb_protocol_t::rget_read_response_t>(&response.response)) {
-            auto streams = boost::get<ql::grouped_t<ql::stream_t> >(
+        if (rdb_protocol_t::rget_read_response_t *rget_resp = checked_boost_get<rdb_protocol_t::rget_read_response_t>(&response.response)) {
+            auto streams = checked_boost_get<ql::grouped_t<ql::stream_t> >(
                 &rget_resp->result);
             ASSERT_TRUE(streams != NULL);
             ASSERT_EQ(0, streams->size());
@@ -325,7 +325,7 @@ std::set<std::string> list_sindexes(namespace_interface_t<rdb_protocol_t> *nsi, 
     cond_t interruptor;
     nsi->read(read, &response, osource->check_in("unittest::list_sindexes(rdb_protocol_t.cc-A"), &interruptor);
 
-    rdb_protocol_t::sindex_list_response_t *res = boost::get<rdb_protocol_t::sindex_list_response_t>(&response.response);
+    rdb_protocol_t::sindex_list_response_t *res = checked_boost_get<rdb_protocol_t::sindex_list_response_t>(&response.response);
 
     if (res == NULL) {
         ADD_FAILURE() << "got wrong type of result back";
@@ -409,7 +409,7 @@ void run_sindex_oversized_keys_test(namespace_interface_t<rdb_protocol_t> *nsi, 
                                "rdb_protocol_t.cc-A"),
                            &interruptor);
 
-                auto resp = boost::get<rdb_protocol_t::point_write_response_t>(
+                auto resp = checked_boost_get<rdb_protocol_t::point_write_response_t>(
                         &response.response);
                 if (!resp) {
                     ADD_FAILURE() << "got wrong type of result back";
@@ -427,8 +427,8 @@ void run_sindex_oversized_keys_test(namespace_interface_t<rdb_protocol_t> *nsi, 
                 cond_t interruptor;
                 nsi->read(read, &response, osource->check_in("unittest::run_sindex_oversized_keys_test(rdb_protocol_t.cc-A"), &interruptor);
 
-                if (rdb_protocol_t::rget_read_response_t *rget_resp = boost::get<rdb_protocol_t::rget_read_response_t>(&response.response)) {
-                    auto streams = boost::get<ql::grouped_t<ql::stream_t> >(
+                if (rdb_protocol_t::rget_read_response_t *rget_resp = checked_boost_get<rdb_protocol_t::rget_read_response_t>(&response.response)) {
+                    auto streams = checked_boost_get<ql::grouped_t<ql::stream_t> >(
                         &rget_resp->result);
                     ASSERT_TRUE(streams != NULL);
                     ASSERT_EQ(1, streams->size());
@@ -478,7 +478,7 @@ void run_sindex_missing_attr_test(namespace_interface_t<rdb_protocol_t> *nsi, or
                        "unittest::run_create_drop_sindex_test(rdb_protocol_t.cc-A"),
                    &interruptor);
 
-        if (!boost::get<rdb_protocol_t::point_write_response_t>(&response.response)) {
+        if (!checked_boost_get<rdb_protocol_t::point_write_response_t>(&response.response)) {
             ADD_FAILURE() << "got wrong type of result back";
         }
     }

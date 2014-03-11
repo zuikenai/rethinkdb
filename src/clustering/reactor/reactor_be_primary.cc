@@ -156,7 +156,7 @@ bool reactor_t<protocol_t>::is_safe_for_us_to_be_primary(const change_tracking_m
             if (!region_is_empty(intersection)) {
                 regions.push_back(intersection);
                 try {
-                    if (const typename rb_t::secondary_without_primary_t * secondary_without_primary = boost::get<typename rb_t::secondary_without_primary_t>(&it->second.activity)) {
+                    if (const typename rb_t::secondary_without_primary_t * secondary_without_primary = checked_boost_get<typename rb_t::secondary_without_primary_t>(&it->second.activity)) {
                         branch_history_t<protocol_t> bh = secondary_without_primary->branch_history;
                         std::set<branch_id_t> known_branchs = branch_history_manager->known_branches();
 
@@ -176,7 +176,7 @@ bool reactor_t<protocol_t>::is_safe_for_us_to_be_primary(const change_tracking_m
                                                    peer,
                                                    it->first),
                                                &res);
-                    } else if (const typename rb_t::nothing_when_safe_t * nothing_when_safe = boost::get<typename rb_t::nothing_when_safe_t>(&it->second.activity)) {
+                    } else if (const typename rb_t::nothing_when_safe_t * nothing_when_safe = checked_boost_get<typename rb_t::nothing_when_safe_t>(&it->second.activity)) {
                         branch_history_t<protocol_t> bh = nothing_when_safe->branch_history;
                         std::set<branch_id_t> known_branchs = branch_history_manager->known_branches();
 
@@ -196,9 +196,9 @@ bool reactor_t<protocol_t>::is_safe_for_us_to_be_primary(const change_tracking_m
                                                    peer,
                                                    it->first),
                                                &res);
-                    } else if (boost::get<typename rb_t::nothing_t>(&it->second.activity)) {
+                    } else if (checked_boost_get<typename rb_t::nothing_t>(&it->second.activity)) {
                         //Everything's fine this peer cannot obstruct us so we shall proceed
-                    } else if (boost::get<typename rb_t::nothing_when_done_erasing_t>(&it->second.activity)) {
+                    } else if (checked_boost_get<typename rb_t::nothing_when_done_erasing_t>(&it->second.activity)) {
                         //Everything's fine this peer cannot obstruct us so we shall proceed
                     } else {
                         return false;

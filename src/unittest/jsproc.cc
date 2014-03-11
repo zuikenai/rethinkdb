@@ -35,7 +35,7 @@ SPAWNER_TEST(JSProc, CallTimeout) {
 
     js_result_t result = js_runner.eval(loop_source, config);
 
-    js_id_t *any_id = boost::get<js_id_t>(&result);
+    js_id_t *any_id = checked_boost_get<js_id_t>(&result);
     ASSERT_TRUE(any_id != NULL);
 
     config.timeout_ms = 10;
@@ -58,7 +58,7 @@ void run_datum_test(const std::string &source_code, counted_t<const ql::datum_t>
     ASSERT_TRUE(js_runner.connected());
 
     counted_t<const ql::datum_t> *res_datum =
-        boost::get<counted_t<const ql::datum_t> >(&result);
+        checked_boost_get<counted_t<const ql::datum_t> >(&result);
     ASSERT_TRUE(res_datum != NULL);
     *res_out = *res_datum;
 }
@@ -93,7 +93,7 @@ SPAWNER_TEST(JSProc, EvalAndCall) {
     ASSERT_TRUE(js_runner.connected());
 
     // Get the id of the function out
-    js_id_t *js_id = boost::get<js_id_t>(&result);
+    js_id_t *js_id = checked_boost_get<js_id_t>(&result);
     ASSERT_TRUE(js_id != NULL);
 
     // Call the function
@@ -104,7 +104,7 @@ SPAWNER_TEST(JSProc, EvalAndCall) {
 
     // Check results
     counted_t<const ql::datum_t> *res_datum =
-        boost::get<counted_t<const ql::datum_t> >(&result);
+        checked_boost_get<counted_t<const ql::datum_t> >(&result);
     ASSERT_TRUE(res_datum != NULL);
     ASSERT_TRUE(res_datum->has());
     ASSERT_TRUE((*res_datum)->get_type() == ql::datum_t::R_NUM);
@@ -125,7 +125,7 @@ SPAWNER_TEST(JSProc, BrokenFunction) {
     ASSERT_TRUE(js_runner.connected());
 
     // Get the id of the function out
-    js_id_t *js_id = boost::get<js_id_t>(&result);
+    js_id_t *js_id = checked_boost_get<js_id_t>(&result);
     ASSERT_TRUE(js_id != NULL);
 
     // Call the function
@@ -135,7 +135,7 @@ SPAWNER_TEST(JSProc, BrokenFunction) {
     ASSERT_TRUE(js_runner.connected());
 
     // Get the error message
-    std::string *error = boost::get<std::string>(&result);
+    std::string *error = checked_boost_get<std::string>(&result);
     ASSERT_TRUE(error != NULL);
 }
 
@@ -153,7 +153,7 @@ SPAWNER_TEST(JSProc, InvalidFunction) {
     ASSERT_TRUE(js_runner.connected());
 
     // Get the error message
-    std::string *error = boost::get<std::string>(&result);
+    std::string *error = checked_boost_get<std::string>(&result);
     ASSERT_TRUE(error != NULL);
 }
 
@@ -171,7 +171,7 @@ SPAWNER_TEST(JSProc, InfiniteRecursionFunction) {
     ASSERT_TRUE(js_runner.connected());
 
     // Get the id of the function out
-    js_id_t *js_id = boost::get<js_id_t>(&result);
+    js_id_t *js_id = checked_boost_get<js_id_t>(&result);
     ASSERT_TRUE(js_id != NULL);
 
     // Call the function
@@ -179,7 +179,7 @@ SPAWNER_TEST(JSProc, InfiniteRecursionFunction) {
     args.push_back(make_counted<ql::datum_t>(1.0));
     result = js_runner.call(source_code, args, config);
 
-    std::string *err_msg = boost::get<std::string>(&result);
+    std::string *err_msg = checked_boost_get<std::string>(&result);
 
     ASSERT_EQ(*err_msg, std::string("RangeError: Maximum call stack size exceeded"));
 }
@@ -204,7 +204,7 @@ void run_overalloc_function_test() {
     ASSERT_TRUE(js_runner.connected());
 
     // Get the id of the function out
-    js_id_t *js_id = boost::get<js_id_t>(&result);
+    js_id_t *js_id = checked_boost_get<js_id_t>(&result);
     ASSERT_TRUE(js_id != NULL);
 
     // Call the function
@@ -236,7 +236,7 @@ void passthrough_test_internal(extproc_pool_t *pool, const counted_t<const ql::d
     ASSERT_TRUE(js_runner.connected());
 
     // Get the id of the function out
-    js_id_t *js_id = boost::get<js_id_t>(&result);
+    js_id_t *js_id = checked_boost_get<js_id_t>(&result);
     ASSERT_TRUE(js_id != NULL);
 
     // Call the function
@@ -244,7 +244,7 @@ void passthrough_test_internal(extproc_pool_t *pool, const counted_t<const ql::d
                                      std::vector<counted_t<const ql::datum_t> >(1, arg),
                                      config);
 
-    counted_t<const ql::datum_t> *res_datum = boost::get<counted_t<const ql::datum_t> >(&res);
+    counted_t<const ql::datum_t> *res_datum = checked_boost_get<counted_t<const ql::datum_t> >(&res);
     ASSERT_TRUE(res_datum != NULL);
     ASSERT_TRUE(res_datum->has());
     ASSERT_EQ(*res_datum->get(), *arg.get());

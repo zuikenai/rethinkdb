@@ -232,13 +232,13 @@ struct read_unshard_visitor_t : public boost::static_visitor<read_response_t> {
     read_unshard_visitor_t(const read_response_t *b, size_t c) : bits(b), count(c) { }
     read_response_t operator()(UNUSED get_query_t get) {
         guarantee(count == 1);
-        return read_response_t(boost::get<get_result_t>(bits[0].result));
+        return read_response_t(checked_boost_get<get_result_t>(bits[0].result));
     }
     read_response_t operator()(rget_query_t rget) {
         // TODO: do this without dynamic memory?
         std::vector<key_with_data_buffer_t> pairs;
         for (size_t i = 0; i < count; ++i) {
-            const rget_result_t *bit = boost::get<rget_result_t>(&bits[i].result);
+            const rget_result_t *bit = checked_boost_get<rget_result_t>(&bits[i].result);
             pairs.insert(pairs.end(), bit->pairs.begin(), bit->pairs.end());
         }
 
@@ -267,8 +267,8 @@ struct read_unshard_visitor_t : public boost::static_visitor<read_response_t> {
         guarantee(count > 0);
 
         for (size_t i = 0; i < count; ++i) {
-            const distribution_result_t *result = boost::get<distribution_result_t>(&bits[i].result);
-            guarantee(result, "Bad boost::get\n");
+            const distribution_result_t *result = checked_boost_get<distribution_result_t>(&bits[i].result);
+            guarantee(result, "Bad checked_boost_get\n");
             results[i] = *result;
         }
 

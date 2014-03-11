@@ -88,7 +88,7 @@ std::map<store_key_t, scoped_cJSON_t*>* mock_namespace_interface_t::get_data() {
 
 void mock_namespace_interface_t::read_visitor_t::operator()(const rdb_protocol_t::point_read_t &get) {
     response->response = rdb_protocol_t::point_read_response_t();
-    rdb_protocol_t::point_read_response_t &res = boost::get<rdb_protocol_t::point_read_response_t>(response->response);
+    rdb_protocol_t::point_read_response_t &res = checked_boost_get<rdb_protocol_t::point_read_response_t>(response->response);
 
     if (data->find(get.key) != data->end()) {
         res.data = make_counted<ql::datum_t>(scoped_cJSON_t(data->at(get.key)->DeepCopy()));

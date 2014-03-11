@@ -40,25 +40,25 @@ struct variant_contains<U> {
 template <class U, class ... T>
 U &checked_boost_get(boost::variant<T ...> &v) {
     static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
-    return boost::get<U>(v);
+    return checked_boost_get<U>(v);
 }
 
 template <class U, class ... T>
 const U &checked_boost_get(const boost::variant<T ...> &v) {
     static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
-    return boost::get<U>(v);
+    return checked_boost_get<U>(v);
 }
 
 template <class U, class ... T>
 U *checked_boost_get(boost::variant<T ...> *v) {
     static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
-    return boost::get<U>(v);
+    return checked_boost_get<U>(v);
 }
 
 template <class U, class ... T>
 const U *checked_boost_get(const boost::variant<T ...> *v) {
     static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
-    return boost::get<U>(v);
+    return checked_boost_get<U>(v);
 }
 
 #endif  // BOOST_UTILS_HPP_

@@ -94,7 +94,7 @@ void run_get_set_test(namespace_interface_t<memcached_protocol_t> *nsi, order_so
         memcached_protocol_t::write_response_t result;
         nsi->write(write, &result, order_source->check_in("unittest::run_get_set_test(memcached_protocol.cc-A)"), &interruptor);
 
-        if (set_result_t *maybe_set_result = boost::get<set_result_t>(&result.result)) {
+        if (set_result_t *maybe_set_result = checked_boost_get<set_result_t>(&result.result)) {
             EXPECT_EQ(*maybe_set_result, sr_stored);
         } else {
             ADD_FAILURE() << "got wrong type of result back";
@@ -110,7 +110,7 @@ void run_get_set_test(namespace_interface_t<memcached_protocol_t> *nsi, order_so
         memcached_protocol_t::read_response_t result;
         nsi->read(read, &result, order_source->check_in("unittest::run_get_set_test(memcached_protocol.cc-B)").with_read_mode(), &interruptor);
 
-        if (get_result_t *maybe_get_result = boost::get<get_result_t>(&result.result)) {
+        if (get_result_t *maybe_get_result = checked_boost_get<get_result_t>(&result.result)) {
             EXPECT_TRUE(maybe_get_result->value.get() != NULL);
             EXPECT_EQ(1, maybe_get_result->value->size());
             if (maybe_get_result->value->size() == 1) {
@@ -129,7 +129,7 @@ void run_get_set_test(namespace_interface_t<memcached_protocol_t> *nsi, order_so
         cond_t interruptor;
         memcached_protocol_t::read_response_t result;
         nsi->read(read, &result, order_source->check_in("unittest::run_get_set_test(memcached_protocol.cc-C)").with_read_mode(), &interruptor);
-        if (rget_result_t *maybe_rget_result = boost::get<rget_result_t>(&result.result)) {
+        if (rget_result_t *maybe_rget_result = checked_boost_get<rget_result_t>(&result.result)) {
             ASSERT_FALSE(maybe_rget_result->truncated);
             EXPECT_EQ(1u, maybe_rget_result->pairs.size());
             EXPECT_EQ(std::string("a"), key_to_unescaped_str(maybe_rget_result->pairs[0].key));

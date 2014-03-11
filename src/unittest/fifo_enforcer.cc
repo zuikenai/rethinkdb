@@ -117,11 +117,11 @@ TPTEST(FIFOEnforcer, QueueEquivalence) {
     }
     while(queue.control.get()) {
         boost::variant<fifo_enforcer_read_token_t, fifo_enforcer_write_token_t>  token = queue.produce_next_value();
-        if (fifo_enforcer_read_token_t *read_token = boost::get<fifo_enforcer_read_token_t>(&token)) {
+        if (fifo_enforcer_read_token_t *read_token = checked_boost_get<fifo_enforcer_read_token_t>(&token)) {
             fifo_enforcer_sink_t::exit_read_t er(&sink, *read_token);
             EXPECT_TRUE(er.is_pulsed());
             queue.finish_read(*read_token);
-        } else if (fifo_enforcer_write_token_t *write_token = boost::get<fifo_enforcer_write_token_t>(&token)) {
+        } else if (fifo_enforcer_write_token_t *write_token = checked_boost_get<fifo_enforcer_write_token_t>(&token)) {
             fifo_enforcer_sink_t::exit_write_t ew(&sink, *write_token);
             EXPECT_TRUE(ew.is_pulsed());
             queue.finish_write(*write_token);

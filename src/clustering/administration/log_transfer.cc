@@ -52,10 +52,10 @@ std::vector<log_message_t> fetch_log_file(
 
     boost::variant<std::vector<log_message_t>, std::string> res;
     if (promise.try_get_value(&res)) {
-        if (std::vector<log_message_t> *messages = boost::get<std::vector<log_message_t> >(&res)) {
+        if (std::vector<log_message_t> *messages = checked_boost_get<std::vector<log_message_t> >(&res)) {
             return *messages;
         } else {
-            throw std::runtime_error(boost::get<std::string>(res));
+            throw std::runtime_error(checked_boost_get<std::string>(res));
         }
     } else {
         throw resource_lost_exc_t();

@@ -35,11 +35,11 @@ bool reactor_t<protocol_t>::is_safe_for_us_to_be_nothing(const change_tracking_m
              ++it) {
             if (it->second.region == region) {
                 if (r_it->second == blueprint_role_primary) {
-                    if (!boost::get<typename reactor_business_card_t<protocol_t>::primary_t>(&it->second.activity)) {
+                    if (!checked_boost_get<typename reactor_business_card_t<protocol_t>::primary_t>(&it->second.activity)) {
                         return false;
                     }
                 } else if (r_it->second == blueprint_role_secondary) {
-                    if (!boost::get<typename reactor_business_card_t<protocol_t>::secondary_up_to_date_t>(&it->second.activity)) {
+                    if (!checked_boost_get<typename reactor_business_card_t<protocol_t>::secondary_up_to_date_t>(&it->second.activity)) {
                         return false;
                     }
                 }

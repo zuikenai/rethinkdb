@@ -279,13 +279,13 @@ void do_one_get(txt_memcached_handler_t *rh, bool with_cas, get_t *gets, int i, 
             memcached_protocol_t::write_t write(get_cas_mutation, rh->generate_cas(), time(NULL));
             memcached_protocol_t::write_response_t response;
             rh->nsi->write(write, &response, token, rh->interruptor);
-            gets[i].res = boost::get<get_result_t>(response.result);
+            gets[i].res = checked_boost_get<get_result_t>(response.result);
         } else {
             get_query_t get_query(gets[i].key);
             memcached_protocol_t::read_t read(get_query, time(NULL));
             memcached_protocol_t::read_response_t response;
             rh->nsi->read(read, &response, token, rh->interruptor);
-            gets[i].res = boost::get<get_result_t>(response.result);
+            gets[i].res = checked_boost_get<get_result_t>(response.result);
         }
         gets[i].ok = true;
     } catch (const cannot_perform_query_exc_t &e) {
@@ -492,7 +492,7 @@ void do_rget(txt_memcached_handler_t *rh, pipeliner_t *pipeliner, order_source_t
             memcached_protocol_t::read_t read(rget_query, time(NULL));
             memcached_protocol_t::read_response_t response;
             rh->nsi->read(read, &response, order_source->check_in("do_rget").with_read_mode(), rh->interruptor);
-            rget_result_t results = boost::get<rget_result_t>(response.result);
+            rget_result_t results = checked_boost_get<rget_result_t>(response.result);
 
             for (std::vector<key_with_data_buffer_t>::iterator it = results.pairs.begin();
                                                                it != results.pairs.end();
@@ -622,7 +622,7 @@ void run_storage_command(txt_memcached_handler_t *rh,
             memcached_protocol_t::write_t write(sarc_mutation, rh->generate_cas(), time(NULL));
             memcached_protocol_t::write_response_t result;
             rh->nsi->write(write, &result, token, rh->interruptor);
-            res = boost::get<set_result_t>(result.result);
+            res = checked_boost_get<set_result_t>(result.result);
             ok = true;
         } catch (const cannot_perform_query_exc_t &e) {
             error_message = e.what();
@@ -681,7 +681,7 @@ void run_storage_command(txt_memcached_handler_t *rh,
             memcached_protocol_t::write_t write(append_prepend_mutation, rh->generate_cas(), time(NULL));
             memcached_protocol_t::write_response_t result;
             rh->nsi->write(write, &result, token, rh->interruptor);
-            res = boost::get<append_prepend_result_t>(result.result);
+            res = checked_boost_get<append_prepend_result_t>(result.result);
             ok = true;
         } catch (const cannot_perform_query_exc_t &e) {
             error_message = e.what();
@@ -870,7 +870,7 @@ void run_incr_decr(txt_memcached_handler_t *rh, pipeliner_acq_t *pipeliner_acq, 
         memcached_protocol_t::write_t write(incr_decr_mutation, rh->generate_cas(), time(NULL));
         memcached_protocol_t::write_response_t result;
         rh->nsi->write(write, &result, token, rh->interruptor);
-        res = boost::get<incr_decr_result_t>(result.result);
+        res = checked_boost_get<incr_decr_result_t>(result.result);
         ok = true;
     } catch (const cannot_perform_query_exc_t &e) {
         error_message = e.what();
@@ -972,7 +972,7 @@ void run_delete(txt_memcached_handler_t *rh, pipeliner_acq_t *pipeliner_acq, sto
         memcached_protocol_t::write_t write(delete_mutation, INVALID_CAS, time(NULL));
         memcached_protocol_t::write_response_t result;
         rh->nsi->write(write, &result, token, rh->interruptor);
-        res = boost::get<delete_result_t>(result.result);
+        res = checked_boost_get<delete_result_t>(result.result);
         ok = true;
     } catch (const cannot_perform_query_exc_t &e) {
         error_message = e.what();

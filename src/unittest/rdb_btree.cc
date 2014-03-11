@@ -235,7 +235,7 @@ void _check_keys_are_present(btree_store_t<rdb_protocol_t> *store,
             sorting_t::ASCENDING,
             &res);
 
-        auto groups = boost::get<ql::grouped_t<ql::stream_t> >(&res.result);
+        auto groups = checked_boost_get<ql::grouped_t<ql::stream_t> >(&res.result);
         ASSERT_TRUE(groups != NULL);
         ASSERT_EQ(1, groups->size());
         auto stream = &groups->begin()->second;
@@ -304,7 +304,7 @@ void _check_keys_are_NOT_present(btree_store_t<rdb_protocol_t> *store,
             sorting_t::ASCENDING,
             &res);
 
-        auto groups = boost::get<ql::grouped_t<ql::stream_t> >(&res.result);
+        auto groups = checked_boost_get<ql::grouped_t<ql::stream_t> >(&res.result);
         ASSERT_TRUE(groups != NULL);
         ASSERT_EQ(0, groups->size());
     }

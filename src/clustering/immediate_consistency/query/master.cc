@@ -38,14 +38,14 @@ void master_t<protocol_t>::client_t::perform_request(
         THROWS_ONLY(interrupted_exc_t)
 {
     if (const typename master_business_card_t<protocol_t>::read_request_t *read =
-            boost::get<typename master_business_card_t<protocol_t>::read_request_t>(&request)) {
+            checked_boost_get<typename master_business_card_t<protocol_t>::read_request_t>(&request)) {
 
         read->order_token.assert_read_mode();
 
         boost::variant<typename protocol_t::read_response_t, std::string> reply;
         try {
             reply = typename protocol_t::read_response_t();
-            typename protocol_t::read_response_t &resp = boost::get<typename protocol_t::read_response_t>(reply);
+            typename protocol_t::read_response_t &resp = checked_boost_get<typename protocol_t::read_response_t>(reply);
 
             fifo_enforcer_sink_t::exit_read_t exiter(&fifo_sink, read->fifo_token);
             parent->broadcaster->read(read->read, &resp, &exiter, read->order_token, interruptor);
@@ -55,7 +55,7 @@ void master_t<protocol_t>::client_t::perform_request(
         send(parent->mailbox_manager, read->cont_addr, reply);
 
     } else if (const typename master_business_card_t<protocol_t>::write_request_t *write =
-            boost::get<typename master_business_card_t<protocol_t>::write_request_t>(&request)) {
+            checked_boost_get<typename master_business_card_t<protocol_t>::write_request_t>(&request)) {
 
         write->order_token.assert_write_mode();
 

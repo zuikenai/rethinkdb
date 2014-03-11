@@ -78,10 +78,10 @@ void master_access_t<protocol_t>::read(
 
     if (result_or_failure.is_pulsed()) {
         if (const std::string *error
-            = boost::get<std::string>(&result_or_failure.wait())) {
+            = checked_boost_get<std::string>(&result_or_failure.wait())) {
             throw cannot_perform_query_exc_t(*error);
         } else if (const typename protocol_t::read_response_t *result =
-                boost::get<typename protocol_t::read_response_t>(
+                checked_boost_get<typename protocol_t::read_response_t>(
                     &result_or_failure.wait())) {
             *response = *result;
         } else {
@@ -132,10 +132,10 @@ void master_access_t<protocol_t>::write(
     wait_interruptible(&waiter, interruptor);
 
     if (result_or_failure.get_ready_signal()->is_pulsed()) {
-        if (const std::string *error = boost::get<std::string>(&result_or_failure.wait())) {
+        if (const std::string *error = checked_boost_get<std::string>(&result_or_failure.wait())) {
             throw cannot_perform_query_exc_t(*error);
         } else if (const typename protocol_t::write_response_t *result =
-                boost::get<typename protocol_t::write_response_t>(&result_or_failure.wait())) {
+                checked_boost_get<typename protocol_t::write_response_t>(&result_or_failure.wait())) {
             *response = *result;
         } else {
             unreachable();

@@ -242,7 +242,7 @@ js_env_t::~js_env_t() {
 js_result_t js_env_t::eval(const std::string &source) {
     js_context_t clean_context;
     js_result_t result("");
-    std::string *errmsg = boost::get<std::string>(&result);
+    std::string *errmsg = checked_boost_get<std::string>(&result);
 
     DECLARE_HANDLE_SCOPE(handle_scope);
 
@@ -340,7 +340,7 @@ js_result_t js_env_t::call(js_id_t id,
                            const std::vector<counted_t<const ql::datum_t> > &args) {
     js_context_t clean_context;
     js_result_t result("");
-    std::string *errmsg = boost::get<std::string>(&result);
+    std::string *errmsg = checked_boost_get<std::string>(&result);
 
     const boost::shared_ptr<v8::Persistent<v8::Value> > found_value = find_value(id);
     guarantee(!found_value->IsEmpty());

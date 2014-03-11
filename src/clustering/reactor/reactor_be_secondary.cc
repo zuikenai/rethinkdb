@@ -29,7 +29,7 @@ bool reactor_t<protocol_t>::find_broadcaster_in_directory(
                                                                a_it != p_it->second->activities.end();
                                                                a_it++) {
                 if (a_it->second.region == region) {
-                    if (boost::get<typename rb_t::primary_t>(&a_it->second.activity)) {
+                    if (checked_boost_get<typename rb_t::primary_t>(&a_it->second.activity)) {
                         if (!found_broadcaster) {
                             //This is the first viable broadcaster we've found
                             //so we set the output variable.
@@ -109,14 +109,14 @@ bool reactor_t<protocol_t>::find_replier_in_directory(
                  a_it != p_it->second->activities.end();
                  ++a_it) {
                 if (a_it->second.region == region) {
-                    if (const typename rb_t::primary_t *primary = boost::get<typename rb_t::primary_t>(&a_it->second.activity)) {
+                    if (const typename rb_t::primary_t *primary = checked_boost_get<typename rb_t::primary_t>(&a_it->second.activity)) {
                         if (primary->replier && primary->broadcaster.branch_id == b_id) {
                             backfill_candidates.push_back(get_directory_entry_view<typename rb_t::primary_t>(it->first, a_it->first)->
                                 subview(&extract_replier_from_reactor_business_card_primary<protocol_t>));
                             peer_ids.push_back(it->first);
                             activity_ids.push_back(a_it->first);
                         }
-                    } else if (const typename rb_t::secondary_up_to_date_t *secondary = boost::get<typename rb_t::secondary_up_to_date_t>(&a_it->second.activity)) {
+                    } else if (const typename rb_t::secondary_up_to_date_t *secondary = checked_boost_get<typename rb_t::secondary_up_to_date_t>(&a_it->second.activity)) {
                         if (secondary->branch_id == b_id) {
                             backfill_candidates.push_back(get_directory_entry_view<typename rb_t::secondary_up_to_date_t>(it->first, a_it->first)->
                                 subview(&extract_replier_from_reactor_business_card_secondary<protocol_t>));

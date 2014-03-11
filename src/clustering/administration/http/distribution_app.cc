@@ -70,7 +70,7 @@ void distribution_app_t::handle(const http_req_t &req, http_res_t *result, signa
                                                         &db_res,
                                                         interruptor);
 
-            scoped_cJSON_t data(render_as_json(&boost::get<distribution_result_t>(db_res.result).key_counts));
+            scoped_cJSON_t data(render_as_json(&checked_boost_get<distribution_result_t>(db_res.result).key_counts));
             http_json_res(data.get(), result);
         } catch (const cannot_perform_query_exc_t &) {
             *result = http_res_t(HTTP_INTERNAL_SERVER_ERROR);
@@ -86,7 +86,7 @@ void distribution_app_t::handle(const http_req_t &req, http_res_t *result, signa
                                                             &db_res,
                                                             interruptor);
 
-            scoped_cJSON_t data(render_as_json(&boost::get<rdb_protocol_t::distribution_read_response_t>(db_res.response).key_counts));
+            scoped_cJSON_t data(render_as_json(&checked_boost_get<rdb_protocol_t::distribution_read_response_t>(db_res.response).key_counts));
             http_json_res(data.get(), result);
         } catch (const cannot_perform_query_exc_t &) {
             *result = http_res_t(HTTP_INTERNAL_SERVER_ERROR);

@@ -128,7 +128,7 @@ js_result_t js_runner_t::eval(const std::string &source,
     }
 
     // If the eval returned a function, cache it
-    js_id_t *any_id = boost::get<js_id_t>(&result);
+    js_id_t *any_id = checked_boost_get<js_id_t>(&result);
     if (any_id != NULL) {
         cache_id(*any_id, source);
     }
@@ -144,7 +144,7 @@ js_result_t js_runner_t::call(const std::string &source,
 
     // This will retrieve the function from the cache if it's there, or re-eval it
     js_result_t result = eval(source, config);
-    js_id_t *fn_id = boost::get<js_id_t>(&result);
+    js_id_t *fn_id = checked_boost_get<js_id_t>(&result);
     guarantee(fn_id != NULL);
 
     object_buffer_t<js_timeout_t::sentry_t> sentry;
@@ -163,7 +163,7 @@ js_result_t js_runner_t::call(const std::string &source,
     }
 
     // If the call returned a function, cache it
-    js_id_t *any_id = boost::get<js_id_t>(&result);
+    js_id_t *any_id = checked_boost_get<js_id_t>(&result);
     if (any_id != NULL) {
         cache_id(*any_id, source);
     }
