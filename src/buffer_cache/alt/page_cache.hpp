@@ -87,7 +87,7 @@ public:
     ~current_page_t();
 
 
-private:
+//private:
     // current_page_acq_t should not access our fields directly.
     friend class current_page_acq_t;
     void add_acquirer(current_page_acq_t *acq, cache_account_t *account);
@@ -318,7 +318,9 @@ public:
         return &default_reads_account_;
     }
 
-private:
+    cache_t *alt_cache_;
+
+//private:
     friend class page_read_ahead_cb_t;
     void add_read_ahead_buf(block_id_t block_id,
                             ser_buffer_t *buf,

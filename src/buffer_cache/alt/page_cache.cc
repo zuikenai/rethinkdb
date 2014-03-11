@@ -9,6 +9,8 @@
 #include "do_on_thread.hpp"
 #include "serializer/serializer.hpp"
 #include "stl_utils.hpp"
+#include "buffer_cache/alt/alt.hpp"
+#include "debug.hpp"
 
 cache_conn_t::~cache_conn_t() {
     // The user could only be expected to make sure that txn_t objects don't have
@@ -256,6 +258,9 @@ current_page_t *page_cache_t::page_for_block_id(block_id_t block_id) {
                 block_id);
         current_pages_[block_id] = new current_page_t();
     } else {
+        if (current_pages_[block_id]->is_deleted()) {
+            debugf("Trying to acquire deleted page:\n%s", alt_cache_->print_log(block_id).c_str());
+        }
         rassert(!current_pages_[block_id]->is_deleted());
     }
 
