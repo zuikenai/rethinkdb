@@ -204,7 +204,7 @@
 // freed. This value is per thread.
 #define COROUTINE_FREE_LIST_SIZE                  64
 
-#define MAX_COROS_PER_THREAD                      10000
+#define MAX_COROS_PER_THREAD                      100000
 
 
 // Minimal time we nap before re-checking if a goal is satisfied in the reactor (in ms).

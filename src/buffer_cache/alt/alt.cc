@@ -18,7 +18,7 @@ using alt::page_t;
 using alt::page_txn_t;
 using alt::tracker_acq_t;
 
-const int SOFT_UNWRITTEN_CHANGES_LIMIT = 200;
+const int SOFT_UNWRITTEN_CHANGES_LIMIT = 10000;
 
 // There are very few ASSERT_NO_CORO_WAITING calls (instead we have
 // ASSERT_FINITE_CORO_WAITING) because most of the time we're at the mercy of the
@@ -99,6 +99,13 @@ cache_t::matching_snapshot_node_or_null(block_id_t block_id,
     intrusive_list_t<alt_snapshot_node_t> *list
         = &snapshot_nodes_by_block_id_[block_id];
     for (alt_snapshot_node_t *p = list->tail(); p != NULL; p = list->prev(p)) {
+        // TODO! I think expecting an equal block version is wrong.
+        // Why is it wrong? Because some writes in between might just have touched
+        // the page. So the block_version would have been increased, but no
+        // snapshot would have been taken.
+        // Or should touches also create snapshots? In theory I guess yet,
+        // but who knows if that is the case?
+        // Actually it does seem to be the case. So never mind I guess...
         if (p->current_page_acq_->block_version() == block_version) {
             return p;
         }
@@ -112,6 +119,8 @@ void cache_t::add_snapshot_node(block_id_t block_id,
     snapshot_nodes_by_block_id_[block_id].push_back(node);
 }
 
+// TODO! I should keep a log of when snapshots are taken, acquired and deleted.
+// (and in general lock all page acquisitions and deletions)
 void cache_t::remove_snapshot_node(block_id_t block_id, alt_snapshot_node_t *node) {
     ASSERT_FINITE_CORO_WAITING;
     // In some hypothetical cache data structure (a disk backed queue) we could have
@@ -267,6 +276,8 @@ alt_snapshot_node_t *buf_lock_t::help_make_child(cache_t *cache,
                                                  block_id_t child_id,
                                                  cache_account_t *account) {
     // KSI: This allocation is sometimes just unnecessary, right?
+    // TODO! Is this just wrong? We should get the block_version directly.
+    // Maybe creating the current_page_acq_t doesn't work in the cases that we have?
     auto acq = make_scoped<current_page_acq_t>(&cache->page_cache_, child_id,
                                                account, read_access_t::read);
 
@@ -383,6 +394,7 @@ void buf_lock_t::help_construct(buf_parent_t parent, block_id_t block_id,
     buf_lock_t::wait_for_parent(parent, access);
     ASSERT_FINITE_CORO_WAITING;
     if (parent.lock_or_null_ != NULL && parent.lock_or_null_->snapshot_node_ != NULL) {
+        rassert(access == access_t::read);
         buf_lock_t *parent_lock = parent.lock_or_null_;
         rassert(!parent_lock->current_page_acq_.has());
         snapshot_node_

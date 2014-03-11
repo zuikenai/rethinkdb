@@ -60,6 +60,7 @@ void actually_delete_rdb_value(buf_parent_t parent, void *value) {
     blob_t blob(parent.cache()->get_block_size(),
                 static_cast<rdb_value_t *>(value)->value_ref(),
                 blob::btree_maxreflen);
+    blob.detach_subtrees(parent);
     blob.clear(parent);
 }
 
@@ -1285,6 +1286,9 @@ public:
         const leaf_node_t *leaf_node
             = static_cast<const leaf_node_t *>(leaf_read.get_data_read());
 
+        // TODO! This should probably start new transactions occasionally.
+        //    And also not yield while the transaction is active, I guess.
+        //    Hmm...
         for (auto it = leaf::begin(*leaf_node); it != leaf::end(*leaf_node); ++it) {
             store_->btree->stats.pm_keys_read.record();
 

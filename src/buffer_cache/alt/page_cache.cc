@@ -148,7 +148,8 @@ page_cache_t::page_cache_t(serializer_t *serializer,
       read_ahead_cb_(NULL),
       drainer_(make_scoped<auto_drainer_t>()) {
 
-    const bool start_read_ahead = config.memory_limit > 0;
+    // TODO!
+    const bool start_read_ahead = config.memory_limit > 0 && false;
     if (start_read_ahead) {
         read_ahead_cb_existence_ = drainer_->lock();
     }
@@ -519,6 +520,8 @@ void current_page_acq_t::manually_touch_recency(repli_timestamp_t recency) {
     rassert(current_page_ != NULL);
     write_cond_.wait();
     rassert(current_page_ != NULL);
+    // TODO!
+    rassert(recency == superceding_recency(recency, page_cache_->recency_for_block_id(block_id_)));
     page_cache_->set_recency_for_block_id(block_id_, recency);
 }
 
@@ -661,7 +664,8 @@ void current_page_t::remove_acquirer(current_page_acq_t *acq) {
         pulse_pulsables(next, acq->page_cache()->default_reads_account());
     } else {
         if (is_deleted_) {
-            acq->page_cache()->free_list()->release_block_id(acq->block_id());
+            // TODO!
+            //acq->page_cache()->free_list()->release_block_id(acq->block_id());
         }
     }
 }
@@ -736,7 +740,8 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq,
                 acquirers_.remove(cur);
                 // KSI: Dedup this with remove_acquirer.
                 if (is_deleted_) {
-                    cur->page_cache()->free_list()->release_block_id(acq->block_id());
+                    // TODO!
+                    //cur->page_cache()->free_list()->release_block_id(acq->block_id());
                 }
             }
             cur = next;
@@ -747,6 +752,8 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq,
             if (acquirers_.prev(cur) == NULL) {
                 // (It gets exclusive write access if there's no preceding reader.)
                 if (is_deleted_) {
+                    // TODO!
+                    rassert(false);
                     // Also, if the block is in an "is_deleted_" state right now, we
                     // need to put it into a non-deleted state.  We initialize the
                     // page to a full-sized page.

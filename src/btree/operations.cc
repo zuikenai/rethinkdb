@@ -528,6 +528,7 @@ void check_and_handle_underfull(value_sizer_t<void> *sizer,
                                 parent_node);
                 }
 
+                last_buf->detach_child(buf->block_id());
                 buf->mark_deleted();
                 buf->swap(sib_buf);
             } else {
@@ -543,6 +544,7 @@ void check_and_handle_underfull(value_sizer_t<void> *sizer,
                                 parent_node);
                 }
 
+                last_buf->detach_child(sib_buf.block_id());
                 sib_buf.mark_deleted();
             }
 
@@ -570,6 +572,7 @@ void check_and_handle_underfull(value_sizer_t<void> *sizer,
                 // The parent has only 1 key after the merge (which means that
                 // it's the root and our node is its only child). Insert our
                 // node as the new root.
+                sb->expose_buf().detach_child(last_buf->block_id());
                 last_buf->mark_deleted();
                 insert_root(buf->block_id(), sb);
             }
