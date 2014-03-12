@@ -26,10 +26,62 @@ enum class sorting_t {
 // UNORDERED sortings aren't reversed
 bool reversed(sorting_t sorting);
 
+// exc_wrapper_t<T> represents either a T or an exc_t
+template <class T>
+class exc_wrapper_t {
+public:
+    exc_wrapper_t() : val(), exc() { }
+    template <class ... U>
+    explicit exc_wrapper_t(U && ... val_) : val(std::forward<U>(val_) ...), exc() { }
+    explicit exc_wrapper_t(const exc_t &exc_) : val(), exc(make_scoped<exc_t>(exc_)) { }
+
+    exc_wrapper_t& operator= (const T &val_) {
+        val = val_;
+        return *this;
+    }
+
+    exc_wrapper_t& operator= (T &&val_) {
+        val = std::move(val_);
+        return *this;
+    }
+
+    exc_wrapper_t& operator= (const exc_t& e) {
+        exc = make_scoped<exc_t>(e);
+        return *this;
+    }
+
+    void maybe_throw() {
+        if (exc.has()) {
+            throw *exc;
+        }
+    }
+
+    T &get_or_throw() {
+        maybe_throw();
+        return val;
+    }
+
+    T *operator -> () {
+        return &get_or_throw();
+    }
+
+    T &operator * () {
+        return get_or_throw();
+    }
+
+    bool has_exc() { return exc.has(); }
+
+    const exc_t &get_exc() { return *exc; }
+
+private:
+    T val;
+    scoped_ptr_t<exc_t> exc;
+};
+
 // This stuff previously resided in the protocol, but has been broken out since
 // we want to use this logic in multiple places.
 typedef std::vector<counted_t<const ql::datum_t> > datums_t;
-typedef std::map<counted_t<const ql::datum_t>, datums_t> groups_t;
+typedef std::map<counted_t<const ql::datum_t>, exc_wrapper_t<datums_t> > groups_t;
 
 struct rget_item_t {
     rget_item_t() { }
@@ -193,37 +245,6 @@ private:
     std::map<counted_t<const datum_t>, T> m;
 };
 
-// exc_wrapper_t<T> represents either a T or an exc_t
-template <class T>
-class exc_wrapper_t {
-public:
-    exc_wrapper_t() : val(), exc() { }
-    explicit exc_wrapper_t(const T &val_) : val(val_), exc() { }
-    explicit exc_wrapper_t(T &&val_) : val(std::move(val_)), exc() { }
-    explicit exc_wrapper_t(const exc_t &exc_) : val(), exc(make_scoped<exc_t>(exc_)) { }
-
-    exc_wrapper_t& operator= (T val_) {
-        val = val_;
-        exc.reset();
-        return *this;
-    }
-
-    T &get_or_throw() {
-        if (exc.has()) {
-            throw *exc;
-        }
-        return val;
-    }
-
-    bool has() { return exc.has(); }
-
-    const exc_t &get_exc() { return *exc; }
-
-private:
-    T val;
-    scoped_ptr_t<exc_t> exc;
-};
-
 // We need a separate class for this because inheriting from
 // `slow_atomic_countable_t` deletes our copy constructor, but boost variants
 // want us to have a copy constructor.
@@ -236,7 +257,8 @@ typedef boost::variant<
     grouped_t<std::pair<double, uint64_t> >, // Avg.
     grouped_t<counted_t<const ql::datum_t> >, // Reduce (may be NULL)
     grouped_t<optimizer_t>, // min, max
-    grouped_t<stream_t> // No terminal.,
+    grouped_t<stream_t>, // No terminal.
+    exc_t
     > result_t;
 
 typedef boost::variant<map_wire_func_t,

@@ -10,6 +10,7 @@
 
 #include "containers/archive/archive.hpp"
 #include "containers/archive/varint.hpp"
+#include "boost_utils.hpp"
 
 inline
 write_message_t &operator<<(UNUSED write_message_t &msg /* NOLINT */, UNUSED const boost::detail::variant::void_ &v) {

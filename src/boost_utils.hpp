@@ -19,6 +19,12 @@ void debug_print(printf_buffer_t *buf, const boost::optional<T> &value) {
     }
 }
 
+#ifndef CHECKED_BOOST_GET
+
+#define checked_boost_get boost::get
+
+#else
+
 template <class U, class ... Ts>
 struct variant_contains;
 
@@ -60,5 +66,7 @@ const U *checked_boost_get(const boost::variant<T ...> *v) {
     static_assert(variant_contains<U, T ...>::value, "Variant does not contain the given type");
     return checked_boost_get<U>(v);
 }
+
+#endif // CHECKED_BOOST_GET
 
 #endif  // BOOST_UTILS_HPP_

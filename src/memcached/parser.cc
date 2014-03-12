@@ -26,6 +26,7 @@
 #include "arch/os_signal.hpp"
 #include "perfmon/collect.hpp"
 #include "memcached/stats.hpp"
+#include "boost_utils.hpp"
 
 static const char *crlf = "\r\n";
 

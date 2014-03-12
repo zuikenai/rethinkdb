@@ -60,7 +60,7 @@ private:
             auto pair = acc.insert(std::make_pair(it->first, default_val));
             auto t_it = pair.first;
             bool keep = !pair.second;
-            for (auto el = it->second.begin(); el != it->second.end(); ++el) {
+            for (auto el = it->second->begin(); el != it->second->end(); ++el) { // TODO ATN
                 keep |= accumulate(
                     *el, &t_it->second, std::move(key), std::move(sindex_val));
             }
@@ -196,10 +196,14 @@ class to_array_t : public eager_acc_t {
 private:
     virtual void operator()(groups_t *gs) {
         for (auto kv = gs->begin(); kv != gs->end(); ++kv) {
-            datums_t *lst1 = &groups[kv->first];
-            datums_t *lst2 = &kv->second;
-            lst1->reserve(lst1->size() + lst2->size());
-            std::move(lst2->begin(), lst2->end(), std::back_inserter(*lst1));
+            try {
+                datums_t *lst1 = &groups[kv->first].get_or_throw();
+                datums_t *lst2 = &kv->second.get_or_throw();
+                lst1->reserve(lst1->size() + lst2->size());
+                std::move(lst2->begin(), lst2->end(), std::back_inserter(*lst1));
+            } catch (const exc_t& e) {
+                groups[kv->first] = e;
+            }
         }
         gs->clear();
     }
@@ -208,11 +212,15 @@ private:
         auto streams = checked_boost_get<grouped_t<stream_t> >(res);
         r_sanity_check(streams);
         for (auto kv = streams->begin(); kv != streams->end(); ++kv) {
-            datums_t *lst = &groups[kv->first];
-            stream_t *stream = &kv->second;
-            lst->reserve(lst->size() + stream->size());
-            for (auto it = stream->begin(); it != stream->end(); ++it) {
-                lst->push_back(std::move(it->data));
+            try {
+                datums_t *lst = &groups[kv->first].get_or_throw();
+                stream_t *stream = &kv->second;
+                lst->reserve(lst->size() + stream->size());
+                for (auto it = stream->begin(); it != stream->end(); ++it) {
+                    lst->push_back(std::move(it->data));
+                }
+            } catch (const exc_t& e) {
+                groups[kv->first] = e;
             }
         }
     }
@@ -253,12 +261,16 @@ private:
         for (auto it = groups->begin(); it != groups->end(); ++it) {
             auto pair = acc->insert(std::make_pair(it->first, *default_val));
             auto t_it = pair.first;
-            bool keep = !pair.second;
-            for (auto el = it->second.begin(); el != it->second.end(); ++el) {
-                keep |= accumulate(*el, &t_it->second);
-            }
-            if (!keep) {
-                acc->erase(t_it);
+            try {
+                bool keep = !pair.second;
+                for (auto el = it->second->begin(); el != it->second->end(); ++el) {
+                    keep |= accumulate(*el, &t_it->second);
+                }
+                if (!keep) {
+                    acc->erase(t_it);
+                }
+            } catch (const exc_t &e) {
+                t_it->second = e;
             }
         }
         groups->clear();
@@ -553,9 +565,13 @@ protected:
 private:
     virtual void operator()(groups_t *groups, const counted_t<const datum_t> &) {
         for (auto it = groups->begin(); it != groups->end(); ++it) {
-            lst_transform(&it->second);
-            if (it->second.size() == 0) {
-                groups->erase(it); // This is important for batching with filter.
+            try {
+                lst_transform(&it->second.get_or_throw());
+                if (it->second->size() == 0) {
+                    groups->erase(it); // This is important for batching with filter.
+                }
+            } catch (const exc_t &e) {
+                it->second = e;
             }
         }
     }
@@ -577,60 +593,65 @@ private:
                             const counted_t<const datum_t> &sindex_val) {
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
-        datums_t *ds = &groups->begin()->second;
-        for (auto el = ds->begin(); el != ds->end(); ++el) {
-            std::vector<counted_t<const datum_t> > arr;
-            arr.reserve(funcs.size() + append_index);
-            for (auto f = funcs.begin(); f != funcs.end(); ++f) {
-                try {
+        try {
+            datums_t *ds = &groups->begin()->second;
+            for (auto el = ds->begin(); el != ds->end(); ++el) {
+                std::vector<counted_t<const datum_t> > arr;
+                arr.reserve(funcs.size() + append_index);
+                for (auto f = funcs.begin(); f != funcs.end(); ++f) {
                     try {
-                        arr.push_back((*f)->call(env, *el)->as_datum());
-                    } catch (const base_exc_t &e) {
-                        if (e.get_type() == base_exc_t::NON_EXISTENCE) {
-                            arr.push_back(
-                                make_counted<const datum_t>(datum_t::R_NULL));
+                        try {
+                            arr.push_back((*f)->call(env, *el)->as_datum());
+                        } catch (const base_exc_t &e) {
+                            if (e.get_type() == base_exc_t::NON_EXISTENCE) {
+                                arr.push_back(
+                                              make_counted<const datum_t>(datum_t::R_NULL));
+                            } else {
+                                throw;
+                            }
+                        }
+                    } catch (const datum_exc_t &e) {
+                        throw exc_t(e, (*f)->backtrace().get(), 1);
+                    }
+                }
+                if (append_index) {
+                    r_sanity_check(sindex_val.has());
+                    arr.push_back(sindex_val);
+                }
+                r_sanity_check(arr.size() == (funcs.size() + append_index));
+
+                if (!multi) {
+                    add(groups, std::move(arr), *el);
+                } else {
+                    std::vector<std::vector<counted_t<const datum_t> > > perms(arr.size());
+                    for (size_t i = 0; i < arr.size(); ++i) {
+                        if (arr[i]->get_type() != datum_t::R_ARRAY) {
+                            perms[i].push_back(arr[i]);
                         } else {
-                            throw;
+                            auto subarr = arr[i]->as_array();
+                            perms[i].reserve(subarr.size());
+                            for (auto it = subarr.begin(); it != subarr.end(); ++it) {
+                                perms[i].push_back(*it);
+                            }
                         }
                     }
-                } catch (const datum_exc_t &e) {
-                    throw exc_t(e, (*f)->backtrace().get(), 1);
+                    std::vector<counted_t<const datum_t> > instance;
+                    instance.reserve(perms.size());
+                    add_perms(groups, &instance, &perms, 0, *el);
+                    r_sanity_check(instance.size() == 0);
                 }
-            }
-            if (append_index) {
-                r_sanity_check(sindex_val.has());
-                arr.push_back(sindex_val);
-            }
-            r_sanity_check(arr.size() == (funcs.size() + append_index));
 
-            if (!multi) {
-                add(groups, std::move(arr), *el);
-            } else {
-                std::vector<std::vector<counted_t<const datum_t> > > perms(arr.size());
-                for (size_t i = 0; i < arr.size(); ++i) {
-                    if (arr[i]->get_type() != datum_t::R_ARRAY) {
-                        perms[i].push_back(arr[i]);
-                    } else {
-                        auto subarr = arr[i]->as_array();
-                        perms[i].reserve(subarr.size());
-                        for (auto it = subarr.begin(); it != subarr.end(); ++it) {
-                            perms[i].push_back(*it);
-                        }
-                    }
-                }
-                std::vector<counted_t<const datum_t> > instance;
-                instance.reserve(perms.size());
-                add_perms(groups, &instance, &perms, 0, *el);
-                r_sanity_check(instance.size() == 0);
+                rcheck_src(
+                           bt.get(), base_exc_t::GENERIC,
+                           groups->size() <= array_size_limit(),
+                           strprintf("Too many groups (> %zu).", array_size_limit()));
             }
-
-            rcheck_src(
-                bt.get(), base_exc_t::GENERIC,
-                groups->size() <= array_size_limit(),
-                strprintf("Too many groups (> %zu).", array_size_limit()));
+            size_t erased = groups->erase(counted_t<const datum_t>());
+            r_sanity_check(erased == 1);
+        } catch (const exc_t& e) {
+            *groups = groups_t{{counted_t<const ql::datum_t>(),
+                                ql::exc_wrapper_t<ql::datums_t>(e)}}
         }
-        size_t erased = groups->erase(counted_t<const datum_t>());
-        r_sanity_check(erased == 1);
     }
 
     void add(groups_t *groups,

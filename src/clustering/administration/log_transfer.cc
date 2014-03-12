@@ -3,6 +3,7 @@
 
 #include "concurrency/promise.hpp"
 #include "containers/archive/boost_types.hpp"
+#include "boost_utils.hpp"
 
 RDB_IMPL_SERIALIZABLE_1(log_server_business_card_t, address);
 
