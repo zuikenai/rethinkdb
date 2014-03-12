@@ -61,6 +61,7 @@ public:
     // TODO! Add more fields as necessary
     void push_log(block_id_t block_id, const std::string &type, const buf_parent_t *parent = NULL);
     std::string print_log(block_id_t block_id) const;
+    void print_full_log() const;
     std::map<block_id_t, std::vector<std::string> > page_logs;
 
 private:

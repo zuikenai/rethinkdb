@@ -60,7 +60,6 @@ void actually_delete_rdb_value(buf_parent_t parent, void *value) {
     blob_t blob(parent.cache()->get_block_size(),
                 static_cast<rdb_value_t *>(value)->value_ref(),
                 blob::btree_maxreflen);
-    blob.detach_subtrees(parent);
     blob.clear(parent);
 }
 

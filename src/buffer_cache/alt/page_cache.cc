@@ -260,6 +260,9 @@ current_page_t *page_cache_t::page_for_block_id(block_id_t block_id) {
     } else {
         if (current_pages_[block_id]->is_deleted()) {
             debugf("Trying to acquire deleted page:\n%s", alt_cache_->print_log(block_id).c_str());
+
+            //debugf("Full log following...\n\n");
+            //alt_cache_->print_full_log();
         }
         rassert(!current_pages_[block_id]->is_deleted());
     }

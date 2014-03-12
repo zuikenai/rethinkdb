@@ -457,7 +457,7 @@ void check_and_handle_split(value_sizer_t<void> *sizer,
 void check_and_handle_underfull(value_sizer_t<void> *sizer,
                                 buf_lock_t *buf,
                                 buf_lock_t *last_buf,
-                                superblock_t *sb,
+                                UNUSED superblock_t *sb,
                                 const btree_key_t *key) {
     bool node_is_underfull;
     {
@@ -508,7 +508,7 @@ void check_and_handle_underfull(value_sizer_t<void> *sizer,
             node_is_mergable = node::is_mergable(sizer, node, sib_node, parent_node);
         }
 
-        if (node_is_mergable) {
+        /*if (node_is_mergable) {
             // Merge.
 
             const repli_timestamp_t buf_recency = buf->get_recency();
@@ -608,7 +608,8 @@ void check_and_handle_underfull(value_sizer_t<void> *sizer,
                                           key_in_middle.btree_key(),
                                           replacement_key);
             }
-        }
+        }*/
+        // TODO! Let's see if stuff works if we ignore underfull conditions.
     }
 }
 

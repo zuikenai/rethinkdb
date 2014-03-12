@@ -8,6 +8,7 @@
 #include "buffer_cache/alt/stats.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "utils.hpp"
+#include "debug.hpp"
 
 #define ALT_DEBUG 0
 
@@ -102,13 +103,6 @@ cache_t::matching_snapshot_node_or_null(block_id_t block_id,
     intrusive_list_t<alt_snapshot_node_t> *list
         = &snapshot_nodes_by_block_id_[block_id];
     for (alt_snapshot_node_t *p = list->tail(); p != NULL; p = list->prev(p)) {
-        // TODO! I think expecting an equal block version is wrong.
-        // Why is it wrong? Because some writes in between might just have touched
-        // the page. So the block_version would have been increased, but no
-        // snapshot would have been taken.
-        // Or should touches also create snapshots? In theory I guess yet,
-        // but who knows if that is the case?
-        // Actually it does seem to be the case. So never mind I guess...
         if (p->current_page_acq_->block_version() == block_version) {
             return p;
         }
@@ -122,8 +116,6 @@ void cache_t::add_snapshot_node(block_id_t block_id,
     snapshot_nodes_by_block_id_[block_id].push_back(node);
 }
 
-// TODO! I should keep a log of when snapshots are taken, acquired and deleted.
-// (and in general lock all page acquisitions and deletions)
 void cache_t::remove_snapshot_node(block_id_t block_id, alt_snapshot_node_t *node) {
     ASSERT_FINITE_CORO_WAITING;
     // In some hypothetical cache data structure (a disk backed queue) we could have
@@ -279,8 +271,6 @@ alt_snapshot_node_t *buf_lock_t::help_make_child(cache_t *cache,
                                                  block_id_t child_id,
                                                  cache_account_t *account) {
     // KSI: This allocation is sometimes just unnecessary, right?
-    // TODO! Is this just wrong? We should get the block_version directly.
-    // Maybe creating the current_page_acq_t doesn't work in the cases that we have?
     auto acq = make_scoped<current_page_acq_t>(&cache->page_cache_, child_id,
                                                account, read_access_t::read);
 
@@ -341,7 +331,6 @@ void buf_lock_t::create_child_snapshot_attachments(cache_t *cache,
                                                    block_id_t parent_id,
                                                    block_id_t child_id,
                                                    cache_account_t *account) {
-    // TODO! Create log entries here
     ASSERT_FINITE_CORO_WAITING;
     // We create at most one child snapshot node.
 
@@ -826,6 +815,7 @@ void cache_t::push_log(block_id_t block_id, const std::string &type, const buf_p
     for (alt_snapshot_node_t *p = list->tail(); p != NULL; p = list->prev(p)) {
         if (!first) str << ", ";
         first = false;
+        str << p->current_page_acq_->block_id() << "@";
         str << p->current_page_acq_->block_version().debug_value();
     }
     str << "] ";
@@ -848,5 +838,11 @@ std::string cache_t::print_log(block_id_t block_id) const {
         output += *it + "\n";
     }
     return output;
+}
+
+void cache_t::print_full_log() const {
+    for (auto it = page_logs.begin(); it != page_logs.end(); ++it) {
+        debugf("Log for id %lu:\n%s\n", it->first, print_log(it->first).c_str());
+    }
 }
 
