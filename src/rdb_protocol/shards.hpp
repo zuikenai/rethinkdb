@@ -34,6 +34,18 @@ public:
     template <class ... U>
     explicit exc_wrapper_t(U && ... val_) : val(std::forward<U>(val_) ...), exc() { }
     explicit exc_wrapper_t(const exc_t &exc_) : val(), exc(make_scoped<exc_t>(exc_)) { }
+    explicit exc_wrapper_t(exc_wrapper_t &&ew)
+        : val(std::move(ew.val)), exc(std::move(ew.exc)) { }
+    explicit exc_wrapper_t(const exc_wrapper_t &ew)
+        : val(ew.val), exc(ew.exc.get_or_null()) { }
+
+    exc_wrapper_t& operator= (const exc_wrapper_t &ew) {
+        if (ew.has_exc()) {
+            exc.swap(make_scoped<exc_t>(*ew.exc));
+        } else {
+            val = ew.val;
+        }
+    }
 
     exc_wrapper_t& operator= (const T &val_) {
         val = val_;
@@ -46,17 +58,23 @@ public:
     }
 
     exc_wrapper_t& operator= (const exc_t& e) {
-        exc = make_scoped<exc_t>(e);
+        auto tmp = make_scoped<exc_t>(e);
+        exc.swap(tmp);
         return *this;
     }
 
-    void maybe_throw() {
+    void maybe_throw() const {
         if (exc.has()) {
             throw *exc;
         }
     }
 
     T &get_or_throw() {
+        maybe_throw();
+        return val;
+    }
+
+    const T &get_or_throw() const {
         maybe_throw();
         return val;
     }
@@ -69,9 +87,15 @@ public:
         return get_or_throw();
     }
 
-    bool has_exc() { return exc.has(); }
+    const T &operator * () const {
+        return get_or_throw();
+    }
 
-    const exc_t &get_exc() { return *exc; }
+    bool has_exc() const { return exc.has(); }
+
+    exc_t &get_exc() { return *exc; }
+
+    const exc_t &get_exc() const { return *exc; }
 
 private:
     T val;
@@ -195,7 +219,13 @@ public:
         serialize_varint_uint64(&msg, m.size());
         for (auto it = m.begin(); it != m.end(); ++it) {
             serialize_grouped(&msg, it->first);
-            serialize_grouped(&msg, it->second);
+            uint8_t b = static_cast<uint8_t>(!it->second.has_exc());
+            msg.append(&b, 1);
+            if (b) {
+                serialize_grouped(&msg, *it->second);
+            } else {
+                msg << it->second.get_exc();
+            }
         }
     }
     archive_result_t rdb_deserialize(read_stream_t *s) {
@@ -208,47 +238,58 @@ public:
         }
         auto pos = m.begin();
         for (uint64_t i = 0; i < sz; ++i) {
-            std::pair<counted_t<const datum_t>, T> el;
+            std::pair<counted_t<const datum_t>, wrapped_t> el;
             res = deserialize_grouped(s, &el.first);
             if (bad(res)) { return res; }
-            res = deserialize_grouped(s, &el.second);
+            uint8_t b;
+            res = deserialize(s, &b);
             if (bad(res)) { return res; }
-            pos = m.insert(pos, std::move(el));
+            if (b) {
+                res = deserialize_grouped(s, &*el.second);
+                if (bad(res)) { return res; }
+                pos = m.insert(pos, std::move(el));
+            } else {
+                el.second = exc_t();
+                res = deserialize(s, &el.second.get_exc());
+                if (bad(res)) { return res; }
+                pos = m.insert(pos, std::move(el));
+            }
         }
         return archive_result_t::SUCCESS;
     }
 
+    typedef exc_wrapper_t<T> wrapped_t;
+    typedef typename std::map<counted_t<const datum_t>, wrapped_t> map_t;
+    typedef typename map_t::iterator iterator;
 
     // We pass these through manually rather than using inheritance because
     // `std::map` lacks a virtual destructor.
-    typename std::map<counted_t<const datum_t>, T>::iterator
-    begin() { return m.begin(); }
-    typename std::map<counted_t<const datum_t>, T>::iterator
-    end() { return m.end(); }
+    iterator begin() { return m.begin(); }
+    iterator end() { return m.end(); }
 
-    std::pair<typename std::map<counted_t<const datum_t>, T>::iterator, bool>
-    insert(std::pair<counted_t<const datum_t>, T> &&val) {
+    std::pair<iterator, bool>
+    insert(std::pair<counted_t<const datum_t>, wrapped_t> &&val) {
         return m.insert(std::move(val));
     }
     void
-    erase(typename std::map<counted_t<const datum_t>, T>::iterator pos) {
+    erase(typename std::map<counted_t<const datum_t>, wrapped_t>::iterator pos) {
         m.erase(pos);
     }
 
     size_t size() { return m.size(); }
     void clear() { return m.clear(); }
-    T &operator[](const counted_t<const datum_t> &k) { return m[k]; }
+    wrapped_t &operator[](const counted_t<const datum_t> &k) { return m[k]; }
 
     void swap(grouped_t<T> &other) { m.swap(other.m); } // NOLINT
-    std::map<counted_t<const datum_t>, T> *get_underlying_map() { return &m; }
+    map_t *get_underlying_map() { return &m; }
 private:
-    std::map<counted_t<const datum_t>, T> m;
+    map_t m;
 };
 
 // We need a separate class for this because inheriting from
 // `slow_atomic_countable_t` deletes our copy constructor, but boost variants
 // want us to have a copy constructor.
-class grouped_data_t : public grouped_t<exc_wrapper_t<counted_t<const datum_t> > >,
+class grouped_data_t : public grouped_t<counted_t<const datum_t> >,
                        public slow_atomic_countable_t<grouped_data_t> { }; // NOLINT
 
 typedef boost::variant<

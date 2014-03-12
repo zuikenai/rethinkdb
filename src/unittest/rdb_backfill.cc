@@ -347,7 +347,7 @@ void run_sindex_backfill_test(std::pair<io_backender_t *, simple_mailbox_cluster
         auto groups = checked_boost_get<ql::grouped_t<ql::stream_t> >(&get_result.result);
         ASSERT_TRUE(groups != NULL);
         ASSERT_EQ(1, groups->size());
-        auto result_stream = &groups->begin()->second;
+        auto result_stream = &groups->begin()->second.get_or_throw();
         ASSERT_EQ(1u, result_stream->size());
         EXPECT_EQ(*generate_document(0, it->second), *result_stream->at(0).data);
     }

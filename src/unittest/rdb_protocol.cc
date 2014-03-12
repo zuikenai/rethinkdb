@@ -259,7 +259,7 @@ void run_create_drop_sindex_test(namespace_interface_t<rdb_protocol_t> *nsi, ord
                 &rget_resp->result);
             ASSERT_TRUE(streams != NULL);
             ASSERT_EQ(1, streams->size());
-            auto stream = &streams->begin()->second;
+            auto stream = &streams->begin()->second.get_or_throw();
             ASSERT_TRUE(stream != NULL);
             ASSERT_EQ(1u, stream->size());
             ASSERT_EQ(ql::datum_t(*data), *stream->at(0).data);
@@ -432,7 +432,7 @@ void run_sindex_oversized_keys_test(namespace_interface_t<rdb_protocol_t> *nsi, 
                         &rget_resp->result);
                     ASSERT_TRUE(streams != NULL);
                     ASSERT_EQ(1, streams->size());
-                    auto stream = &streams->begin()->second;
+                    auto stream = &streams->begin()->second.get_or_throw();
                     ASSERT_TRUE(stream != NULL);
                     // There should be results equal to the number of iterations
                     // performed

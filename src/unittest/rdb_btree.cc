@@ -238,7 +238,7 @@ void _check_keys_are_present(btree_store_t<rdb_protocol_t> *store,
         auto groups = checked_boost_get<ql::grouped_t<ql::stream_t> >(&res.result);
         ASSERT_TRUE(groups != NULL);
         ASSERT_EQ(1, groups->size());
-        auto stream = &groups->begin()->second;
+        auto stream = &groups->begin()->second.get_or_throw();
         ASSERT_TRUE(stream != NULL);
         ASSERT_EQ(1ul, stream->size());
 

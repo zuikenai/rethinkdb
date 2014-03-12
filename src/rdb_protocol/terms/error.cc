@@ -22,6 +22,18 @@ private:
     virtual const char *name() const { return "error"; }
 };
 
+class default_term_t : public grouped_seq_op_term_t {
+public:
+    default_term_t(compile_env_t *env, const protob_t<const Term> &term)
+        : grouped_seq_op_term_t(env, term, argspec_t(2)) { }
+private:
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+        return new_val(env->env, arg(env, 0)->as_seq(env->env)->add_transformation(
+            env->env, default_wire_func_t(arg(env, 1)->as_func()), backtrace()));
+    }
+    virtual const char *name() const { return "map"; }
+};
+
 class default_term_t : public op_term_t {
 public:
     default_term_t(compile_env_t *env, const protob_t<const Term> &term)
@@ -80,6 +92,7 @@ private:
         }
     }
     virtual const char *name() const { return "default"; }
+    virtual bool can_be_grouped() { return false; }
 };
 
 counted_t<term_t> make_error_term(compile_env_t *env, const protob_t<const Term> &term) {

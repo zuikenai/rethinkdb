@@ -85,12 +85,12 @@ rdb_namespace_interface_t rdb_namespace_access_t::get_namespace_if() {
 }
 
 template<class T>
-T groups_to_batch(std::map<counted_t<const datum_t>, T> *g) {
+T groups_to_batch(std::map<counted_t<const datum_t>, exc_wrapper_t<T> > *g) {
     if (g->size() == 0) {
         return T();
     } else {
         r_sanity_check(g->size() == 1 && !g->begin()->first.has());
-        return std::move(g->begin()->second);
+        return std::move(g->begin()->second.get_or_throw());
     }
 }
 

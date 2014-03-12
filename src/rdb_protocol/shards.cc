@@ -59,13 +59,17 @@ private:
         for (auto it = groups->begin(); it != groups->end(); ++it) {
             auto pair = acc.insert(std::make_pair(it->first, default_val));
             auto t_it = pair.first;
-            bool keep = !pair.second;
-            for (auto el = it->second->begin(); el != it->second->end(); ++el) { // TODO ATN
-                keep |= accumulate(
-                    *el, &t_it->second, std::move(key), std::move(sindex_val));
-            }
-            if (!keep) {
-                acc.erase(t_it);
+            try {
+                bool keep = !pair.second;
+                for (auto el = it->second->begin(); el != it->second->end(); ++el) {
+                    keep |= accumulate(
+                        *el, &*t_it->second, std::move(key), std::move(sindex_val));
+                }
+                if (!keep) {
+                    acc.erase(t_it);
+                }
+            } catch (const exc_t& e) {
+                t_it->second = e;
             }
         }
         return should_send_batch() ? done_traversing_t::YES : done_traversing_t::NO;
@@ -87,18 +91,26 @@ private:
     virtual void unshard(const store_key_t &last_key,
                          const std::vector<result_t *> &results) {
         guarantee(acc.size() == 0);
-        std::map<counted_t<const datum_t>, std::vector<T *> > vecs;
+        std::map<counted_t<const datum_t>, exc_wrapper_t<std::vector<T *> > > vecs;
         for (auto res = results.begin(); res != results.end(); ++res) {
             guarantee(*res);
             grouped_t<T> *gres = checked_boost_get<grouped_t<T> >(*res);
             guarantee(gres);
             for (auto kv = gres->begin(); kv != gres->end(); ++kv) {
-                vecs[kv->first].push_back(&kv->second);
+                if (kv->second.has_exc()) {
+                    vecs[kv->first] = kv->second.get_exc();
+                } else {
+                    vecs[kv->first]->push_back(&*kv->second);
+                }
             }
         }
         for (auto kv = vecs.begin(); kv != vecs.end(); ++kv) {
-            auto t_it = acc.insert(std::make_pair(kv->first, default_val)).first;
-            unshard_impl(&t_it->second, last_key, kv->second);
+            if (kv->second.has_exc()) {
+                acc[kv->first] = kv->second.get_exc();
+            } else {
+                auto t_it = acc.insert(std::make_pair(kv->first, default_val)).first;
+                unshard_impl(&*t_it->second, last_key, *kv->second);
+            }
         }
     }
     virtual void unshard_impl(T *acc,
@@ -214,7 +226,7 @@ private:
         for (auto kv = streams->begin(); kv != streams->end(); ++kv) {
             try {
                 datums_t *lst = &groups[kv->first].get_or_throw();
-                stream_t *stream = &kv->second;
+                stream_t *stream = &kv->second.get_or_throw();
                 lst->reserve(lst->size() + stream->size());
                 for (auto it = stream->begin(); it != stream->end(); ++it) {
                     lst->push_back(std::move(it->data));
@@ -230,7 +242,11 @@ private:
         if (is_grouped) {
             counted_t<grouped_data_t> ret(new grouped_data_t());
             for (auto kv = groups.begin(); kv != groups.end(); ++kv) {
-                (*ret)[kv->first] = exc_wrapper_t<counted_t<const datum_t> >(make_counted<const datum_t>(std::move(kv->second)));
+                if (kv->second.has_exc()) {
+                    (*ret)[kv->first] = kv->second.get_exc();
+                } else {
+                    (*ret)[kv->first] = make_counted<const datum_t>(std::move(*kv->second));
+                }
             }
             return make_counted<val_t>(std::move(ret), bt);
         } else if (groups.size() == 0) {
@@ -239,7 +255,8 @@ private:
         } else {
             r_sanity_check(groups.size() == 1 && !groups.begin()->first.has());
             return make_counted<val_t>(
-                make_counted<const datum_t>(std::move(groups.begin()->second)), bt);
+                       make_counted<const datum_t>(
+                           std::move(groups.begin()->second.get_or_throw())), bt);
         }
     }
 
@@ -264,7 +281,7 @@ private:
             try {
                 bool keep = !pair.second;
                 for (auto el = it->second->begin(); el != it->second->end(); ++el) {
-                    keep |= accumulate(*el, &t_it->second);
+                    keep |= accumulate(*el, &*t_it->second);
                 }
                 if (!keep) {
                     acc->erase(t_it);
@@ -285,7 +302,11 @@ private:
         if (is_grouped) {
             counted_t<grouped_data_t> ret(new grouped_data_t());
             for (auto kv = acc->begin(); kv != acc->end(); ++kv) {
-                ret->insert(std::make_pair(kv->first, unpack(&kv->second)));
+                if (kv->second.has_exc()) {
+                    (*ret)[kv->first] = kv->second.get_exc();
+                } else {
+                    ret->insert(std::make_pair(kv->first, unpack(&*kv->second)));
+                }
             }
             retval = make_counted<val_t>(std::move(ret), bt);
         } else if (acc->size() == 0) {
@@ -293,7 +314,7 @@ private:
             retval = make_counted<val_t>(unpack(&t), bt);
         } else {
             r_sanity_check(acc->size() == 1 && !acc->begin()->first.has());
-            retval = make_counted<val_t>(unpack(&acc->begin()->second), bt);
+            retval = make_counted<val_t>(unpack(&acc->begin()->second.get_or_throw()), bt);
         }
         acc->clear();
         return retval;
@@ -313,7 +334,11 @@ private:
         } else {
             for (auto kv = gres->begin(); kv != gres->end(); ++kv) {
                 auto t_it = acc->insert(std::make_pair(kv->first, *default_val)).first;
-                unshard_impl(&t_it->second, &kv->second);
+                try {
+                    unshard_impl(&*t_it->second, &*kv->second);
+                } catch (const exc_t &e) {
+                    t_it->second = e;
+                }
             }
         }
     }
@@ -594,7 +619,7 @@ private:
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         try {
-            datums_t *ds = &groups->begin()->second;
+            datums_t *ds = &groups->begin()->second.get_or_throw();
             for (auto el = ds->begin(); el != ds->end(); ++el) {
                 std::vector<counted_t<const datum_t> > arr;
                 arr.reserve(funcs.size() + append_index);
@@ -649,8 +674,8 @@ private:
             size_t erased = groups->erase(counted_t<const datum_t>());
             r_sanity_check(erased == 1);
         } catch (const exc_t& e) {
-            *groups = groups_t{{counted_t<const ql::datum_t>(),
-                                ql::exc_wrapper_t<ql::datums_t>(e)}}
+            groups->empty();
+            (*groups)[counted_t<const ql::datum_t>()] = e;
         }
     }
 
@@ -661,7 +686,7 @@ private:
             ? std::move(arr[0])
             : make_counted<const datum_t>(std::move(arr));
         r_sanity_check(group.has());
-        (*groups)[group].push_back(el);
+        (*groups)[group]->push_back(el);
     }
 
     void add_perms(groups_t *groups,

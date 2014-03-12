@@ -812,8 +812,8 @@ THROWS_ONLY(interrupted_exc_t) {
             }
         }
 
-        ql::groups_t data = {{counted_t<const ql::datum_t>(),
-                              ql::exc_wrapper_t<ql::datums_t>{val}}};
+        ql::groups_t data;
+        data[counted_t<const ql::datum_t>()]->push_back(val);
 
         for (auto it = job.transformers.begin(); it != job.transformers.end(); ++it) {
             (**it)(&data, sindex_val);

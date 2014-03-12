@@ -148,12 +148,12 @@ counted_t<val_t> op_term_t::term_eval(scope_env_t *env, eval_flags_t eval_flags)
                     rassert(group_val != NULL);
                     arg0 = make_counted<val_t>(group_val, backtrace());
                 } catch (const exc_t& e) {
-                    arg0 = exc_wrapper_t<counted_t<val_t> >(e);
+                    arg0 = e;
                 }
                 try {
                     (*out)[kv->first] = eval_impl(env, eval_flags)->as_datum();
                 } catch (const exc_t &e) {
-                    (*out)[kv->first] = exc_wrapper_t<counted_t<const datum_t> >(e);
+                    (*out)[kv->first] = e;
                 }
                 av.reset();
                 av.init(new arg_verifier_t(&args, &arg_verifier));
