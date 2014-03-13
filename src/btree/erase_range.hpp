@@ -14,6 +14,7 @@ struct btree_key_t;
 class order_token_t;
 class superblock_t;
 class signal_t;
+class value_deleter_t;
 
 class key_tester_t {
 public:
@@ -32,22 +33,6 @@ struct always_true_key_tester_t : public key_tester_t {
     }
 };
 
-class value_deleter_t {
-public:
-    value_deleter_t() { }
-    virtual void delete_value(buf_parent_t leaf_node, void *value) const = 0;
-
-protected:
-    virtual ~value_deleter_t() { }
-
-    DISABLE_COPYING(value_deleter_t);
-};
-
-/* A deleter that does absolutely nothing. */
-class noop_value_deleter_t : public value_deleter_t {
-public:
-    void delete_value(buf_parent_t, void *) const;
-};
 
 void btree_erase_range_generic(value_sizer_t<void> *sizer, key_tester_t *tester,
         const value_deleter_t *deleter, const btree_key_t *left_exclusive_or_null,
