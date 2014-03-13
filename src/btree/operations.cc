@@ -397,6 +397,13 @@ void check_and_handle_split(value_sizer_t<void> *sizer,
         }
     }
 
+    // If we are splitting the root, we must detach it from sb first.
+    // It will later be attached to a newly created root, together with its
+    // newly created sibling.
+    if (last_buf->empty()) {
+        sb->expose_buf().detach_child(buf->block_id());
+    }
+
     // Allocate a new node to split into, and some temporary memory to keep
     // track of the median key in the split; then actually split.
     buf_lock_t rbuf(last_buf->empty() ? sb->expose_buf() : buf_parent_t(last_buf),
