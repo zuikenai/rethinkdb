@@ -7,6 +7,7 @@
 
 #include "config/args.hpp"
 #include "containers/intrusive_list.hpp"
+#include "time.hpp"
 
 typedef int fd_t;
 #define INVALID_FD fd_t(-1)
@@ -31,6 +32,8 @@ public:
 
     void set_priority(int _priority) { priority = _priority; }
     int get_priority() const { return priority; }
+
+    ticks_t scheduled_at;
 protected:
     virtual ~linux_thread_message_t() {}
 private:

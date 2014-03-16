@@ -9,6 +9,7 @@
 #include "arch/runtime/thread_pool.hpp"
 #include "logger.hpp"
 #include "utils.hpp"
+#include "debug.hpp"
 
 // Set this to 1 if you would like some "unordered" messages to be unordered.
 #ifndef NDEBUG
@@ -49,6 +50,7 @@ linux_message_hub_t::~linux_message_hub_t() {
 
 void linux_message_hub_t::do_store_message(threadnum_t nthread, linux_thread_message_t *msg) {
     rassert(0 <= nthread.threadnum && nthread.threadnum < thread_pool_->n_threads);
+    msg->scheduled_at = get_ticks();
     queues_[nthread.threadnum].msg_local_list.push_back(msg);
 }
 
@@ -91,6 +93,7 @@ void linux_message_hub_t::store_message_sometime(threadnum_t nthread, linux_thre
 
 
 void linux_message_hub_t::insert_external_message(linux_thread_message_t *msg) {
+    msg->scheduled_at = get_ticks();
     bool do_wake_up;
     {
         spinlock_acq_t acq(&incoming_messages_lock_);
@@ -133,6 +136,7 @@ void linux_message_hub_t::on_event(int events) {
     const size_t effective_granularity = std::min(total_pending_msgs,
                                                   static_cast<size_t>(MESSAGE_SCHEDULER_GRANULARITY));
 
+    bool has_warned = false;
     // Process a certain number of messages from each priority
     for (int current_priority = MESSAGE_SCHEDULER_MAX_PRIORITY;
          current_priority >= MESSAGE_SCHEDULER_MIN_PRIORITY; --current_priority) {
@@ -164,6 +168,12 @@ void linux_message_hub_t::on_event(int events) {
             }
 #endif
 
+            ticks_t tts = get_ticks() - m->scheduled_at;
+            double d = ticks_to_secs(tts);
+            if (!has_warned && d > 0.5) {
+                has_warned = true;
+                debugf("Task took %f seconds to be scheduled\n", d);
+            }
             m->on_thread_switch();
         }
     }
