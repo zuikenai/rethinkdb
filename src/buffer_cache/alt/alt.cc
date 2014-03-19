@@ -440,6 +440,7 @@ void buf_lock_t::help_construct(buf_parent_t parent, block_id_t block_id,
     // current_page_acq_t.
     // KSI: Probably we should do that anyway.
     ASSERT_FINITE_CORO_WAITING;
+    cache()->push_log(block_id, "help_construct_create", &parent);
 
     current_page_acq_.init(new current_page_acq_t(txn_->page_txn(),
                                                   block_id,
