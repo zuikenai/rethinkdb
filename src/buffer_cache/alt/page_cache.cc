@@ -280,6 +280,7 @@ current_page_t *page_cache_t::internal_page_for_new_chosen(block_id_t block_id) 
                                std::move(buf),
                                this);
     } else {
+        alt_cache_->push_log(block_id, "undelete (internal_page_for_new_chosen)", NULL);
         current_pages_[block_id]->make_non_deleted(max_block_size_,
                                                    std::move(buf),
                                                    this);
@@ -705,7 +706,7 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq) {
             if (acquirers_.prev(cur) == NULL) {
                 // (It gets exclusive write access if there's no preceding reader.)
                 if (is_deleted_) {
-                    cur->page_cache()->alt_cache_->push_log(help.block_id, "undelete", NULL);
+                    cur->page_cache()->alt_cache_->push_log(help.block_id, "undelete (pulse_pulsables)", NULL);
                     // Also, if the block is in an "is_deleted_" state right now, we
                     // need to put it into a non-deleted state.  We initialize the
                     // page to a full-sized page.
