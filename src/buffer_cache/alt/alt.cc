@@ -1,11 +1,13 @@
 #include "buffer_cache/alt/alt.hpp"
 
+#include <sstream>
 #include <stack>
 
 #include "arch/types.hpp"
 #include "arch/runtime/coroutines.hpp"
 #include "buffer_cache/alt/stats.hpp"
 #include "concurrency/auto_drainer.hpp"
+#include "debug.hpp"
 #include "utils.hpp"
 
 #define ALT_DEBUG 0
@@ -74,7 +76,9 @@ cache_t::cache_t(serializer_t *serializer,
                  perfmon_collection_t *perfmon_collection)
     : stats_(make_scoped<alt_cache_stats_t>(perfmon_collection)),
       throttler_(),
-      page_cache_(serializer, balancer) { }
+      page_cache_(serializer, balancer) {
+    page_cache_.alt_cache_ = this;
+}
 
 cache_t::~cache_t() { }
 
@@ -370,6 +374,7 @@ void buf_lock_t::help_construct(buf_parent_t parent, block_id_t block_id,
     buf_lock_t::wait_for_parent(parent, access);
     ASSERT_FINITE_CORO_WAITING;
     if (parent.lock_or_null_ != NULL && parent.lock_or_null_->snapshot_node_ != NULL) {
+        cache()->push_log(block_id, "help_construct_read_snap", &parent);
         buf_lock_t *parent_lock = parent.lock_or_null_;
         rassert(!parent_lock->current_page_acq_.has());
         snapshot_node_
@@ -384,10 +389,13 @@ void buf_lock_t::help_construct(buf_parent_t parent, block_id_t block_id,
         ++snapshot_node_->ref_count_;
     } else {
         if (access == access_t::write && parent.lock_or_null_ != NULL) {
+            cache()->push_log(block_id, "help_construct_write_snap", &parent);
             create_child_snapshot_attachments(txn_->cache(),
                                               parent.lock_or_null_->current_page_acq()->block_version(),
                                               parent.lock_or_null_->block_id(),
                                               block_id);
+        } else {
+            cache()->push_log(block_id, "help_construct_no_snap", &parent);
         }
         current_page_acq_.init(new current_page_acq_t(txn_->page_txn(), block_id,
                                                       access));
@@ -477,6 +485,7 @@ buf_lock_t::buf_lock_t(buf_parent_t parent,
 
 void buf_lock_t::mark_deleted() {
     ASSERT_FINITE_CORO_WAITING;
+    cache()->push_log(block_id(), "mark_deleted");
 #if ALT_DEBUG
     debugf("%p: buf_lock_t %p delete %lu\n", cache(), this, block_id());
 #endif
@@ -646,6 +655,16 @@ void buf_lock_t::detach_child(block_id_t child_id) {
     ASSERT_FINITE_CORO_WAITING;
     guarantee(!empty());
     guarantee(access() == access_t::write);
+    {
+        std::stringstream str;
+        str << "detach_from_parent_" << block_id();
+        cache()->push_log(child_id, str.str());
+    }
+    {
+        std::stringstream str;
+        str << "detach_child_" << child_id;
+        cache()->push_log(block_id(), str.str());
+    }
 
     // _This_ txn isn't loading the page, so use the default reads account.
     buf_lock_t::create_child_snapshot_attachments(
@@ -761,3 +780,48 @@ void *buf_write_t::get_data_write() {
     return get_data_write(lock_->cache()->max_block_size().value());
 }
 
+void cache_t::push_log(block_id_t block_id, const std::string &type, const buf_parent_t *parent) {
+    std::stringstream str;
+    str << "cache: " << this << " ";
+    str << "current: ";
+    if (page_cache_.current_pages_.size() > block_id && page_cache_.current_pages_[block_id])
+        str << page_cache_.current_pages_[block_id]->last_write_acquirer_version_.debug_value() << " ";
+    else
+        str << "NULL ";
+    str << "snapshots: [";
+    bool first = true;
+    intrusive_list_t<alt_snapshot_node_t> *list
+        = &snapshot_nodes_by_block_id_[block_id];
+    for (alt_snapshot_node_t *p = list->tail(); p != NULL; p = list->prev(p)) {
+        if (!first) str << ", ";
+        first = false;
+        str << p->current_page_acq_->block_id() << "@";
+        str << p->current_page_acq_->block_version().debug_value();
+    }
+    str << "] ";
+    if (parent) {
+        str << "txn: " << parent->txn() << " ";
+        str << "parent: ";
+        if (parent->lock_or_null_) {
+            str << parent->lock_or_null_->block_id() << " ";
+        } else {
+            str << "TXN ";
+        }
+    }
+    str << type;
+    page_logs[block_id].push_back(str.str());
+}
+
+std::string cache_t::print_log(block_id_t block_id) const {
+    std::string output;
+    for (auto it = page_logs.find(block_id)->second.begin(); it != page_logs.find(block_id)->second.end(); ++it) {
+        output += *it + "\n";
+    }
+    return output;
+}
+
+void cache_t::print_full_log() const {
+    for (auto it = page_logs.begin(); it != page_logs.end(); ++it) {
+        debugf("Log for id %lu:\n%s\n", it->first, print_log(it->first).c_str());
+    }
+}

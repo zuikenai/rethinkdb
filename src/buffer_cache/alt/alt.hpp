@@ -14,6 +14,7 @@
 class serializer_t;
 
 class buf_lock_t;
+class buf_parent_t;
 class alt_cache_stats_t;
 class alt_snapshot_node_t;
 class perfmon_collection_t;
@@ -51,6 +52,11 @@ public:
     // i.e. define a "default" priority etc.  TODO: As soon as we can support it, we
     // might consider supporting a mem_cap paremeter.
     cache_account_t create_cache_account(int priority);
+
+    void push_log(block_id_t block_id, const std::string &type, const buf_parent_t *parent = NULL);
+    std::string print_log(block_id_t block_id) const;
+    void print_full_log() const;
+    std::map<block_id_t, std::vector<std::string> > page_logs;
 
 private:
     friend class txn_t;
@@ -125,8 +131,6 @@ private:
 
     DISABLE_COPYING(txn_t);
 };
-
-class buf_parent_t;
 
 class buf_lock_t {
 public:
@@ -304,6 +308,8 @@ private:
     friend class buf_lock_t;
     txn_t *txn_;
     buf_lock_t *lock_or_null_;
+
+    friend class cache_t;
 };
 
 class buf_read_t {

@@ -7,6 +7,7 @@
 
 #include "arch/runtime/coroutines.hpp"
 #include "concurrency/auto_drainer.hpp"
+#include "buffer_cache/alt/alt.hpp"
 #include "buffer_cache/alt/cache_balancer.hpp"
 #include "do_on_thread.hpp"
 #include "serializer/serializer.hpp"
@@ -635,6 +636,7 @@ void current_page_t::remove_acquirer(current_page_acq_t *acq) {
     } else {
         if (is_deleted_) {
             acq->page_cache()->free_list()->release_block_id(acq->block_id());
+            acq->page_cache()->alt_cache_->push_log(acq->block_id(), "release_id (remove_acquirer)", NULL);
         }
     }
 }
@@ -692,6 +694,7 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq) {
                 // KSI: Dedup this with remove_acquirer.
                 if (is_deleted_) {
                     cur->page_cache()->free_list()->release_block_id(acq->block_id());
+                    cur->page_cache()->alt_cache_->push_log(acq->block_id(), "release_id (pulse_pulseables)", NULL);
                 }
             }
             cur = next;
@@ -702,6 +705,7 @@ void current_page_t::pulse_pulsables(current_page_acq_t *const acq) {
             if (acquirers_.prev(cur) == NULL) {
                 // (It gets exclusive write access if there's no preceding reader.)
                 if (is_deleted_) {
+                    cur->page_cache()->alt_cache_->push_log(cur->block_id(), "undelete", NULL);
                     // Also, if the block is in an "is_deleted_" state right now, we
                     // need to put it into a non-deleted state.  We initialize the
                     // page to a full-sized page.

@@ -142,6 +142,8 @@ private:
     // All list elements have current_page_ != NULL, snapshotted_page_ == NULL.
     intrusive_list_t<current_page_acq_t> acquirers_;
 
+    friend class cache_t;
+
     DISABLE_COPYING(current_page_t);
 };
 
@@ -429,6 +431,9 @@ private:
     auto_drainer_t::lock_t read_ahead_cb_existence_;
 
     scoped_ptr_t<auto_drainer_t> drainer_;
+
+    friend class cache_t;
+    cache_t *alt_cache_;
 
     DISABLE_COPYING(page_cache_t);
 };
