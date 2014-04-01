@@ -460,6 +460,10 @@ class JavaScript extends RDBOp
     tt: protoTermType.JAVASCRIPT
     st: 'js'
 
+class Wget extends RDBOp
+    tt: "WGET"
+    st: 'wget'
+
 class Json extends RDBOp
     tt: protoTermType.JSON
     st: 'json'
@@ -1013,6 +1017,8 @@ rethinkdb.expr = varar 1, 2, (val, nestingDepth=20) ->
         new DatumTerm val
 
 rethinkdb.js = aropt (jssrc, opts) -> new JavaScript opts, jssrc
+
+rethinkdb.wget = aropt (url, opts) -> new Wget opts, url
 
 rethinkdb.json = ar (jsonsrc) -> new Json {}, jsonsrc
 
