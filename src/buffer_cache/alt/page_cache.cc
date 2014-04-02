@@ -521,16 +521,42 @@ void current_page_acq_t::declare_snapshotted() {
     }
 }
 
-bool current_page_acq_t::has_outdated_snapshotted_page() const {
+bool current_page_acq_t::is_certainly_up_to_date() const {
     assert_thread();
+
+    // Always up to date if not snapshotted
+    if (!declared_snapshotted_) {
+        return true;
+    }
+
+    // Not up to date if recencies differ
+    if (snapshotted_page_.timestamp()
+        != page_cache()->recencies_.get_sparsely(block_id())) {
+        return false;
+    }
+
     const current_page_t *current_page =
         page_cache()->current_pages_.get_sparsely(block_id());
-    return snapshotted_page_.has()
-           && (current_page == NULL
-               || !current_page->page_.has()
-               || current_page->page_.get_page_for_read()
-                  != snapshotted_page_.get_page_for_read());
-    // TODO! Also compare the timestamps? Overall this is messy. Refactor it.
+
+    // Not necessarily up to date if the current_page has been evicted
+    if (current_page == NULL) {
+        return false;
+    }
+
+    // Up to date if both are deleted
+    if (!snapshotted_page_.has() && current_page->is_deleted()) {
+        return true;
+    }
+
+    // Up to date if both page_ptrs point to the same page
+    if (snapshotted_page_.has() && current_page->page_.has()
+        && snapshotted_page_.get_page_for_read()
+           == current_page->page_.get_page_for_read()) {
+        return true;
+    }
+
+    // Not necessarily up to date otherwise
+    return false;
 }
 
 signal_t *current_page_acq_t::read_acq_signal() {

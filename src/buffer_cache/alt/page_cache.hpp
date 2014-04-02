@@ -189,8 +189,14 @@ public:
     // Declares ourself snapshotted.  (You must be readonly to do this.)
     void declare_snapshotted();
 
-    // True if snapshotted_page_ is different from the current page in the cache
-    bool has_outdated_snapshotted_page() const;
+    // True if not snapshotted or snapshotted_page_ is the same as the current page
+    // in the cache.
+    // Note that this can sometimes return false, even if the snapshotted page
+    // actually has the same content as the current version of the block.
+    // This happens for example if the current_page in the cache has been evicted
+    // and we have no way to check without loading the block back from disk
+    // (which we want to avoid here)
+    bool is_certainly_up_to_date() const;
 
     signal_t *read_acq_signal();
     signal_t *write_acq_signal();

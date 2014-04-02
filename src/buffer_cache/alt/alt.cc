@@ -40,23 +40,9 @@ private:
     friend class cache_t;
 
     // The total number of references, lock_ref_count_ + parents_.size()
-    // TODO! Move the implementations downwards
-    int64_t ref_count() const {
-        return lock_ref_count_ + parents_.size();
-    }
+    int64_t ref_count() const;
 
-    bool safe_to_remove() const {
-        // We can remove the snapshot node if either
-        // - its ref_count() is 0
-        // - or its lock_ref_count_ is 0
-        //   AND the page in the snapshot node is up to date
-        //   AND the snapshot node doesn't have any children
-        const bool can_be_removed = ref_count() == 0
-                || (lock_ref_count_ == 0
-                    && !current_page_acq_->has_outdated_snapshotted_page()
-                    && children_.empty());
-        return can_be_removed;
-    }
+    bool safe_to_remove() const;
 
     // This is never null (and is always a current_page_acq_t that has had
     // declare_snapshotted() called).
@@ -293,6 +279,23 @@ alt_snapshot_node_t::~alt_snapshot_node_t() {
     rassert(lock_ref_count_ == 0);
     rassert(current_page_acq_.has());
     rassert(children_.empty());
+}
+
+int64_t alt_snapshot_node_t::ref_count() const {
+    return lock_ref_count_ + parents_.size();
+}
+
+bool alt_snapshot_node_t::safe_to_remove() const {
+    // We can remove the snapshot node if either
+    // - its ref_count() is 0
+    // - or its lock_ref_count_ is 0
+    //   AND the page in the snapshot node is up to date
+    //   AND the snapshot node doesn't have any children
+    const bool can_be_removed = ref_count() == 0
+            || (lock_ref_count_ == 0
+                && current_page_acq_->is_certainly_up_to_date()
+                && children_.empty());
+    return can_be_removed;
 }
 
 buf_lock_t::buf_lock_t()
