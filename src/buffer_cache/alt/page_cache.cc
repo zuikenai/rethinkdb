@@ -521,6 +521,11 @@ void current_page_acq_t::declare_snapshotted() {
     }
 }
 
+bool current_page_acq_t::has_snapshotted_page() const {
+    assert_thread();
+    return snapshotted_page_.has();
+}
+
 signal_t *current_page_acq_t::read_acq_signal() {
     assert_thread();
     return &read_cond_;

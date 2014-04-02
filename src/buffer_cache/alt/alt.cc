@@ -29,8 +29,7 @@ const double SOFT_UNWRITTEN_CHANGES_MEMORY_FRACTION = 0.5;
 
 
 // The intrusive list of alt_snapshot_node_t contains all the snapshot nodes for a
-// given block id, in order by version.  (See
-// cache_t::snapshot_nodes_by_block_id_.)
+// given block id, in order of version. (See cache_t::snapshot_nodes_by_block_id_.)
 class alt_snapshot_node_t : public intrusive_list_node_t<alt_snapshot_node_t> {
 public:
     explicit alt_snapshot_node_t(scoped_ptr_t<current_page_acq_t> &&acq);
@@ -40,6 +39,11 @@ private:
     friend class buf_lock_t;
     friend class cache_t;
 
+    // The total number of references, lock_ref_count_ + parents_.size()
+    int64_t ref_count() {
+        return lock_ref_count_ + parents_.size();
+    }
+
     // This is never null (and is always a current_page_acq_t that has had
     // declare_snapshotted() called).
     scoped_ptr_t<current_page_acq_t> current_page_acq_;
@@ -48,9 +52,10 @@ private:
     // A NULL pointer associated with a block id indicates that the block is deleted.
     std::map<block_id_t, alt_snapshot_node_t *> children_;
 
-    // The number of buf_lock_t's referring to this node, plus the number of
-    // alt_snapshot_node_t's referring to this node (via its children_ vector).
-    int64_t ref_count_;
+    std::vector<alt_snapshot_node_t *> parents_;
+
+    // The number of buf_lock_t's referring to this node
+    int64_t lock_ref_count_;
 
 
     DISABLE_COPYING(alt_snapshot_node_t);
@@ -134,12 +139,19 @@ void cache_t::remove_snapshot_node(block_id_t block_id, alt_snapshot_node_t *nod
         // snapshot_nodes_by_block_id_.
         snapshot_nodes_by_block_id_[pair.first].remove(pair.second);
 
+        // Step 2. Remove the node from its parents.
+        for (size_t i = 0; i < pair.second->parents_.size(); ++i) {
+            auto child_it = pair.second->parents_[i]->children_.find(pair.first);
+            guarantee(child_it != pair.second->parents_[i]->children_.end());
+            pair.second->parents_[i]->children_.erase(child_it);
+        }
+
+        // Step 3. Destroy the node.
         const std::map<block_id_t, alt_snapshot_node_t *> children
             = std::move(pair.second->children_);
-        // Step 2. Destroy the node.
         delete pair.second;
 
-        // Step 3. Take its children and reduce their reference count, readying them
+        // Step 4. Take its children and remove their parents_ entry, readying them
         // for deletion if necessary.
         for (auto it = children.begin(); it != children.end(); ++it) {
 #if ALT_DEBUG
@@ -147,8 +159,15 @@ void cache_t::remove_snapshot_node(block_id_t block_id, alt_snapshot_node_t *nod
                    it->second, pair.second, this);
 #endif
             if (it->second != NULL) {
-                --it->second->ref_count_;
-                if (it->second->ref_count_ == 0) {
+                for (auto parent_it = it->second->parents_.begin();
+                     parent_it != it->second->parents_.end();
+                     ++parent_it) {
+                    if (*parent_it == pair.second) {
+                        it->second->parents_.erase(parent_it);
+                        break;
+                    }
+                }
+                if (it->second->ref_count() == 0) {
 #if ALT_DEBUG
                     debugf("removing child %p from parent %p (in %p)\n",
                            it->second, pair.second, this);
@@ -246,12 +265,12 @@ void txn_t::set_account(cache_account_t *cache_account) {
 
 
 alt_snapshot_node_t::alt_snapshot_node_t(scoped_ptr_t<current_page_acq_t> &&acq)
-    : current_page_acq_(std::move(acq)), ref_count_(0) { }
+    : current_page_acq_(std::move(acq)), lock_ref_count_(0) { }
 
 alt_snapshot_node_t::~alt_snapshot_node_t() {
     // The only thing that deletes an alt_snapshot_node_t should be the
     // remove_snapshot_node function.
-    rassert(ref_count_ == 0);
+    rassert(ref_count() == 0);
     rassert(current_page_acq_.has());
     rassert(children_.empty());
 }
@@ -304,7 +323,7 @@ buf_lock_t::get_or_create_child_snapshot_node(cache_t *cache,
         // via the parent, or detached, before modification
         alt_snapshot_node_t *child = help_make_child(cache, child_id);
 
-        child->ref_count_++;
+        child->parents_.push_back(parent);
         parent->children_.insert(std::make_pair(child_id, child));
         return child;
     } else {
@@ -350,7 +369,7 @@ void buf_lock_t::create_child_snapshot_attachments(cache_t *cache,
             child = help_make_child(cache, child_id);
         }
 
-        child->ref_count_++;
+        child->parents_.push_back(p);
         p->children_.insert(std::make_pair(child_id, child));
     }
 }
@@ -396,7 +415,7 @@ void buf_lock_t::help_construct(buf_parent_t parent, block_id_t block_id,
                   " as child of %" PRIu64 ") (with read access).",
                   txn_->cache(),
                   block_id, parent_lock->block_id());
-        ++snapshot_node_->ref_count_;
+        ++snapshot_node_->lock_ref_count_;
     } else {
         if (access == access_t::write && parent.lock_or_null_ != NULL) {
             create_child_snapshot_attachments(txn_->cache(),
@@ -570,8 +589,17 @@ buf_lock_t::~buf_lock_t() {
     guarantee(access_ref_count_ == 0);
 
     if (snapshot_node_ != NULL) {
-        --snapshot_node_->ref_count_;
-        if (snapshot_node_->ref_count_ == 0) {
+        --snapshot_node_->lock_ref_count_;
+        // We can remove the snapshot node if either
+        // - its ref_count() is 0
+        // - or its lock_ref_count_ is 0
+        //   AND the page in the snapshot node is not actually snapshotted
+        //   AND the snapshot node doesn't have any children
+        const bool remove_snapshot_node = snapshot_node_->ref_count() == 0
+                || (snapshot_node_->lock_ref_count_ == 0
+                    && !snapshot_node_->current_page_acq_->has_snapshotted_page()
+                    && snapshot_node_->children_.empty());
+        if (remove_snapshot_node) {
 #if ALT_DEBUG
             debugf("remove_snapshot_node %p by %p (in %p)\n",
                    snapshot_node_, this, cache());
@@ -631,13 +659,13 @@ void buf_lock_t::snapshot_subdag() {
 
     if (matching_node != NULL) {
         snapshot_node_ = matching_node;
-        ++matching_node->ref_count_;
+        ++matching_node->lock_ref_count_;
     } else {
         const block_id_t block_id = current_page_acq_->block_id();
         alt_snapshot_node_t *node
             = new alt_snapshot_node_t(std::move(current_page_acq_));
-        rassert(node->ref_count_ == 0);
-        ++node->ref_count_;
+        rassert(node->ref_count() == 0);
+        ++node->lock_ref_count_;
         txn_->cache()->add_snapshot_node(block_id, node);
         snapshot_node_ = node;
         node->current_page_acq_->declare_snapshotted();

@@ -189,6 +189,9 @@ public:
     // Declares ourself snapshotted.  (You must be readonly to do this.)
     void declare_snapshotted();
 
+    // True iff snapshotted_page_ is not null
+    bool has_snapshotted_page() const;
+
     signal_t *read_acq_signal();
     signal_t *write_acq_signal();
 
@@ -197,10 +200,6 @@ public:
 
     page_t *current_page_for_write(cache_account_t *account);
     void manually_touch_recency(repli_timestamp_t recency);
-
-    // Returns current_page_for_read, except it guarantees that the page acq has
-    // already snapshotted the page and is not waiting for the page_t *.
-    page_t *snapshotted_page_ptr();
 
     block_id_t block_id() const { return block_id_; }
     access_t access() const { return access_; }
