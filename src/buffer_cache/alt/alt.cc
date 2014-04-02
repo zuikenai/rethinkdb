@@ -40,8 +40,21 @@ private:
     friend class cache_t;
 
     // The total number of references, lock_ref_count_ + parents_.size()
-    int64_t ref_count() {
+    int64_t ref_count() const {
         return lock_ref_count_ + parents_.size();
+    }
+
+    bool safe_to_remove() const {
+        // We can remove the snapshot node if either
+        // - its ref_count() is 0
+        // - or its lock_ref_count_ is 0
+        //   AND the page in the snapshot node is not actually snapshotted
+        //   AND the snapshot node doesn't have any children
+        const bool can_be_removed = ref_count() == 0
+                || (lock_ref_count_ == 0
+                    && !current_page_acq_->has_snapshotted_page()
+                    && children_.empty());
+        return can_be_removed;
     }
 
     // This is never null (and is always a current_page_acq_t that has had
@@ -139,11 +152,17 @@ void cache_t::remove_snapshot_node(block_id_t block_id, alt_snapshot_node_t *nod
         // snapshot_nodes_by_block_id_.
         snapshot_nodes_by_block_id_[pair.first].remove(pair.second);
 
-        // Step 2. Remove the node from its parents.
+        // Step 2. Remove the node from its parents, readying them for deletion if
+        // necessary.
         for (size_t i = 0; i < pair.second->parents_.size(); ++i) {
             auto child_it = pair.second->parents_[i]->children_.find(pair.first);
             guarantee(child_it != pair.second->parents_[i]->children_.end());
             pair.second->parents_[i]->children_.erase(child_it);
+            if (pair.second->parents_[i]->safe_to_remove()) {
+                stack.push(std::make_pair(
+                        pair.second->parents_[i]->current_page_acq_->block_id(),
+                        pair.second->parents_[i]));
+            }
         }
 
         // Step 3. Destroy the node.
@@ -167,7 +186,7 @@ void cache_t::remove_snapshot_node(block_id_t block_id, alt_snapshot_node_t *nod
                         break;
                     }
                 }
-                if (it->second->ref_count() == 0) {
+                if (it->second->safe_to_remove()) {
 #if ALT_DEBUG
                     debugf("removing child %p from parent %p (in %p)\n",
                            it->second, pair.second, this);
@@ -590,16 +609,7 @@ buf_lock_t::~buf_lock_t() {
 
     if (snapshot_node_ != NULL) {
         --snapshot_node_->lock_ref_count_;
-        // We can remove the snapshot node if either
-        // - its ref_count() is 0
-        // - or its lock_ref_count_ is 0
-        //   AND the page in the snapshot node is not actually snapshotted
-        //   AND the snapshot node doesn't have any children
-        const bool remove_snapshot_node = snapshot_node_->ref_count() == 0
-                || (snapshot_node_->lock_ref_count_ == 0
-                    && !snapshot_node_->current_page_acq_->has_snapshotted_page()
-                    && snapshot_node_->children_.empty());
-        if (remove_snapshot_node) {
+        if (snapshot_node_->safe_to_remove()) {
 #if ALT_DEBUG
             debugf("remove_snapshot_node %p by %p (in %p)\n",
                    snapshot_node_, this, cache());
