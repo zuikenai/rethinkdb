@@ -48,11 +48,11 @@ private:
         // We can remove the snapshot node if either
         // - its ref_count() is 0
         // - or its lock_ref_count_ is 0
-        //   AND the page in the snapshot node is not actually snapshotted
+        //   AND the page in the snapshot node is up to date
         //   AND the snapshot node doesn't have any children
         const bool can_be_removed = ref_count() == 0
                 || (lock_ref_count_ == 0
-                    && !current_page_acq_->has_snapshotted_page()
+                    && !current_page_acq_->has_outdated_snapshotted_page()
                     && children_.empty());
         return can_be_removed;
     }

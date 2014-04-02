@@ -521,9 +521,16 @@ void current_page_acq_t::declare_snapshotted() {
     }
 }
 
-bool current_page_acq_t::has_snapshotted_page() const {
+bool current_page_acq_t::has_outdated_snapshotted_page() const {
     assert_thread();
-    return snapshotted_page_.has();
+    const current_page_t *current_page =
+        page_cache()->current_pages_.get_sparsely(block_id());
+    return snapshotted_page_.has()
+           && (current_page == NULL
+               || !current_page->page_.has()
+               || current_page->page_.get_page_for_read()
+                  != snapshotted_page_.get_page_for_read());
+    // TODO! Also compare the timestamps? Overall this is messy. Refactor it.
 }
 
 signal_t *current_page_acq_t::read_acq_signal() {

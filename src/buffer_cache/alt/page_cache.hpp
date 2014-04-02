@@ -189,8 +189,8 @@ public:
     // Declares ourself snapshotted.  (You must be readonly to do this.)
     void declare_snapshotted();
 
-    // True iff snapshotted_page_ is not null
-    bool has_snapshotted_page() const;
+    // True if snapshotted_page_ is different from the current page in the cache
+    bool has_outdated_snapshotted_page() const;
 
     signal_t *read_acq_signal();
     signal_t *write_acq_signal();
