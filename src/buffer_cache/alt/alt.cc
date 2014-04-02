@@ -40,6 +40,7 @@ private:
     friend class cache_t;
 
     // The total number of references, lock_ref_count_ + parents_.size()
+    // TODO! Move the implementations downwards
     int64_t ref_count() const {
         return lock_ref_count_ + parents_.size();
     }
@@ -289,7 +290,7 @@ alt_snapshot_node_t::alt_snapshot_node_t(scoped_ptr_t<current_page_acq_t> &&acq)
 alt_snapshot_node_t::~alt_snapshot_node_t() {
     // The only thing that deletes an alt_snapshot_node_t should be the
     // remove_snapshot_node function.
-    rassert(ref_count() == 0);
+    rassert(lock_ref_count_ == 0);
     rassert(current_page_acq_.has());
     rassert(children_.empty());
 }
