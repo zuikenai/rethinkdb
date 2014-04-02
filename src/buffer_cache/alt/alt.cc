@@ -7,7 +7,6 @@
 #include "buffer_cache/alt/stats.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "utils.hpp"
-#include "rdb_protocol/term_walker.hpp"
 
 #define ALT_DEBUG 0
 
@@ -646,29 +645,6 @@ void buf_lock_t::snapshot_subdag() {
 
     // Our hold on the block now uses snapshot_node_, not current_page_acq_.
     current_page_acq_.reset();
-}
-
-// TODO!
-void buf_lock_t::unsnapshot_subdag() {
-#if ALT_DEBUG
-    debugf("%p: buf_lock_t %p unsnapshot %lu\n", cache(), this, block_id());
-#endif
-    ASSERT_FINITE_CORO_WAITING;
-    guarantee(!empty());
-    guarantee(snapshot_node_ != NULL);
-
-    // TODO! For each child, decrement its ref count and remove if possible
-    for (auto child = snapshot_node_->children_.begin();
-         child != snapshot_node_->children_.end();
-         ++child) {
-        rassert(child->second->ref_count_ > 0);
-        --child->second->ref_count_;
-        if (child->second->ref_count_ == 0) {
-            cache()->remove_snapshot_node(child->first,
-                                          child->second);
-        }
-    }
-    snapshot_node_->children_.clear();
 }
 
 current_page_acq_t *buf_lock_t::current_page_acq() const {
