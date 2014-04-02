@@ -579,33 +579,6 @@ buf_lock_t::~buf_lock_t() {
             cache()->remove_snapshot_node(block_id(),
                                           snapshot_node_);
         }
-        // TODO! Check if all children only have ourselves as their remaining reference.
-        // If yes, delete *all* child snapshot nodes, cleaning children_.
-        // TODO! This is a hacky implementation for testing purposes.
-        // I think this is also not save, as in it doesn't make sure that we delete
-        // snapshot nodes whenever possible
-        // And I think it's also incorrect. I should explicitly check that
-        // the snapshot is still pointing to the current page version.
-        bool all_children_unused = true;
-        for (auto it = snapshot_node_->children_.begin();
-             it != snapshot_node_->children_.begin();
-             ++it) {
-            if (it->second->ref_count_ > 1) {
-                all_children_unused = false;
-                break;
-            }
-        }
-        if (all_children_unused) {
-            for (auto it = snapshot_node_->children_.begin();
-             it != snapshot_node_->children_.begin();
-             ++it) {
-                --it->second->ref_count_;
-                rassert(it->second->ref_count_ == 0);
-                cache()->remove_snapshot_node(it->first,
-                                              it->second);
-            }
-            snapshot_node_->children_.clear();
-        }
     }
 }
 
