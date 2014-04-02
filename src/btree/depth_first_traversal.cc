@@ -81,6 +81,7 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
                                  const key_range_t &range,
                                  depth_first_traversal_callback_t *cb,
                                  direction_t direction) {
+    // TODO! What is all this counted stuff around the buf_lock? Do we need that?
     buf_read_t read(block.get());
     const node_t *node = static_cast<const node_t *>(read.get_data_read());
     if (node::is_internal(node)) {
@@ -108,6 +109,11 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
                 return false;
             }
         }
+        // TODO!
+        // We are done with this node. We will not touch it again.
+        // TODO! Do this only if we release the superblock and stuff
+        guarantee(block.unique());
+        block->unsnapshot_subdag();
         return true;
     } else {
         const leaf_node_t *lnode = reinterpret_cast<const leaf_node_t *>(node);

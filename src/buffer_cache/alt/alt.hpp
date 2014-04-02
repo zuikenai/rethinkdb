@@ -191,6 +191,7 @@ public:
     }
 
     void snapshot_subdag();
+    void unsnapshot_subdag();
 
     void detach_child(block_id_t child_id);
 
