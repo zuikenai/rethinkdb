@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # Copyright 2010-2012 RethinkDB, all rights reserved.
-import sys, os, time
+import sys, os, time, collections
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
-import http_admin, driver, workload_runner, scenario_common
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'build', 'packages', 'python')))
+import rethinkdb as r
+import driver, workload_runner, scenario_common
 from vcoptparse import *
 
 op = OptParser()
@@ -11,6 +13,8 @@ op["workload1"] = PositionalArg()
 op["workload2"] = PositionalArg()
 op["timeout"] = IntFlag("--timeout", 600)
 opts = op.parse(sys.argv)
+
+TableShim = collections.namedtuple('TableShim', ['name'])
 
 with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
@@ -22,11 +26,10 @@ with driver.Metacluster() as metacluster:
         executable_path = executable_path, command_prefix = command_prefix, extra_options = serve_options)
     process.wait_until_started_up()
     print "Creating table..."
-    http = http_admin.ClusterAccess([("localhost", process.http_port)])
-    dc = http.add_datacenter()
-    http.move_server_to_datacenter(http.machines.keys()[0], dc)
-    ns = scenario_common.prepare_table_for_workload(opts, http, primary = dc)
-    http.wait_until_blueprint_satisfied(ns)
+    with r.connect('localhost', process.driver_port) as conn:
+        r.db_create('test').run(conn)
+        r.db('test').table_create('restart').run(conn)
+    ns = TableShim(name='restart')
     workload_ports = scenario_common.get_workload_ports(opts, ns, [process])
     workload_runner.run("UNUSED", opts["workload1"], workload_ports, opts["timeout"])
     print "Restarting server..."
@@ -34,9 +37,10 @@ with driver.Metacluster() as metacluster:
     process2 = driver.Process(cluster, files,
         executable_path = executable_path, command_prefix = command_prefix, extra_options = serve_options)
     process2.wait_until_started_up()
-    http2 = http_admin.ClusterAccess([("localhost", process2.http_port)])
-    http2.wait_until_blueprint_satisfied(ns)
     cluster.check()
+    with r.connect('localhost', process2.driver_port) as conn:
+        # TODO poll for table availablility
+        pass
     workload_ports2 = scenario_common.get_workload_ports(opts, ns, [process2])
     workload_runner.run("UNUSED", opts["workload2"], workload_ports2, opts["timeout"])
     print "Shutting down..."
