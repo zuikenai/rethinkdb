@@ -15,7 +15,7 @@ class Workload:
     def run(self, conn):
 
         doc = { 'str': 'X' * random.randint(1,200) }
-        
+
         write_result = r.db(self.db).table(self.table).insert(doc).run(conn)
 
         if write_result['inserted'] != 1:

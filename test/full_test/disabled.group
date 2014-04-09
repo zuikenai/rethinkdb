@@ -1,8 +1,8 @@
 # These tests are broken
-#bonus_tests.heavy-backfilling
-#bonus_tests.reconfigure-under-load-1
-#bonus_tests.reconfigure-under-load-2
-#bonus_tests.reconfigure-under-load-3
+bonus_tests.heavy-backfilling
+bonus_tests.reconfigure-under-load-1
+bonus_tests.reconfigure-under-load-2
+bonus_tests.reconfigure-under-load-3
 
 # Issue #2211
 #split_workloads.rebalance-2-multi-serial-mix
