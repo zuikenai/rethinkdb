@@ -225,6 +225,9 @@ def stress_controller(options):
                     print "  - %s" % error
                     stats["errors"][error] = stats["errors"].get(error, 0) + 1
             else:
+                if options["duration"]:
+                    if time.time() - start_time > options["duration"]:
+                        exit_event.set()
                 time.sleep(0.1)
 
     except:
