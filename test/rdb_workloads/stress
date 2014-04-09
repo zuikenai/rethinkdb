@@ -165,29 +165,33 @@ class QueryThrottler:
     def __init__(self, options, stat_queue):
         self.workload = options["workload"]
         self.stat_queue = stat_queue
-        self.secs_per_op = float(options["clients"]) / options["ops_per_sec"]
+        if options["ops_per_sec"]:
+            self.secs_per_op = float(options["clients"]) / options["ops_per_sec"]
+        else:
+            self.secs_per_op = 0
 
         # Time at which to send the next query
         self.next_query_time = None
 
     def send_query(self, conn):
-        if self.next_query_time is None:
-            # Desync from other clients by waiting a random amount of time less than one op's duration
-            time.sleep(random.random() * self.secs_per_op)
-            self.next_query_time = time.time()
+        if self.secs_per_op:
+            if self.next_query_time is None:
+                # Desync from other clients by waiting a random amount of time less than one op's duration
+                time.sleep(random.random() * self.secs_per_op)
+                self.next_query_time = time.time()
 
-        # Sync up with our schedule
-        now = time.time()
-        time_overdue = now - self.next_query_time
+            # Sync up with our schedule
+            now = time.time()
+            time_overdue = now - self.next_query_time
 
-        if time_overdue > 10 * self.secs_per_op:
-            # Don't allow us to get more than 10 ops behind or we'll overload if/when the system recovers
-            self.next_query_time = now - (10 * self.secs_per_op)
-        elif time_overdue >= 0.0:
-            self.next_query_time += self.secs_per_op
-        else:
-            self.next_query_time += self.secs_per_op
-            time.sleep(-time_overdue)
+            if time_overdue > 10 * self.secs_per_op:
+                # Don't allow us to get more than 10 ops behind or we'll overload if/when the system recovers
+                self.next_query_time = now - (10 * self.secs_per_op)
+            elif time_overdue >= 0.0:
+                self.next_query_time += self.secs_per_op
+            else:
+                self.next_query_time += self.secs_per_op
+                time.sleep(-time_overdue)
 
         start_time = time.time()
         result = { "timestamp": start_time }
@@ -253,7 +257,7 @@ def stress_controller(options):
         sys.exit(1)
     finally:
         # Allow some time for operations to complete
-        stop_timeout = max(2.0, 3.0 / options["ops_per_sec"])
+        stop_timeout = max(2.0, 3.0 / (options["ops_per_sec"] or 1))
         end_time = stop_clients(exit_event, child_procs, options["clients"], stop_timeout)
 
         while not stat_queue.empty():
