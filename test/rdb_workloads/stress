@@ -213,6 +213,7 @@ def stress_controller(options):
     start_event = multiprocessing.Event()
     exit_event = multiprocessing.Event()
     child_procs = [ ]
+    op_count = options["op_count"]
 
     # Register interrupt, now that we're spawning client processes
     parent_pid = os.getpid()
@@ -246,6 +247,10 @@ def stress_controller(options):
                 for error in stat.get("errors", [ ]):
                     print "  - %s" % error
                     stats["errors"][error] = stats["errors"].get(error, 0) + 1
+
+                if op_count and stats["count"] >= op_count:
+                    exit_event.set()
+
             else:
                 if options["duration"]:
                     if time.time() - start_time > options["duration"]:
@@ -280,13 +285,15 @@ if __name__ == "__main__":
     parser.add_option("--host", dest="hosts", metavar="HOST:PORT", action="append", default=[], type="string")
     parser.add_option("--quiet", dest="quiet", action="store_true", default=False)
     parser.add_option("--duration", dest="duration", type="int", default=0)
+    parser.add_option("--op-count", dest="op_count", type="int", default=0)
     (parsed_options, args) = parser.parse_args()
     options = { "clients": parsed_options.clients,
                 "ops_per_sec": parsed_options.ops_per_sec,
                 "ops_per_conn": parsed_options.ops_per_conn,
                 "quiet": parsed_options.quiet,
                 "hosts": [ ],
-                "duration": parsed_options.duration }
+                "duration": parsed_options.duration,
+                "op_count": parsed_options.op_count }
 
     if len(args) != 0:
         print "no positional arguments supported"
