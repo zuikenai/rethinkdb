@@ -38,9 +38,21 @@ with driver.Metacluster() as metacluster:
         executable_path = executable_path, command_prefix = command_prefix, extra_options = serve_options)
     process2.wait_until_started_up()
     cluster.check()
+    # Wait for the table to become available before launching the workload
     with r.connect('localhost', process2.driver_port) as conn:
-        # TODO poll for table availablility
-        pass
+        poll = 20
+        while poll:
+            try:
+                r.table('restart').limit(1).run(conn)
+                poll = 0
+            except r.errors.RqlRuntimeError as e:
+                if "No master available" in str(e):
+                    poll = poll - 1
+                    time.sleep(1)
+                else:
+                    poll = 0
+            except:
+                poll = 0
     workload_ports2 = scenario_common.get_workload_ports(opts, ns, [process2])
     workload_runner.run("UNUSED", opts["workload2"], workload_ports2, opts["timeout"])
     print "Shutting down..."
