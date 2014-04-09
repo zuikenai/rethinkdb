@@ -15,7 +15,6 @@ def call_ignore_interrupt(fun):
         except IOError as ex:
             if ex.errno != errno.EINTR:
                 raise
-
 def stress_client_proc(options, start_event, exit_event, stat_queue, host_offset, random_seed) :
     host_offset = host_offset % len(options["hosts"])
     host = options["hosts"][host_offset][0]
@@ -76,20 +75,39 @@ def spawn_clients(options, start_event, exit_event, stat_queue):
 
     return client_procs
 
-def stop_clients(exit_event, child_procs, num_clients, timeout):
+def stop_clients(exit_event, child_procs_list, num_clients, timeout):
     exit_event.set()
     end_time = time.time()
+    child_procs = set(child_procs_list)
 
     # Check that all processes have exited, allow some time to shut down
     kill_time = end_time + timeout
 
+    failed_procs = []
+
     for proc in child_procs:
-        while time.time() < kill_time and proc.is_alive():
-            time.sleep(0.1)
-        if proc.is_alive():
-            proc.terminate()
-    if time.time() > kill_time:
-        print "Timed out waiting for processes to shut down"
+        proc.terminate()
+
+    while True:
+        for proc in child_procs.copy():
+            if not proc.is_alive():
+                if proc.exitcode not in [0, -15]:
+                    failed_procs.append(proc)
+                child_procs.remove(proc)
+        if child_procs:
+            break
+        if time.time() < kill_time:
+            failed_procs += child_procs
+            break
+        time.sleep(0.1)
+
+    if failed_procs:
+        reasons = ["process " + str(child_procs_list.index(proc) + 1) +
+                   (" failed with code " + str(proc.exitcode)
+                    if proc.exitcode else " timed out")
+                   for proc in failed_procs]
+        print "Sub-processes failed: " + ", ".join(reasons)
+        sys.exit(1)
 
     return end_time
 
@@ -232,6 +250,7 @@ def stress_controller(options):
 
     except:
         traceback.print_exc()
+        sys.exit(1)
     finally:
         # Allow some time for operations to complete
         stop_timeout = max(2.0, 3.0 / options["ops_per_sec"])
