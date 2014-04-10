@@ -7,9 +7,9 @@ generate_test(
 # Test repeatedly reconfiguring the server while also running HTTP queries against it
 generate_test(
     "$RETHINKDB/test/scenarios/more_or_less_secondaries.py 2+1-1+1-1+1-1+1-1+1-1 "
-        "--workload-before '$RETHINKDB/test/memcached_workloads/serial_mix.py --address $HOST:$PORT --table $DB_NAME:$TABLE_NAME --save x' "
-        "--workload-between '$RETHINKDB/test/memcached_workloads/serial_mix.py --address $HOST:$PORT --table $DB_NAME:$TABLE_NAME --load x --save x' "
-        "--workload-after '$RETHINKDB/test/memcached_workloads/serial_mix.py --address $HOST:$PORT --table $DB_NAME:$TABLE_NAME --load x' "
+        "--workload-before '$RETHINKDB/test/memcached_workloads/serial_mix.py --address $HOST:$PORT --table $DB_NAME.$TABLE_NAME --save x' "
+        "--workload-between '$RETHINKDB/test/memcached_workloads/serial_mix.py --address $HOST:$PORT --table $DB_NAME.$TABLE_NAME --load x --save x' "
+        "--workload-after '$RETHINKDB/test/memcached_workloads/serial_mix.py --address $HOST:$PORT --table $DB_NAME.$TABLE_NAME --load x' "
         "--workload-during '$RETHINKDB/test/memcached_workloads/simulate_web_ui.py --address $HOST:$HTTP_PORT'",
         name = "reconfigure-under-load-1"
     )
