@@ -23,7 +23,7 @@ def insert_many(host="localhost", port=28015, database="test", table=None, count
     def gen(i):
         return { 'val': "X" * (i % 100) }
 
-    if isinstance(table, "".__class__):
+    if isinstance(tabel, str) or isinstance(table, unicode):
         table = r.db(database).table(table)
 
     batch_size = 1000

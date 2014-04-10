@@ -37,7 +37,7 @@ with driver.Metacluster() as metacluster:
     cluster.check()
 
     print "Inserting some data..."
-    rdb_workload_common.insert_many(host=host, port=port, db="test", table="stress", count=20000)
+    rdb_workload_common.insert_many(host=host, port=port, database="test", table="stress", count=20000)
     cluster.check()
 
     print "Decreasing replication factor..."
