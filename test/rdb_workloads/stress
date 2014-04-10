@@ -198,11 +198,11 @@ class QueryThrottler:
         try:
             result.update(self.workload.run(conn))
         except (r.RqlError, r.RqlDriverError) as ex:
-            result["errors"] = [ ex.message ]
+            result["errors"] = result.get('errors', []) + [ ex.message ]
         except (IOError, OSError) as ex:
             if ex.errno != errno.EINTR:
                 raise
-            result["errors"] = [ "Interrupted system call" ]
+            result["errors"] = result.get('errors', []) + [ "Interrupted system call" ]
         result["latency"] = time.time() - start_time
 
         self.stat_queue.put(result)
@@ -245,7 +245,8 @@ def stress_controller(options):
                 stats["count"] += 1
                 stats["latency"] += stat["latency"]
                 for error in stat.get("errors", [ ]):
-                    print "  - %s" % error
+                    if not options["ignore_errors"]:
+                        print "  - %s" % error
                     stats["errors"][error] = stats["errors"].get(error, 0) + 1
 
                 if op_count and stats["count"] >= op_count:
@@ -286,6 +287,7 @@ if __name__ == "__main__":
     parser.add_option("--quiet", dest="quiet", action="store_true", default=False)
     parser.add_option("--duration", dest="duration", type="int", default=0)
     parser.add_option("--op-count", dest="op_count", type="int", default=0)
+    parser.add_option("--ignore-errors", dest="ignore_errors", action="store_true", default=False)
     (parsed_options, args) = parser.parse_args()
     options = { "clients": parsed_options.clients,
                 "ops_per_sec": parsed_options.ops_per_sec,
@@ -293,7 +295,8 @@ if __name__ == "__main__":
                 "quiet": parsed_options.quiet,
                 "hosts": [ ],
                 "duration": parsed_options.duration,
-                "op_count": parsed_options.op_count }
+                "op_count": parsed_options.op_count,
+                "ignore_errors": parsed_options.ignore_errors}
 
     if len(args) != 0:
         print "no positional arguments supported"
