@@ -5,12 +5,11 @@ import os
 from os.path import abspath, join, dirname, pardir
 import time
 
-# sys.path.insert(0, abspath(join(dirname(__file__), pardir, "build", "packages", "python")))
-sys.path.insert(0, abspath(join(dirname(__file__), pardir, "lib")))
+sys.path.insert(0, abspath(join(dirname(__file__), "common")))
 
-from retest.framework import run, Test, TestTree, SimpleTest, group_from_file
-from retest.unit import AllUnitTests
-from retest.shelltest import ShellCommandTest
+from test_framework import run, Test, TestTree, SimpleTest, group_from_file
+from unit import AllUnitTests
+from shelltest import ShellCommandTest
 
 # Initialise the list of tests with the dumy tests and the unit tests
 tests = TestTree({

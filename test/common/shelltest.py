@@ -3,7 +3,7 @@ from subprocess import check_call, CalledProcessError
 from os import environ
 from sys import stderr
 
-from retest.framework import Test
+from test_framework import Test
 
 class ShellCommandTest(Test):
     def __init__(self, command, env={}, **kwargs):
