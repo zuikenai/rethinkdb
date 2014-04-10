@@ -23,7 +23,7 @@ def insert_many(host="localhost", port=28015, database="test", table=None, count
     def gen(i):
         return { 'val': "X" * (i % 100) }
 
-    if isinstance(tabel, str) or isinstance(table, unicode):
+    if isinstance(table, str) or isinstance(table, unicode):
         table = r.db(database).table(table)
 
     batch_size = 1000
@@ -35,3 +35,17 @@ def insert_many(host="localhost", port=28015, database="test", table=None, count
         assert res['inserted'] == end - start
 
     print "inserted", count, "documents into", table
+
+def wait_for_table(table, host="localhost", port=28015, attempts=20, delay=1):
+    with r.connect(host, port) as conn:
+        poll = attempts
+        while poll:
+            try:
+                r.table(table).limit(1).run(conn)
+                return
+            except r.errors.RqlRuntimeError as e:
+                if "No master available" in str(e):
+                    poll = poll - 1
+                    time.sleep(delay)
+                else:
+                    raise

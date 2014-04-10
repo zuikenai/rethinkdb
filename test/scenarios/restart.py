@@ -4,7 +4,7 @@ import sys, os, time, collections
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'build', 'packages', 'python')))
 import rethinkdb as r
-import driver, workload_runner, scenario_common
+import driver, workload_runner, scenario_common, rdb_workload_common
 from vcoptparse import *
 
 op = OptParser()
@@ -38,21 +38,7 @@ with driver.Metacluster() as metacluster:
         executable_path = executable_path, command_prefix = command_prefix, extra_options = serve_options)
     process2.wait_until_started_up()
     cluster.check()
-    # Wait for the table to become available before launching the workload
-    with r.connect('localhost', process2.driver_port) as conn:
-        poll = 20
-        while poll:
-            try:
-                r.table('restart').limit(1).run(conn)
-                poll = 0
-            except r.errors.RqlRuntimeError as e:
-                if "No master available" in str(e):
-                    poll = poll - 1
-                    time.sleep(1)
-                else:
-                    poll = 0
-            except:
-                poll = 0
+    rdb_workload_common.wait_for_table(host="localhost", port=process2.driver_port, table=ns.name)
     workload_ports2 = scenario_common.get_workload_ports(opts, ns, [process2])
     workload_runner.run("UNUSED", opts["workload2"], workload_ports2, opts["timeout"])
     print "Shutting down..."

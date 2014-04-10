@@ -11,7 +11,7 @@ op["use-proxy"] = BoolFlag("--use-proxy")
 op["num-nodes"] = IntFlag("--num-nodes", 3)
 op["num-shards"] = IntFlag("--num-shards", 2)
 op["workload"] = PositionalArg()
-op["timeout"] = IntFlag("--timeout", 600)
+op["timeout"] = IntFlag("--timeout", 1200)
 opts = op.parse(sys.argv)
 
 with driver.Metacluster() as metacluster:

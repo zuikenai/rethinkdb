@@ -41,7 +41,8 @@ def run(__unused, command_line, ports, timeout):
                 print "Failed (%d seconds)" % (time.time() - start_time)
                 sys.stderr.write("workload '%s' failed with error code %d\n" % (command_line, result))
                 exit(1)
-        print "Timed out (%d seconds)" % (time.time() - start_time)
+        print
+        print "Workload timed out after %d seconds (%s)" % (time.time() - start_time, command_line)
     finally:
         try:
             os.killpg(proc.pid, signal.SIGTERM)
