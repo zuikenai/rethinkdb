@@ -402,7 +402,7 @@ class ClusterAccess(object):
         self.do_query("POST", "/ajax/semilattice/rdb_namespaces/%s/ack_expectations" % (table.uuid), ae_dict)
         self.update_cluster_data(10)
 
-    def add_table(self, name = None, primary = None, affinities = { }, ack_expectations = { }, primary_key = None, database = "test", check = False):
+    def add_table(self, name = None, primary = None, affinities = { }, ack_expectations = { }, primary_key = None, database = None, check = False):
         if name is None:
             name = str(random.randint(0, 1000000))
         if primary is not None:
@@ -415,7 +415,13 @@ class ClusterAccess(object):
         ack_dict = { }
         for datacenter, count in ack_expectations.iteritems():
             ack_dict[self.find_datacenter(datacenter).uuid] = { 'expectation': count }
-        database_uuid = self.find_database(database).uuid
+        if database:
+            database_uuid = self.find_database(database).uuid
+        else:
+            try:
+                database_uuid = self.find_database("test").uuid
+            except ValueError:
+                database_uuid = self.add_database("test").uuid
         data_to_post = {
             "name": name,
             "primary_uuid": primary,

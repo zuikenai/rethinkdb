@@ -1,6 +1,6 @@
 # TODO : test that depend on each other
 # TODO : parameterised tests
-# TODO : add flags to specify build dir, html report, flaky tests, groups
+# TODO : add flags to specify build dir, html report, flaky tests
 # TODO : specify dependency on python driver
 
 import multiprocessing
@@ -144,6 +144,7 @@ def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tr
                     print
                     print '===', name, '==='
                     test.dump_file(name)
+
 def configure(reqs):
     # TODO
    return dict(
