@@ -257,7 +257,8 @@ class ClusterAccess(object):
         if response.status == 200:
             return response.read()
         else:
-            raise BadServerResponse(response.status, response.reason)
+            content = response.read()
+            raise BadServerResponse(response.status, response.reason + (": " + content if content else ""))
 
     def __str__(self):
         retval = "Machines:"
