@@ -1,8 +1,3 @@
-# TODO : test that depend on each other
-# TODO : parameterised tests
-# TODO : add flags to specify build dir, html report, flaky tests
-# TODO : specify dependency on python driver
-
 import multiprocessing
 import threading
 import signal
