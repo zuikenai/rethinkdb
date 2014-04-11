@@ -1,3 +1,5 @@
+# This test framework is responsible for running the test suite
+
 import multiprocessing
 import threading
 import signal
@@ -13,7 +15,7 @@ import traceback
 import shutil
 import fnmatch
 
-default_test_results_dir = join(dirname(__file__), pardir, pardir, 'build', 'test_results')
+default_test_results_dir = join(dirname(__file__), pardir, 'results')
 
 parser = ArgumentParser(description='Run RethinkDB tests')
 parser.add_argument('-j', '--jobs', type=int, default=1,
@@ -48,6 +50,11 @@ parser.add_argument('-g', '--groups', action='store_true',
                     help='List all groups')
 
 def run(all_tests, all_groups, args):
+    """ The main entry point
+    all_tests: A tree of all the tests
+    all_groups: A dict of named groups
+    args: Arguments from the command line
+    """
     args = parser.parse_args(args)
     if args.groups and not args.list:
         list_groups_mode(all_groups, args.filter, args.verbose)
@@ -97,6 +104,7 @@ def list_tests_mode(tests, verbose, all_groups):
         else:
             print name + group_list
 
+# This mode lists the groups
 def list_groups_mode(groups, filters, verbose):
     if filters:
         raise Exception('Cannot combine --groups with positional arguments')
@@ -108,7 +116,7 @@ def list_groups_mode(groups, filters, verbose):
             for pattern in patterns:
                 print ' ', pattern
 
-# This mode loads previously run tests
+# This mode loads previously run tests instead of running any tests
 def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tree, examine):
     if isinstance(load, "".__class__):
         load_path = load
@@ -140,6 +148,7 @@ def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tr
                     print '===', name, '==='
                     test.dump_file(name)
 
+# Take the requirements for the tests, and build a configuration
 def configure(reqs):
     # TODO
    return dict(
@@ -153,7 +162,7 @@ def redirect_fd_to_file(fd, file, tee=False):
         f = tee.stdin
     os.dup2(f.fileno(), fd)
 
-
+# The main logic for running the tests
 class TestRunner(object):
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
@@ -293,6 +302,7 @@ class TestRunner(object):
         with self.running as running:
             return len(running)
 
+# For printing the status of TestRunner to stdout
 class TextView(object):
     green = "\033[32;1m"
     red = "\033[31;1m"
@@ -325,6 +335,7 @@ class TextView(object):
     def close(self):
         pass
 
+# For printing the status to a terminal
 class TermView(TextView):
     def __init__(self):
         TextView.__init__(self)
@@ -389,6 +400,7 @@ class TermView(TextView):
         self.buffer = ''
         sys.stdout.flush()
 
+# Utility class for scoped locks
 class Locked(object):
     def __init__(self, value=None):
         self.value = value
@@ -401,6 +413,7 @@ class Locked(object):
     def __exit__(self, e, x, c):
         self.lock.release()
 
+# Run a single test in a separate process
 class TestProcess(object):
     def __init__(self, runner, id, test, dir, run_dir):
         self.runner = runner
@@ -465,7 +478,6 @@ class TestProcess(object):
                 lines = f.read().split('\n')[-len(lines):] + lines
         return '\n'.join(lines)
 
-
     def supervise(self):
         read_pipe, write_pipe = multiprocessing.Pipe(False)
         self.process = multiprocessing.Process(target=self.run, args=[write_pipe],
@@ -505,6 +517,7 @@ class TestProcess(object):
 class TimeoutException(Exception):
     pass
 
+# A scoped timeout for single-threaded processes
 class Timeout(object):
     def __init__(self, seconds):
         self.timeout = seconds
@@ -540,6 +553,7 @@ class FilterSource(object):
         else:
             return default
 
+# A test filter that discriminates tests by name
 class TestFilter(object):
     INCLUDE = 'INCLUDE'
     EXCLUDE = 'EXCLUDE'
@@ -623,6 +637,7 @@ class TestFilter(object):
         self.was_matched = True
         return not self.tree
 
+# A test filter that discriminates using a predicate
 class PredicateFilter(object):
     def __init__(self, predicate):
         self.predicate = predicate
@@ -638,6 +653,7 @@ class PredicateFilter(object):
     def zoom(self, name):
         return self
 
+# A base class for tests or groups of tests
 class Test(object):
     def __init__(self, timeout=None):
         self._timeout = timeout
@@ -664,6 +680,7 @@ class Test(object):
     def configure(self, conf):
         return self
 
+# A simple test just runs a python function
 class SimpleTest(Test):
     def __init__(self, run, **kwargs):
         Test.__init__(self, **kwargs)
@@ -672,6 +689,7 @@ class SimpleTest(Test):
     def run(self):
         self._run()
 
+# A tree of named tests
 class TestTree(Test):
     def __init__(self, tests={}):
         self.tests = dict(tests)
@@ -733,6 +751,7 @@ class TestTree(Test):
     def has_test(self, name):
         return self.tests.has_key(name)
 
+# Used with `--load' to load old test results
 def load_test_results_as_tests(path):
     tests = TestTree()
     for dir in os.listdir(path):
@@ -750,6 +769,7 @@ def load_test_results_as_tests(path):
         parent[names[-1]] = test
     return tests
 
+# A test that has already run
 class OldTest(Test):
     def __init__(self, dir, **kwargs):
         Test.__init__(self, **kwargs)
@@ -786,6 +806,7 @@ class OldTest(Test):
                     if name == glob or guess_is_text_file(join(root, file)):
                         yield name
 
+# non-printable ascii characters and invalid utf8 bytes
 non_text_bytes = \
   range(0x00, 0x09+1) + [0x0B, 0x0C] + range(0x0F, 0x1F+1) + \
   [0xC0, 0xC1] + range(0xF5, 0xFF+1)
