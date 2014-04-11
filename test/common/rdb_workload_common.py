@@ -2,6 +2,7 @@ from vcoptparse import *
 import contextlib
 import rethinkdb as r
 import http_admin
+import time
 
 def option_parser_for_connect():
     op = OptParser()
