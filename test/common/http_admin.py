@@ -8,7 +8,6 @@ import socket
 import random
 from httplib import HTTPConnection
 import urllib   # for `quote()` and `unquote()`
-import utils
 
 """ The `http_admin.py` module is a Python wrapper around the HTTP interface to
 RethinkDB. It is not responsible for starting and stopping RethinkDB processes.

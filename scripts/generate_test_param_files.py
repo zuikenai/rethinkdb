@@ -19,7 +19,7 @@ tests = { }
 
 def generate_test(base_name):
     def gen(test_command, name):
-        full_name = base_name + '-' + name
+        full_name = base_name + '.' + name
         if tests.has_key(full_name):
             for i in itertools.count():
                 new_name = full_name + '-' + str(i)
