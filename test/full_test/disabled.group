@@ -1,3 +1,4 @@
 # These tests are broken
 
-# Nothing to see here!
+# Issue #2211
+split_workloads.rebalance-2-multi-serial-mix
