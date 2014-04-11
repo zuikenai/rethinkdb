@@ -571,7 +571,7 @@ class TestFilter(object):
         if args[0][0] == '!':
             filter = TestFilter(self.INCLUDE, group=FilterSource(group))
         else:
-            filter = TestFilter(group=FilterSource(group))
+            filter = TestFilter(self.EXCLUDE, group=FilterSource(group))
         for arg in args:
             if arg[0] == '!':
                 arg = arg[1:]
@@ -589,11 +589,11 @@ class TestFilter(object):
         return filter
 
     def combine(self, type, other):
+        for name in set(self.tree.keys() + other.tree.keys()):
+            self.zoom(name, create=True).combine(type, other.zoom(name))
         if other.default == self.INCLUDE:
             self.default = type
         self.group = self.group.combined(other.group)
-        for name in set(self.tree.keys() + other.tree.keys()):
-            self.zoom(name, create=True).combine(type, other.zoom(name))
 
     def at(self, path):
         if not path:
