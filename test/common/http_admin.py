@@ -534,8 +534,19 @@ class ClusterAccess(object):
                 message += issue["description"] + "\n"
             raise RuntimeError("Cluster has issues:\n" + message)
 
-    def get_distribution(self, table, depth = 1):
-        return self.do_query("GET", "/ajax/distribution?namespace=%s&depth=%d" % (table.uuid, depth))
+    def get_distribution(self, table, depth = 1, tries=10, delay=1):
+        while True:
+            try:
+                return self.do_query("GET", "/ajax/distribution?namespace=%s&depth=%d" % (table.uuid, depth))
+            except BadServerResponse as response:
+                if response.status == 500 and 'No direct reader available' in response.reason:
+                    print 'Distribution is not yet available, retrying (%d)' % tries
+                    tries = tries - 1
+                    if not tries:
+                        raise
+                    time.sleep(delay)
+                else:
+                    raise
 
     def is_blueprint_satisfied(self, table):
         table = self.find_table(table)
