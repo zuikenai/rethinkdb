@@ -14,6 +14,8 @@ import time
 import traceback
 import shutil
 import fnmatch
+from utils import guess_is_text_file
+import test_report
 
 default_test_results_dir = join(dirname(__file__), pardir, 'results')
 
@@ -48,6 +50,8 @@ parser.add_argument('filter', nargs='*',
                     help='The name of the tests to run, or a group of tests, or their negation with ! (Default: run all tests)')
 parser.add_argument('-g', '--groups', action='store_true',
                     help='List all groups')
+parser.add_argument('-H', '--html-report', action='store_true',
+                    help='Generate an HTML report')
 
 def run(all_tests, all_groups, args):
     """ The main entry point
@@ -61,7 +65,7 @@ def run(all_tests, all_groups, args):
         return
     filter = TestFilter.parse(args.filter, all_groups)
     if args.load or args.tree or args.examine:
-        old_tests_mode(all_tests, args.load, filter, args.verbose, args.list, args.only_failed, args.tree, args.examine)
+        old_tests_mode(all_tests, args.load, filter, args.verbose, args.list, args.only_failed, args.tree, args.examine, args.html_report)
         return
     tests = all_tests.filter(filter)
     reqs = tests.requirements()
@@ -83,6 +87,8 @@ def run(all_tests, all_groups, args):
             kontinue=args.kontinue,
             abort_fast=args.abort_fast)
         testrunner.run()
+        if args.html_report:
+            test_report.gen_report(testrunner.dir, load_test_results_as_tests(testrunner.dir))
 
 # This mode just lists the tests
 def list_tests_mode(tests, verbose, all_groups):
@@ -117,7 +123,7 @@ def list_groups_mode(groups, filters, verbose):
                 print ' ', pattern
 
 # This mode loads previously run tests instead of running any tests
-def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tree, examine):
+def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tree, examine, html_report):
     if isinstance(load, "".__class__):
         load_path = load
     else:
@@ -128,6 +134,9 @@ def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tr
     filter.check_use()
     if only_failed:
         tests = tests.filter(PredicateFilter(lambda test: not test.passed()))
+    if html_report:
+        test_report.gen_report(load_path, tests)
+        return
     if list_tests:
         list_tests_mode(tests, verbose)
         return
@@ -783,6 +792,7 @@ class OldTest(Test):
             with open(join(self.dir, name)) as file:
                 return file.read()
         except Exception as e:
+            # TODO: catch the right exception here
             return default
 
     def passed(self):
@@ -798,26 +808,13 @@ class OldTest(Test):
         self.dump_file("stderr")
         print
 
-    def list_files(self, glob=None):
+    def list_files(self, glob=None, text_only=True):
         for root, dirs, files in os.walk(self.dir):
             for file in files:
                 name = relpath(join(root, file), self.dir)
                 if not glob or fnmatch.fnmatch(name, glob):
-                    if name == glob or guess_is_text_file(join(root, file)):
+                    if not text_only or name == glob or guess_is_text_file(join(root, file)):
                         yield name
-
-# non-printable ascii characters and invalid utf8 bytes
-non_text_bytes = \
-  range(0x00, 0x09+1) + [0x0B, 0x0C] + range(0x0F, 0x1F+1) + \
-  [0xC0, 0xC1] + range(0xF5, 0xFF+1)
-
-def guess_is_text_file(name):
-    with file(name, 'rb') as f:
-        data = f.read(100)
-    for byte in data:
-        if ord(byte) in non_text_bytes:
-            return False
-    return True
 
 def group_from_file(path):
     patterns = []
