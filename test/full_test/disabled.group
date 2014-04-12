@@ -2,3 +2,6 @@
 
 # Issue #2211
 split_workloads.rebalance-2-multi-serial-mix
+
+# Issue #549
+unit.TimerTest
