@@ -14,7 +14,7 @@ class AllUnitTests(Test):
         return AllUnitTests(self.filters + [filter])
 
     def configure(self, conf):
-        unit_executable = os.path.join(conf['SRC_ROOT'], "rethinkdb-unittest")
+        unit_executable = os.path.join(conf['BUILD_DIR'], "rethinkdb-unittest")
         output = check_output([unit_executable, "--gtest_list_tests"])
         key = None
         dict = defaultdict(list)
