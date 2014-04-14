@@ -409,7 +409,7 @@ class TermView(TextView):
         self.buffer = ''
         sys.stdout.flush()
 
-# Utility class for scoped locks
+# Lock access to an object with a lock
 class Locked(object):
     def __init__(self, value=None):
         self.value = value
