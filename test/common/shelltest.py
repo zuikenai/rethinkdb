@@ -15,7 +15,7 @@ class ShellCommandTest(Test):
         env = self.env.copy()
         env.update({
             'RETHINKDB': abspath(join(conf['SRC_ROOT'])),
-            'RETHINKDB_BUILD_DIR': abspath(join(conf['SRC_ROOT'], "build", "debug")),
+            'RETHINKDB_BUILD_DIR': abspath(conf['BUILD_DIR']),
             'PYTHONUNBUFFERED': 'true',
         })
         return ShellCommandTest(self.command, env)
