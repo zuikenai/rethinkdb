@@ -47,6 +47,8 @@ ifeq ($(BUILD_PORTABLE),1)
   endif
 endif
 
+MISSING_DIST_SUPPORT_PACKAGES := $(filter-out $(FETCH_LIST), $(DIST_SUPPORT_PACKAGES))
+DIST_SUPPORT_PACKAGES := $(filter $(FETCH_LIST), $(DIST_SUPPORT_PACKAGES))
 DSC_CONFIGURE_DEFAULT = --prefix=/usr --sysconfdir=/etc --localstatedir=/var
 DIST_CONFIGURE_DEFAULT = $(foreach pkg, $(DIST_SUPPORT_PACKAGES), --fetch $(pkg))
 DIST_SUPPORT = $(foreach pkg, $(DIST_SUPPORT_PACKAGES), $(SUPPORT_SRC_DIR)/$(pkg)_$($(pkg)_VERSION))
@@ -159,6 +161,9 @@ $(DIST_DIR)/VERSION.OVERRIDE: FORCE | reset-dist-dir
 .PHONY: dist-dir
 dist-dir: reset-dist-dir $(DIST_DIR)/custom.mk $(DIST_DIR)/precompiled/web
 dist-dir: $(DIST_DIR)/VERSION.OVERRIDE $(DIST_SUPPORT) $(DIST_DIR)/configure.default
+ifneq (,$(MISSING_DIST_SUPPORT_PACKAGES))
+	$(error Missing source packages in external. Please configure with '$(patsubst %,--fetch %,$(MISSING_DIST_SUPPORT_PACKAGES))')
+endif
 	$P CP $(DIST_SUPPORT) "->" $(DIST_DIR)/external
 	$(foreach path,$(DIST_SUPPORT), \
 	  $(foreach dir,$(DIST_DIR)/external/$(patsubst $(SUPPORT_SRC_DIR)/%,%,$(path)), \
