@@ -3,8 +3,6 @@ import sys, os, time, signal, random, traceback, errno
 import multiprocessing, multiprocessing.queues
 from optparse import OptionParser
 
-# TODO: add option to not ignore errors
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'drivers', 'python')))
 import rethinkdb as r
 
@@ -15,6 +13,7 @@ def call_ignore_interrupt(fun):
         except IOError as ex:
             if ex.errno != errno.EINTR:
                 raise
+
 def stress_client_proc(options, start_event, exit_event, stat_queue, host_offset, random_seed) :
     host_offset = host_offset % len(options["hosts"])
     host = options["hosts"][host_offset][0]
@@ -165,7 +164,7 @@ class QueryThrottler:
     def __init__(self, options, stat_queue):
         self.workload = options["workload"]
         self.stat_queue = stat_queue
-        if options["ops_per_sec"]:
+        if options["ops_per_sec"] != 0:
             self.secs_per_op = float(options["clients"]) / options["ops_per_sec"]
         else:
             self.secs_per_op = 0
@@ -174,7 +173,7 @@ class QueryThrottler:
         self.next_query_time = None
 
     def send_query(self, conn):
-        if self.secs_per_op:
+        if self.secs_per_op != 0:
             if self.next_query_time is None:
                 # Desync from other clients by waiting a random amount of time less than one op's duration
                 time.sleep(random.random() * self.secs_per_op)
@@ -249,11 +248,11 @@ def stress_controller(options):
                         print "  - %s" % error
                     stats["errors"][error] = stats["errors"].get(error, 0) + 1
 
-                if op_count and stats["count"] >= op_count:
+                if op_count != 0 and stats["count"] >= op_count:
                     exit_event.set()
 
             else:
-                if options["duration"]:
+                if options["duration"] != 0:
                     if time.time() - start_time > options["duration"]:
                         exit_event.set()
                 time.sleep(0.1)
