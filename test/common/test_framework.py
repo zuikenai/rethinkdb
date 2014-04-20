@@ -14,6 +14,7 @@ import time
 import traceback
 import shutil
 import fnmatch
+import math
 from utils import guess_is_text_file
 import test_report
 
@@ -223,7 +224,10 @@ class TestRunner(object):
 
 
         self.running = Locked({})
-        self.view = TermView() if sys.stdout.isatty() and not verbose else TextView()
+        if sys.stdout.isatty() and not verbose:
+            self.view = TermView(total = len(self.tests) * self.repeat)
+        else:
+            self.view = TextView()
 
     def run(self):
         tests_count = len(self.tests)
@@ -363,10 +367,14 @@ class TextView(object):
 
 # For printing the status to a terminal
 class TermView(TextView):
-    def __init__(self):
+    def __init__(self, total):
         TextView.__init__(self)
         self.running_list = []
         self.buffer = ''
+        self.passed = 0
+        self.failed = 0
+        self.total = total
+        self.start_time = time.time()
         self.read_pipe, self.write_pipe = multiprocessing.Pipe(False)
         self.thread = threading.Thread(target=self.run, name='TermView')
         self.thread.daemon = True
@@ -381,16 +389,24 @@ class TermView(TextView):
 
     def run(self):
         while True:
-            args, kwargs = self.read_pipe.recv()
-            if args == 'EXIT':
-                break
-            self.thread_tell(*args, **kwargs)
+            if self.read_pipe.poll(1):
+                args, kwargs = self.read_pipe.recv()
+                if args == 'EXIT':
+                    break
+                self.thread_tell(*args, **kwargs)
+            else:
+                self.update_status()
+                self.flush()
 
     def thread_tell(self, event, name, **kwargs):
         if event == 'STARTED':
             self.running_list += [name]
             self.update_status()
         else:
+            if event == 'SUCCESS':
+                self.passed += 1
+            else:
+                self.failed += 1
             self.running_list.remove(name)
             self.show(self.format_event(event, name, **kwargs))
         self.flush()
@@ -404,7 +420,31 @@ class TermView(TextView):
 
     def show_status(self):
         if self.running_list:
-            self.buffer += '[%d tests running: %s]' % (len(self.running_list), self.format_running())
+            running = len(self.running_list)
+            names = self.format_running()
+            passed = self.passed
+            failed = self.failed
+            remaining = self.total - passed - failed - running
+            if self.use_color:
+                if passed:
+                    passed = self.green + str(passed) + self.nocolor
+                if failed:
+                    failed = self.red + str(failed) + self.nocolor
+            duration = self.format_duration(time.time() - self.start_time)
+            self.buffer += '[%s/%s/%d/%d %s %s]' % (passed, failed, running, remaining, duration, names)
+
+    def format_duration(self, elapsed):
+        elapsed = math.floor(elapsed)
+        seconds = elapsed % 60
+        elapsed = math.floor(elapsed / 60)
+        minutes = elapsed % 60
+        hours = math.floor(elapsed / 60)
+        ret = "%ds" % (seconds,)
+        if minutes or hours:
+            ret = "%dm%s" % (minutes, ret)
+        if hours:
+            ret = "%dh%s" % (hours, ret)
+        return ret
 
     def format_running(self):
         ret = self.running_list[0]
