@@ -322,6 +322,7 @@ class TestRunner(object):
             with self.running as running:
                 del(running[id])
             if status not in ['SUCCESS', 'KILLED']:
+                self.view.tell('CANCEL', self.repeat - id[1] - 1)
                 self.failed_set.add(name)
             self.semaphore.release()
         self.view.tell(status, name, **args)
@@ -341,7 +342,7 @@ class TextView(object):
         self.use_color = sys.stdout.isatty()
 
     def tell(self, event, name, **args):
-        if event != 'STARTED':
+        if event not in ['STARTED', 'CANCEL']:
             print self.format_event(event, name, **args)
 
     def format_event(self, str, name, error=None):
@@ -399,7 +400,10 @@ class TermView(TextView):
                 self.flush()
 
     def thread_tell(self, event, name, **kwargs):
-        if event == 'STARTED':
+        if event == 'CANCEL':
+            print 'CANCELLING', name
+            self.total -= name
+        elif event == 'STARTED':
             self.running_list += [name]
             self.update_status()
         else:
