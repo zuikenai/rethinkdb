@@ -583,8 +583,9 @@ class TestProcess(object):
                         file.write('Failed')
             self.runner.tell(status, self.id, self)
 
-    def join(self, *args):
-        self.supervisor.join(*args)
+    def join(self):
+        while self.supervisor.is_alive():
+            self.supervisor.join(1)
 
     def terminate_thorough(self):
         if not self.process:
