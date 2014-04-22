@@ -1,5 +1,5 @@
 // Copyright 2010-2014 RethinkDB, all rights reserved.
-#include "extproc/wget_job.hpp"
+#include "extproc/http_job.hpp"
 
 #include <stdint.h>
 #include <cmath>
@@ -13,16 +13,16 @@
 #include "rdb_protocol/pseudo_time.hpp"
 
 // Returns an empty counted_t on error.
-counted_t<const ql::datum_t> wget_to_datum(const std::string &json);
-wget_result_t perform_wget(const std::string &url,
+counted_t<const ql::datum_t> http_to_datum(const std::string &json);
+http_result_t perform_http(const std::string &url,
                            const std::vector<std::string> &headers,
                            size_t rate_limit);
 
 // The job_t runs in the context of the main rethinkdb process
-wget_job_t::wget_job_t(extproc_pool_t *pool, signal_t *interruptor) :
+http_job_t::http_job_t(extproc_pool_t *pool, signal_t *interruptor) :
     extproc_job(pool, &worker_fn, interruptor) { }
 
-wget_result_t wget_job_t::wget(const std::string &url,
+http_result_t http_job_t::http(const std::string &url,
                                const std::vector<std::string> &headers,
                                size_t rate_limit) {
     write_message_t msg;
@@ -31,23 +31,23 @@ wget_result_t wget_job_t::wget(const std::string &url,
     msg << rate_limit;
     {
         int res = send_write_message(extproc_job.write_stream(), &msg);
-        if (res != 0) { throw wget_worker_exc_t("failed to send data to the worker"); }
+        if (res != 0) { throw http_worker_exc_t("failed to send data to the worker"); }
     }
 
-    wget_result_t result;
+    http_result_t result;
     archive_result_t res = deserialize(extproc_job.read_stream(), &result);
     if (bad(res)) {
-        throw wget_worker_exc_t(strprintf("failed to deserialize result from worker (%s)",
+        throw http_worker_exc_t(strprintf("failed to deserialize result from worker (%s)",
                                           archive_result_as_str(res)));
     }
     return result;
 }
 
-void wget_job_t::worker_error() {
+void http_job_t::worker_error() {
     extproc_job.worker_error();
 }
 
-bool wget_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out) {
+bool http_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out) {
     std::string url;
     {
         archive_result_t res = deserialize(stream_in, &url);
@@ -66,14 +66,14 @@ bool wget_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out)
         if (bad(res)) { return false; }
     }
 
-    wget_result_t result;
+    http_result_t result;
 
     try {
-        result = perform_wget(url, headers, rate_limit);
+        result = perform_http(url, headers, rate_limit);
     } catch (const std::exception &ex) {
         result = std::string(ex.what());
     } catch (...) {
-        result = std::string("Unknown error when performing wget");
+        result = std::string("Unknown error when performing http");
     }
 
     write_message_t msg;
@@ -151,7 +151,7 @@ void read_pipes(fd_t res_pipe, std::string *res_str,
         } else if (res == 0) {
             break;
         } else if (get_errno() != EINTR) {
-            err_str->assign(strprintf("Error when reading result from wget: %s",
+            err_str->assign(strprintf("Error when reading result from http: %s",
                                       errno_string(get_errno()).c_str()));
             return;
         }
@@ -164,7 +164,7 @@ void read_pipes(fd_t res_pipe, std::string *res_str,
         } else if (res == 0) {
             break;
         } else if (get_errno() != EINTR) {
-            err_str->assign(strprintf("Error when reading errors from wget: %s",
+            err_str->assign(strprintf("Error when reading errors from http: %s",
                                           errno_string(get_errno()).c_str()));
             return;
         }
@@ -172,19 +172,19 @@ void read_pipes(fd_t res_pipe, std::string *res_str,
 
 }
 
-wget_result_t perform_wget(UNUSED const std::string &url,
+http_result_t perform_http(UNUSED const std::string &url,
                            UNUSED const std::vector<std::string> &headers,
                            UNUSED size_t rate_limit) {
-    wget_result_t result;
+    http_result_t result;
 
     fd_t res_pipe[2];
     if (::pipe(&res_pipe[0]) != 0) {
-        return std::string("failed to create pipe for wget stdout redirect");
+        return std::string("failed to create pipe for http stdout redirect");
     }
 
     fd_t err_pipe[2];
     if (::pipe(&err_pipe[0]) != 0) {
-        return std::string("failed to create pipe for wget stderr redirect");
+        return std::string("failed to create pipe for http stderr redirect");
     }
 
     int res;
@@ -223,7 +223,7 @@ wget_result_t perform_wget(UNUSED const std::string &url,
     if (res_str.length() == 0) {
         result = err_str;
     } else {
-        counted_t<const ql::datum_t> datum = wget_to_datum(res_str);
+        counted_t<const ql::datum_t> datum = http_to_datum(res_str);
         if (datum.has()) {
             result = datum;
         } else {
@@ -234,7 +234,7 @@ wget_result_t perform_wget(UNUSED const std::string &url,
     return result;
 }
 
-counted_t<const ql::datum_t> wget_to_datum(const std::string &json) {
+counted_t<const ql::datum_t> http_to_datum(const std::string &json) {
     scoped_cJSON_t cjson(cJSON_Parse(json.c_str()));
     if (cjson.get() == NULL) {
         return counted_t<const ql::datum_t>();

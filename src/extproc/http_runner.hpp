@@ -1,6 +1,6 @@
 // Copyright 2010-2014 RethinkDB, all rights reserved.
-#ifndef EXTPROC_WGET_RUNNER_HPP_
-#define EXTPROC_WGET_RUNNER_HPP_
+#ifndef EXTPROC_HTTP_RUNNER_HPP_
+#define EXTPROC_HTTP_RUNNER_HPP_
 
 #include <string>
 #include <vector>
@@ -17,29 +17,29 @@
 #include "arch/timing.hpp"
 #include "http/json.hpp"
 
-// wget calls result either in a DATUM return value, a function id (which we can
+// http calls result either in a DATUM return value, a function id (which we can
 // use to call the function later), or an error string
-typedef boost::variant<counted_t<const ql::datum_t>, std::string> wget_result_t;
+typedef boost::variant<counted_t<const ql::datum_t>, std::string> http_result_t;
 
 class extproc_pool_t;
-class wget_runner_t;
-class wgetjs_job_t;
+class http_runner_t;
+class httpjs_job_t;
 
-class wget_worker_exc_t : public std::exception {
+class http_worker_exc_t : public std::exception {
 public:
-    explicit wget_worker_exc_t(const std::string& data) : info(data) { }
-    ~wget_worker_exc_t() throw () { }
+    explicit http_worker_exc_t(const std::string& data) : info(data) { }
+    ~http_worker_exc_t() throw () { }
     const char *what() const throw () { return info.c_str(); }
 private:
     std::string info;
 };
 
 // A handle to a running "javascript evaluator" job.
-class wget_runner_t : public home_thread_mixin_t {
+class http_runner_t : public home_thread_mixin_t {
 public:
-    wget_runner_t(extproc_pool_t *_pool);
+    http_runner_t(extproc_pool_t *_pool);
 
-    wget_result_t wget(const std::string &url,
+    http_result_t http(const std::string &url,
                        const std::vector<std::string> &headers,
                        size_t rate_limit,
                        uint64_t timeout_ms,
@@ -48,7 +48,7 @@ public:
 private:
     extproc_pool_t *pool;
 
-    DISABLE_COPYING(wget_runner_t);
+    DISABLE_COPYING(http_runner_t);
 };
 
-#endif /* EXTPROC_WGET_RUNNER_HPP_ */
+#endif /* EXTPROC_HTTP_RUNNER_HPP_ */

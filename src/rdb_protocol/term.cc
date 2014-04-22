@@ -23,7 +23,7 @@ counted_t<term_t> compile_term(compile_env_t *env, protob_t<const Term> t) {
     case Term::MAKE_OBJ:           return make_make_obj_term(env, t);
     case Term::VAR:                return make_var_term(env, t);
     case Term::JAVASCRIPT:         return make_javascript_term(env, t);
-    case Term::WGET:               return make_wget_term(env, t);
+    case Term::HTTP:               return make_http_term(env, t);
     case Term::ERROR:              return make_error_term(env, t);
     case Term::IMPLICIT_VAR:       return make_implicit_var_term(env, t);
     case Term::RANDOM:             return make_random_term(env, t);

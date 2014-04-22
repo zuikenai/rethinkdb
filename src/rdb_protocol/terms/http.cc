@@ -8,22 +8,22 @@
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/op.hpp"
 #include "rdb_protocol/terms/terms.hpp"
-#include "extproc/wget_runner.hpp"
+#include "extproc/http_runner.hpp"
 
 namespace ql {
 
-class wget_result_visitor_t : public boost::static_visitor<counted_t<val_t> > {
+class http_result_visitor_t : public boost::static_visitor<counted_t<val_t> > {
 public:
-    wget_result_visitor_t(const pb_rcheckable_t *_parent) :
+    http_result_visitor_t(const pb_rcheckable_t *_parent) :
           parent(_parent) { }
 
-    // This wget resulted in an error
+    // This http resulted in an error
     counted_t<val_t> operator()(const std::string &err_val) const {
         rfail_target(parent, base_exc_t::GENERIC, "%s", err_val.c_str());
         unreachable();
     }
 
-    // This wget resulted in data
+    // This http resulted in data
     counted_t<val_t> operator()(const counted_t<const datum_t> &datum) const {
         return make_counted<val_t>(datum, parent->backtrace());
     }
@@ -32,9 +32,9 @@ private:
     const pb_rcheckable_t *parent;
 };
 
-class wget_term_t : public op_term_t {
+class http_term_t : public op_term_t {
 public:
-    wget_term_t(compile_env_t *env, const protob_t<const Term> &term) :
+    http_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         op_term_t(env, term, argspec_t(1, -1),
                   optargspec_t({ "timeout", "header", "rate_limit" }))
     { }
@@ -98,22 +98,22 @@ private:
         std::vector<std::string> headers = get_headers(env);
         std::string url = arg(env, 0)->as_str().to_std();
 
-        wget_result_t wget_result;
+        http_result_t http_result;
         try {
-            wget_runner_t runner(env->env->extproc_pool);
-            wget_result = runner.wget(url, headers, rate_limit, timeout_ms, env->env->interruptor);
-        } catch (const wget_worker_exc_t &e) {
-            wget_result = strprintf("wget of `%s` caused a crash in a worker process.", url.c_str());
+            http_runner_t runner(env->env->extproc_pool);
+            http_result = runner.http(url, headers, rate_limit, timeout_ms, env->env->interruptor);
+        } catch (const http_worker_exc_t &e) {
+            http_result = strprintf("http of `%s` caused a crash in a worker process.", url.c_str());
         } catch (const interrupted_exc_t &e) {
-            wget_result = strprintf("wget of `%s` timed out after %" PRIu64 ".%03" PRIu64 " seconds.",
+            http_result = strprintf("http of `%s` timed out after %" PRIu64 ".%03" PRIu64 " seconds.",
                                     url.c_str(), timeout_ms / 1000, timeout_ms % 1000);
         } catch (const std::exception &e) {
-            wget_result = std::string(e.what());
+            http_result = std::string(e.what());
         } catch (...) {
-            wget_result = std::string("wget encountered an unknown exception");
+            http_result = std::string("http encountered an unknown exception");
         }
 
-        return boost::apply_visitor(wget_result_visitor_t(this), wget_result);
+        return boost::apply_visitor(http_result_visitor_t(this), http_result);
     }
 
     virtual const char *name() const { return "javascript"; }
@@ -124,8 +124,8 @@ private:
     }
 };
 
-counted_t<term_t> make_wget_term(compile_env_t *env, const protob_t<const Term> &term) {
-    return make_counted<wget_term_t>(env, term);
+counted_t<term_t> make_http_term(compile_env_t *env, const protob_t<const Term> &term) {
+    return make_counted<http_term_t>(env, term);
 }
 
 }  // namespace ql

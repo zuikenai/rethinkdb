@@ -11,8 +11,8 @@ def json(json_str):
 def js(js_str, timeout=()):
     return JavaScript(js_str, timeout=timeout)
 
-def wget(url, **kwargs):
-    return Wget(func_wrap(url), **kwargs)
+def http(url, **kwargs):
+    return Http(func_wrap(url), **kwargs)
 
 def error(*msg):
     return UserError(*msg)
