@@ -17,13 +17,12 @@
 #include "arch/timing.hpp"
 #include "http/json.hpp"
 
-// http calls result either in a DATUM return value, a function id (which we can
-// use to call the function later), or an error string
+// http calls result either in a DATUM return value or an error string
 typedef boost::variant<counted_t<const ql::datum_t>, std::string> http_result_t;
 
 class extproc_pool_t;
 class http_runner_t;
-class httpjs_job_t;
+class http_job_t;
 
 class http_worker_exc_t : public std::exception {
 public:
@@ -34,15 +33,85 @@ private:
     std::string info;
 };
 
+enum class http_method_t {
+    GET,
+    HEAD,
+    PUT,
+    POST,
+    DELETE
+};
+
+enum class http_auth_type_t {
+    NONE,
+    BASIC,
+    DIGEST
+};
+
+enum class http_result_format_t {
+    AUTO,
+    TEXT,
+    JSON
+};
+
+ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(
+        http_method_t, int8_t,
+        http_method_t::GET, http_method_t::DELETE);
+
+ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(
+        http_auth_type_t, int8_t,
+        http_auth_type_t::NONE, http_auth_type_t::DIGEST);
+
+ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(
+        http_result_format_t, int8_t,
+        http_result_format_t::AUTO, http_result_format_t::JSON);
+
+std::string http_method_to_str(http_method_t method);
+
+struct http_opts_t {
+    // Sets the default options
+    http_opts_t();
+
+    struct http_auth_t {
+        // No auth by default
+        http_auth_t();
+
+        void make_basic_auth(std::string &&user,
+                             std::string &&pass);
+
+        void make_digest_auth(std::string &&user,
+                              std::string &&pass);
+
+        http_auth_type_t type;
+        std::string username;
+        std::string password;
+
+        RDB_DECLARE_ME_SERIALIZABLE;
+    } auth;
+
+    http_method_t method;
+    http_result_format_t result_format;
+
+    std::string url;
+    std::string url_params;
+    std::string header;
+    std::string body;
+
+    uint64_t timeout_ms;
+    uint64_t attempts;
+
+    bool allow_redirect;
+    bool depaginate;
+    bool verify;
+
+    RDB_DECLARE_ME_SERIALIZABLE;
+};
+
 // A handle to a running "javascript evaluator" job.
 class http_runner_t : public home_thread_mixin_t {
 public:
-    http_runner_t(extproc_pool_t *_pool);
+    explicit http_runner_t(extproc_pool_t *_pool);
 
-    http_result_t http(const std::string &url,
-                       const std::vector<std::string> &headers,
-                       size_t rate_limit,
-                       uint64_t timeout_ms,
+    http_result_t http(const http_opts_t *opts,
                        signal_t *interruptor);
 
 private:

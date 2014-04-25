@@ -260,9 +260,18 @@ message Term {
 
         // Takes an HTTP URL and gets it.  If the get succeeds and
         //  returns valid JSON, it is converted into a DATUM
-        HTTP = 151; // STRING {timeout: !NUMBER,
-                    //         header: !STRING | [!STRING],
-                    //         rate_limit: !NUMBER} -> DATUM
+        HTTP = 152; // STRING {body: !OBJECT,
+                    //         timeout: !NUMBER,
+                    //         method: !STRING,
+                    //         params: !OBJECT,
+                    //         header: !OBJECT
+                    //         reattempts: !NUMBER,
+                    //         allow_redirect: !BOOL,
+                    //         verify: !BOOL,
+                    //         depaginate: !BOOL,
+                    //         auth: !OBJECT,
+                    //         result_format: !STRING,
+                    //         } -> STRING | STREAM
 
         // Takes a string and throws an error with that message.
         // Inside of a `default` block, you can omit the first

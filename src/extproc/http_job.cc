@@ -14,21 +14,15 @@
 
 // Returns an empty counted_t on error.
 counted_t<const ql::datum_t> http_to_datum(const std::string &json);
-http_result_t perform_http(const std::string &url,
-                           const std::vector<std::string> &headers,
-                           size_t rate_limit);
+http_result_t perform_http(const http_opts_t &opts);
 
 // The job_t runs in the context of the main rethinkdb process
 http_job_t::http_job_t(extproc_pool_t *pool, signal_t *interruptor) :
     extproc_job(pool, &worker_fn, interruptor) { }
 
-http_result_t http_job_t::http(const std::string &url,
-                               const std::vector<std::string> &headers,
-                               size_t rate_limit) {
+http_result_t http_job_t::http(const http_opts_t *opts) {
     write_message_t msg;
-    msg << url;
-    msg << headers;
-    msg << rate_limit;
+    msg << *opts;
     {
         int res = send_write_message(extproc_job.write_stream(), &msg);
         if (res != 0) { throw http_worker_exc_t("failed to send data to the worker"); }
@@ -48,28 +42,16 @@ void http_job_t::worker_error() {
 }
 
 bool http_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out) {
-    std::string url;
+    http_opts_t opts;
     {
-        archive_result_t res = deserialize(stream_in, &url);
-        if (bad(res)) { return false; }
-    }
-
-    std::vector<std::string> headers;
-    {
-        archive_result_t res = deserialize(stream_in, &headers);
-        if (bad(res)) { return false; }
-    }
-
-    size_t rate_limit;
-    {
-        archive_result_t res = deserialize(stream_in, &rate_limit);
+        archive_result_t res = deserialize(stream_in, &opts);
         if (bad(res)) { return false; }
     }
 
     http_result_t result;
 
     try {
-        result = perform_http(url, headers, rate_limit);
+        result = perform_http(opts);
     } catch (const std::exception &ex) {
         result = std::string(ex.what());
     } catch (...) {
@@ -84,8 +66,7 @@ bool http_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out)
     return true;
 }
 
-std::string exec_curl(const std::string &url, size_t rate_limit,
-                      const std::vector<std::string> &headers,
+std::string exec_curl(const std::string &url,
                       fd_t res_pipe, fd_t err_pipe) {
     int res;
     do {
@@ -106,15 +87,6 @@ std::string exec_curl(const std::string &url, size_t rate_limit,
 
     std::vector<std::string> args;
     args.push_back(""); // zero arg isn't parsed, it seems
-    
-    if (rate_limit > 0) {
-        args.push_back(strprintf("--limit-rate=%zu", rate_limit));
-    }
-
-    for (size_t i = 0; i < headers.size(); ++i) {
-        args.push_back(strprintf("--header=%s", headers[i].c_str()));
-    }
-
     args.push_back(std::string("--location"));
     args.push_back(std::string("--silent"));
     args.push_back(std::string("--show-error"));
@@ -172,9 +144,7 @@ void read_pipes(fd_t res_pipe, std::string *res_str,
 
 }
 
-http_result_t perform_http(UNUSED const std::string &url,
-                           UNUSED const std::vector<std::string> &headers,
-                           UNUSED size_t rate_limit) {
+http_result_t perform_http(const http_opts_t &opts) {
     http_result_t result;
 
     fd_t res_pipe[2];
@@ -197,8 +167,7 @@ http_result_t perform_http(UNUSED const std::string &url,
         ::close(err_pipe[0]);
 
         // If we return from this call, something terrible has happened
-        std::string info = exec_curl(url, rate_limit, headers,
-                                     res_pipe[1], err_pipe[1]);
+        std::string info = exec_curl(opts.url, res_pipe[1], err_pipe[1]);
 
         do {
             res = ::write(err_pipe[1], info.c_str(), info.length());
