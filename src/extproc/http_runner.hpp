@@ -92,8 +92,8 @@ struct http_opts_t {
     http_result_format_t result_format;
 
     std::string url;
-    std::string url_params;
-    std::string header;
+    std::vector<std::pair<std::string, std::string> > url_params;
+    std::vector<std::string> header;
     std::string body;
 
     uint64_t timeout_ms;

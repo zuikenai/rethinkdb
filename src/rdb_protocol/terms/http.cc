@@ -67,13 +67,12 @@ private:
         }
     }
 
-    void get_header(scope_env_t *env, std::string *header_out) {
+    void get_header(scope_env_t *env, std::vector<std::string> *header_out) {
         counted_t<val_t> header = optarg(env, "header");
         if (header.has()) {
             counted_t<const datum_t> datum_header = header->as_datum();
-            if (datum_header->get_type() == datum_t::R_STR) {
-                header_out->assign(datum_header->as_str().to_std());
-            } else if (datum_header->get_type() == datum_t::R_OBJECT) {
+            // TODO: allow array of strings?
+            if (datum_header->get_type() == datum_t::R_OBJECT) {
                 const std::map<std::string, counted_t<const datum_t> > &header_map = datum_header->as_object();
                 for (auto it = header_map.begin(); it != header_map.end(); ++it) {
                     if (it->second->get_type() != datum_t::R_STR) {
@@ -81,12 +80,12 @@ private:
                                      "Expected `header.%s` to be a STRING, but found %s.",
                                      it->first.c_str(), it->second->get_type_name().c_str());
                     }
-                    header_out->append(strprintf("\n%s: %s", it->first.c_str(),
-                                                 it->second->as_str().c_str()));
+                    header_out->push_back(strprintf("%s: %s", it->first.c_str(),
+                                                    it->second->as_str().c_str()));
                 }
             } else {
                 rfail_target(this, base_exc_t::GENERIC,
-                             "Expected `header` to be a STRING or OBJECT, but found %s.",
+                             "Expected `header` to be an OBJECT, but found %s.",
                              datum_header->get_type_name().c_str());
             }
         }
@@ -196,27 +195,22 @@ private:
         return result;
     }
 
-    void get_params(scope_env_t *env, std::string *params_out) {
+    void get_params(scope_env_t *env, std::vector<std::pair<std::string, std::string> > *params_out) {
         counted_t<val_t> params = optarg(env, "params");
         if (params.has()) {
             counted_t<const datum_t> datum_params = params->as_datum();
-            if (datum_params->get_type() == datum_t::R_STR) {
-                params_out->assign(datum_params->as_str().to_std());
-            } else if (datum_params->get_type() == datum_t::R_OBJECT) {
+            if (datum_params->get_type() == datum_t::R_OBJECT) {
                 const std::map<std::string, counted_t<const datum_t> > &params_map = datum_params->as_object();
                 for (auto it = params_map.begin(); it != params_map.end(); ++it) {
-                    params_out += params_out->empty() ? '?' : '&';
                     if (it->second->get_type() == datum_t::R_NUM) {
-                        params_out->append(strprintf("%s=%" PR_RECONSTRUCTABLE_DOUBLE,
-                                                     escape_param_str(it->first).c_str(),
-                                                     it->second->as_num()));
+                        params_out->push_back(std::make_pair(it->first,
+                                                             strprintf("%" PR_RECONSTRUCTABLE_DOUBLE,
+                                                                       it->second->as_num())));
                     } else if (it->second->get_type() == datum_t::R_STR) {
-                        params_out->append(strprintf("%s=%s",
-                                                     escape_param_str(it->first).c_str(),
-                                                     escape_param_str(it->second->as_str().to_std()).c_str()));
+                        params_out->push_back(std::make_pair(it->first,
+                                                             it->second->as_str().to_std()));
                     } else if (it->second->get_type() == datum_t::R_NULL) {
-                        params_out->append(strprintf("%s=",
-                                                     escape_param_str(it->first).c_str()));
+                        params_out->push_back(std::make_pair(it->first, std::string()));
                     } else {
                         rfail_target(this, base_exc_t::GENERIC,
                                      "Expected `params.%s` to be a NUMBER, STRING or NULL, but found %s.",
@@ -226,7 +220,7 @@ private:
                 
             } else {
                 rfail_target(this, base_exc_t::GENERIC,
-                             "Expected `params` to be a STRING or OBJECT, but found %s.",
+                             "Expected `params` to be an OBJECT, but found %s.",
                              datum_params->get_type_name().c_str());
             }
         }
