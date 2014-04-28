@@ -25,6 +25,7 @@ http_opts_t::http_opts_t() :
     auth(),
     method(http_method_t::GET),
     result_format(http_result_format_t::AUTO),
+    proxy(),
     url(),
     url_params(),
     header(),

@@ -53,7 +53,7 @@ private:
         counted_t<val_t> timeout = optarg(env, "timeout");
         if (timeout.has()) {
             counted_t<const datum_t> datum_timeout = timeout->as_datum();
-            if (datum_timeout->get_type() != datum_t::R_STR) {
+            if (datum_timeout->get_type() != datum_t::R_NUM) {
                 rfail_target(this, base_exc_t::GENERIC,
                              "Expected `timeout` to be a NUMBER, but found %s.",
                              datum_timeout->get_type_name().c_str());
@@ -252,7 +252,7 @@ private:
     }
 
     void get_attempts(scope_env_t *env, uint64_t *attempts_out) {
-        counted_t<val_t> attempts = optarg(env, "method");
+        counted_t<val_t> attempts = optarg(env, "attempts");
         if (attempts.has()) {
             counted_t<const datum_t> datum_attempts = attempts->as_datum();
             if (datum_attempts->get_type() != datum_t::R_STR) {

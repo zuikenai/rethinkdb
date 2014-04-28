@@ -91,6 +91,7 @@ struct http_opts_t {
     http_method_t method;
     http_result_format_t result_format;
 
+    std::string proxy;
     std::string url;
     std::vector<std::pair<std::string, std::string> > url_params;
     std::vector<std::string> header;
