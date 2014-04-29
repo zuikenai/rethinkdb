@@ -210,27 +210,50 @@ void transfer_url_opt(const std::string &url,
     exc_setopt(curl_handle, CURLOPT_URL, full_url.c_str(), "URL");
 }
 
-// TODO: verify that header items do not contain newlines
-void transfer_header_opt(const std::vector<std::string> &header, CURL *curl_handle) {
-    struct curl_slist *curl_header = NULL;
+// Used for adding headers, which cannot be freed until after the request is done
+class scoped_curl_slist_t {
+public:
+    scoped_curl_slist_t() :
+        slist(NULL) { }
 
-    for (auto it = header.begin(); it != header.end(); ++it) {
-        curl_header = curl_slist_append(curl_header, it->c_str());
-        if (curl_header == NULL) {
+    ~scoped_curl_slist_t() {
+        if (slist != NULL) {
+            curl_slist_free_all(slist);
+        }
+    }
+
+    curl_slist *get() {
+        return slist;
+    }
+
+    void add(const std::string &str) {
+        slist = curl_slist_append(slist, str.c_str());
+        if (slist == NULL) {
             throw curl_exc_t("appending headers", "allocation failure");
         }
     }
 
-    if (curl_header != NULL) {
-        exc_setopt(curl_handle, CURLOPT_HTTPHEADER, curl_header, "HEADER");
-        curl_slist_free_all(curl_header);
+private:
+    struct curl_slist *slist;
+};
+
+void transfer_header_opt(const std::vector<std::string> &header,
+                         CURL *curl_handle,
+                         scoped_curl_slist_t *curl_headers) {
+    for (auto it = header.begin(); it != header.end(); ++it) {
+        curl_headers->add(*it);
+    }
+
+    if (curl_headers->get() != NULL) {
+        exc_setopt(curl_handle, CURLOPT_HTTPHEADER, curl_headers->get(), "HEADER");
     }
 }
 
-// TODO: make allow_redirect a number corresponding to how many redirects to allow
-void transfer_redirect_opt(bool allow_redirect, CURL *curl_handle) {
-    long val = allow_redirect ? 1 : 0;
+void transfer_redirect_opt(uint32_t max_redirects, CURL *curl_handle) {
+    long val = (max_redirects > 0) ? 1 : 0;
     exc_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, val, "ALLOW REDIRECT");
+    val = max_redirects;
+    exc_setopt(curl_handle, CURLOPT_MAXREDIRS, val, "MAX REDIRECTS");
     // TODO: what to do about CURLOPT_POSTREDIR?
 }
 
@@ -242,13 +265,14 @@ void transfer_verify_opt(bool verify, CURL *curl_handle) {
 }
 
 void transfer_opts(const http_opts_t &opts,
-                   CURL *curl_handle) {
+                   CURL *curl_handle,
+                   scoped_curl_slist_t *curl_headers) {
     transfer_auth_opt(opts.auth, curl_handle);
     transfer_url_opt(opts.url, opts.url_params, curl_handle);
-    transfer_redirect_opt(opts.allow_redirect, curl_handle);
+    transfer_redirect_opt(opts.max_redirects, curl_handle);
     transfer_verify_opt(opts.verify, curl_handle);
 
-    transfer_header_opt(opts.header, curl_handle);
+    transfer_header_opt(opts.header, curl_handle, curl_headers);
 
     // Set method last as it may override some options libcurl automatically sets
     transfer_method_opt(opts.method, curl_handle);
@@ -282,6 +306,7 @@ void set_default_opts(CURL *curl_handle,
 // TODO: implement streams
 http_result_t perform_http(http_opts_t *opts) {
     curl_callbacks_t callbacks(std::move(opts->body));
+    scoped_curl_slist_t curl_headers;
 
     printf("curl_easy_init\n");
     CURL* curl_handle = curl_easy_init();
@@ -293,7 +318,7 @@ http_result_t perform_http(http_opts_t *opts) {
         printf("set_default_opts\n");
         set_default_opts(curl_handle, opts->proxy, callbacks);
         printf("transfer_opts\n");
-        transfer_opts(*opts, curl_handle);
+        transfer_opts(*opts, curl_handle, &curl_headers);
     } catch (curl_exc_t &ex) {
         return strprintf("failed to set options: %s", ex.what());
     }
@@ -330,8 +355,8 @@ http_result_t perform_http(http_opts_t *opts) {
     if (curl_res != CURLE_OK) {
         return strprintf("could not get response code: %s", curl_easy_strerror(curl_res));
     } else if (response_code < 200 || response_code >= 300) {
-        // TODO: include response data
-        return strprintf("HTTP status code %ld", response_code);
+        // TODO: truncate response data?
+        return strprintf("HTTP status code %ld, response: %s", response_code, callbacks.get_data().c_str());
     }
 
     printf("parse http response\n");
@@ -363,7 +388,7 @@ http_result_t perform_http(http_opts_t *opts) {
 counted_t<const ql::datum_t> http_to_datum(const std::string &json) {
     scoped_cJSON_t cjson(cJSON_Parse(json.c_str()));
     if (cjson.get() == NULL) {
-        return counted_t<const ql::datum_t>();
+        return make_counted<const ql::datum_t>(ql::datum_t::R_NULL);
     }
 
     return make_counted<const ql::datum_t>(cjson);

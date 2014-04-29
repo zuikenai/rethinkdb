@@ -42,7 +42,7 @@ public:
                                 "params",
                                 "header",
                                 "attempts",
-                                "allow_redirect",
+                                "max_redirects",
                                 "verify",
                                 "depaginate",
                                 "auth",
@@ -67,25 +67,58 @@ private:
         }
     }
 
+    // Don't allow header strings to include newlines
+    void verify_header_string(const std::string &str) {
+        // TODO: backtrace
+        if (str.find_first_of("\r\n") != std::string::npos) {
+            rfail_target(this, base_exc_t::GENERIC,
+                         "A `header` item contains newline characters.");
+        }
+    }
+
     void get_header(scope_env_t *env, std::vector<std::string> *header_out) {
         counted_t<val_t> header = optarg(env, "header");
         if (header.has()) {
             counted_t<const datum_t> datum_header = header->as_datum();
-            // TODO: allow array of strings?
             if (datum_header->get_type() == datum_t::R_OBJECT) {
                 const std::map<std::string, counted_t<const datum_t> > &header_map = datum_header->as_object();
                 for (auto it = header_map.begin(); it != header_map.end(); ++it) {
-                    if (it->second->get_type() != datum_t::R_STR) {
+                    std::string str;
+                    // If the value for the header is supposed to be empty, libcurl requires
+                    // a semicolon instead of a colon
+                    if (it->second->get_type() == datum_t::R_STR) {
+                        // TODO: filter out values that are only whitespace? ugh...
+                        if (it->second->as_str().size() == 0) {
+                            str = strprintf("%s;", it->first.c_str());
+                        } else {
+                            str = strprintf("%s: %s", it->first.c_str(),
+                                            it->second->as_str().c_str());
+                        }
+                    } else if (it->second->get_type() == datum_t::R_NULL) {
+                        str = strprintf("%s;", it->first.c_str());
+                    } else {
                         rfail_target(this, base_exc_t::GENERIC,
-                                     "Expected `header.%s` to be a STRING, but found %s.",
+                                     "Expected `header.%s` to be a STRING or NULL, but found %s.",
                                      it->first.c_str(), it->second->get_type_name().c_str());
                     }
-                    header_out->push_back(strprintf("%s: %s", it->first.c_str(),
-                                                    it->second->as_str().c_str()));
+                    verify_header_string(str);
+                    header_out->push_back(str);
+                }
+            } else if (datum_header->get_type() == datum_t::R_ARRAY) {
+                for (size_t i = 0; i < datum_header->size(); ++i) {
+                    counted_t<const datum_t> line = datum_header->get(i);
+                    if (line->get_type() != datum_t::R_STR) {
+                        rfail_target(this, base_exc_t::GENERIC,
+                                     "Expected `header[%zu]` to be a STRING, but found %s.",
+                                     i, line->get_type_name().c_str());
+                    }
+                    std::string str = line->as_str().to_std();
+                    verify_header_string(str);
+                    header_out->push_back(str);
                 }
             } else {
                 rfail_target(this, base_exc_t::GENERIC,
-                             "Expected `header` to be an OBJECT, but found %s.",
+                             "Expected `header` to be an ARRAY or OBJECT, but found %s.",
                              datum_header->get_type_name().c_str());
             }
         }
@@ -180,21 +213,6 @@ private:
         }
     }
 
-    std::string escape_param_str(const std::string &param) {
-        std::string result;
-        for (size_t i = 0; i < param.length(); ++i) {
-            char c = param[i];
-            if ((c >= 'A' && c <= 'Z') ||
-                (c >= 'a' && c <= 'z') ||
-                (c >= '0' && c <= '9')) {
-                result += c;
-            } else {
-                result += strprintf("%%%.2hhX\n", c);
-            }
-        }
-        return result;
-    }
-
     void get_params(scope_env_t *env, std::vector<std::pair<std::string, std::string> > *params_out) {
         counted_t<val_t> params = optarg(env, "params");
         if (params.has()) {
@@ -202,20 +220,18 @@ private:
             if (datum_params->get_type() == datum_t::R_OBJECT) {
                 const std::map<std::string, counted_t<const datum_t> > &params_map = datum_params->as_object();
                 for (auto it = params_map.begin(); it != params_map.end(); ++it) {
+                    std::string val_str;
                     if (it->second->get_type() == datum_t::R_NUM) {
-                        params_out->push_back(std::make_pair(it->first,
-                                                             strprintf("%" PR_RECONSTRUCTABLE_DOUBLE,
-                                                                       it->second->as_num())));
+                        val_str = strprintf("%" PR_RECONSTRUCTABLE_DOUBLE,
+                                            it->second->as_num());
                     } else if (it->second->get_type() == datum_t::R_STR) {
-                        params_out->push_back(std::make_pair(it->first,
-                                                             it->second->as_str().to_std()));
-                    } else if (it->second->get_type() == datum_t::R_NULL) {
-                        params_out->push_back(std::make_pair(it->first, std::string()));
-                    } else {
+                        val_str = it->second->as_str().to_std();
+                    } else if (it->second->get_type() != datum_t::R_NULL) {
                         rfail_target(this, base_exc_t::GENERIC,
                                      "Expected `params.%s` to be a NUMBER, STRING or NULL, but found %s.",
                                      it->first.c_str(), it->second->get_type_name().c_str());
                     }
+                    params_out->push_back(std::make_pair(it->first, val_str));
                 }
                 
             } else {
@@ -255,7 +271,7 @@ private:
         counted_t<val_t> attempts = optarg(env, "attempts");
         if (attempts.has()) {
             counted_t<const datum_t> datum_attempts = attempts->as_datum();
-            if (datum_attempts->get_type() != datum_t::R_STR) {
+            if (datum_attempts->get_type() != datum_t::R_NUM) {
                 rfail_target(this, base_exc_t::GENERIC,
                              "Expected `attempts` to be a NUMBER, but found %s.",
                              datum_attempts->get_type_name().c_str());
@@ -267,6 +283,29 @@ private:
                              "`attempts` (%" PRIi64 ") cannot be negative.", temp);
             }
             *attempts_out = temp;
+        }
+    }
+
+    void get_redirects(scope_env_t *env, uint32_t *redirects_out) {
+        counted_t<val_t> redirects = optarg(env, "redirects");
+        if (redirects.has()) {
+            counted_t<const datum_t> datum_redirects = redirects->as_datum();
+            if (datum_redirects->get_type() != datum_t::R_NUM) {
+                rfail_target(this, base_exc_t::GENERIC,
+                             "Expected `redirects` to be a NUMBER, but found %s.",
+                             datum_redirects->get_type_name().c_str());
+            }
+
+            int64_t temp = datum_redirects->as_int();
+            if (temp < 0) {
+                rfail_target(this, base_exc_t::GENERIC,
+                             "`redirects` (%" PRIi64 ") cannot be negative.", temp);
+            } else if (temp > std::numeric_limits<uint32_t>::max()) {
+                rfail_target(this, base_exc_t::GENERIC,
+                             "`redirects` (%" PRIi64 ") cannot be greater than 2^32 - 1.", temp);
+            }
+
+            *redirects_out = temp;
         }
     }
 
@@ -292,7 +331,7 @@ private:
         get_body(env, &opts_out->body);
         get_timeout(env, &opts_out->timeout_ms);
         get_attempts(env, &opts_out->attempts);
-        get_bool_optarg("allow_redirect", env, &opts_out->allow_redirect);
+        get_redirects(env, &opts_out->max_redirects);
         get_bool_optarg("depaginate", env, &opts_out->depaginate);
         get_bool_optarg("verify", env, &opts_out->verify);
     }

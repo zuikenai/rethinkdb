@@ -99,8 +99,8 @@ struct http_opts_t {
 
     uint64_t timeout_ms;
     uint64_t attempts;
+    uint32_t max_redirects;
 
-    bool allow_redirect;
     bool depaginate;
     bool verify;
 
