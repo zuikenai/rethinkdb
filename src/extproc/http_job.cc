@@ -251,10 +251,12 @@ void transfer_header_opt(const std::vector<std::string> &header,
 
 void transfer_redirect_opt(uint32_t max_redirects, CURL *curl_handle) {
     long val = (max_redirects > 0) ? 1 : 0;
+    printf("max redirects: %d, followlocation: %ld\n", max_redirects, val);
     exc_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, val, "ALLOW REDIRECT");
     val = max_redirects;
     exc_setopt(curl_handle, CURLOPT_MAXREDIRS, val, "MAX REDIRECTS");
-    // TODO: what to do about CURLOPT_POSTREDIR?
+    // maybe we should set CURLOPT_POSTREDIR - libcurl will, by default,
+    // change POST requests to GET requests if redirected
 }
 
 void transfer_verify_opt(bool verify, CURL *curl_handle) {

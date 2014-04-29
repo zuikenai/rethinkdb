@@ -42,7 +42,7 @@ public:
                                 "params",
                                 "header",
                                 "attempts",
-                                "max_redirects",
+                                "redirects",
                                 "verify",
                                 "depaginate",
                                 "auth",

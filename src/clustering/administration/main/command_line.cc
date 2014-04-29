@@ -1025,6 +1025,10 @@ options::help_section_t get_network_options(const bool join_required, std::vecto
                                              join_required ? options::MANDATORY_REPEAT : options::OPTIONAL_REPEAT));
     help.add("-j [ --join ] host:port", "host and port of a rethinkdb node to connect to");
 
+    options_out->push_back(options::option_t(options::names_t("--reql-http-proxy"),
+                                             options::OPTIONAL));
+    help.add("--reql-http-proxy [protocol://]host[:port]", "HTTP proxy to use for performing `r.http(...)` queries, default port is 1080");
+
     options_out->push_back(options::option_t(options::names_t("--canonical-address"),
                                              options::OPTIONAL_REPEAT));
     help.add("--canonical-address addr", "address that other rethinkdb instances will use to connect to us, can be specified multiple times");
