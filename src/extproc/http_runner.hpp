@@ -36,8 +36,9 @@ private:
 enum class http_method_t {
     GET,
     HEAD,
-    PUT,
     POST,
+    PUT,
+    PATCH,
     DELETE
 };
 
@@ -95,7 +96,10 @@ struct http_opts_t {
     std::string url;
     std::vector<std::pair<std::string, std::string> > url_params;
     std::vector<std::string> header;
+
+    // These will be used based on the method specified
     std::string data;
+    std::vector<std::pair<std::string, std::string> > form_data;
 
     uint64_t timeout_ms;
     uint64_t attempts;

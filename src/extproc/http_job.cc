@@ -31,19 +31,37 @@ public:
     const std::string error_string;
 };
 
-class curl_callbacks_t {
+class scoped_curl_handle_t {
 public:
-    curl_callbacks_t() : send_data_offset(0) { }
+    scoped_curl_handle_t() :
+        handle(curl_easy_init()) {
+    }
+
+    ~scoped_curl_handle_t() {
+        curl_easy_cleanup(handle);
+    }
+
+    CURL *get() {
+        return handle;
+    }
+
+private:
+    CURL *handle;
+};
+
+class curl_data_t {
+public:
+    curl_data_t() : send_data_offset(0) { }
 
     static size_t write(char *ptr, size_t size, size_t nmemb, void* instance) {
-        curl_callbacks_t *self = reinterpret_cast<curl_callbacks_t*>(instance);
+        curl_data_t *self = reinterpret_cast<curl_data_t*>(instance);
         uint64_t bytes_to_copy = size;
         bytes_to_copy *= nmemb;
         return self->write_internal(ptr, bytes_to_copy);
     };
 
     static size_t read(char *ptr, size_t size, size_t nmemb, void* instance) {
-        curl_callbacks_t *self = reinterpret_cast<curl_callbacks_t*>(instance);
+        curl_data_t *self = reinterpret_cast<curl_data_t*>(instance);
         uint64_t bytes_to_copy = size;
         bytes_to_copy *= nmemb;
         return self->read_internal(ptr, bytes_to_copy);
@@ -56,6 +74,59 @@ public:
     std::string &get_recv_data() {
         return recv_data;
     }
+
+    // Used for adding headers, which cannot be freed until after the request is done
+    class scoped_curl_slist_t {
+    public:
+        scoped_curl_slist_t() :
+            slist(NULL) { }
+
+        ~scoped_curl_slist_t() {
+            if (slist != NULL) {
+                curl_slist_free_all(slist);
+            }
+        }
+
+        curl_slist *get() {
+            return slist;
+        }
+
+        void add(const std::string &str) {
+            slist = curl_slist_append(slist, str.c_str());
+            if (slist == NULL) {
+                throw curl_exc_t("appending headers", "allocation failure");
+            }
+        }
+
+    private:
+        struct curl_slist *slist;
+    } headers;
+
+    class scoped_curl_form_t {
+    public:
+        scoped_curl_form_t() : first_item(NULL), last_item(NULL) { }
+        ~scoped_curl_form_t() {
+            curl_formfree(first_item);
+        }
+
+        void add(const std::vector<std::pair<std::string, std::string> > &items) {
+            for (auto it = items.begin(); it != items.end(); ++it) {
+                curl_formadd(&first_item, &last_item,
+                             CURLFORM_PTRNAME, it->first.data(),
+                             CURLFORM_NAMELENGTH, it->first.size(),
+                             CURLFORM_PTRCONTENTS, it->second.data(),
+                             CURLFORM_CONTENTSLENGTH, it->second.size(),
+                             CURLFORM_END);
+            }
+        }
+
+        curl_httppost *get() {
+            return first_item;
+        }
+    private:
+        struct curl_httppost *first_item;
+        struct curl_httppost *last_item;
+    } forms;
 
 private:
     // This is called for getting data in the response from the server
@@ -166,33 +237,43 @@ void transfer_auth_opt(const http_opts_t::http_auth_t &auth, CURL *curl_handle) 
     }
 }
 
-void transfer_method_opt(http_method_t method,
-                         std::string *data,
-                         curl_callbacks_t *callbacks,
-                         CURL *curl_handle) {
-    switch (method) {
+void transfer_method_opt(http_opts_t *opts,
+                         CURL *curl_handle,
+                         curl_data_t *curl_data) {
+    // Opts will have either data or form_data set - 
+    //  - form_data is only used for post requests, and will result in a string
+    //    of form-encoded pairs in the request
+    //  - data is used in put, patch, and post requests, and will result in the
+    //    given string being directly put into the body of the request
+    switch (opts->method) {
         case http_method_t::GET:
             exc_setopt(curl_handle, CURLOPT_HTTPGET, 1, "HTTP GET");
             break;
+        case http_method_t::PATCH:
+            // Fallthrough intentional - patch uses the same data as put
+            exc_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "PATCH", "HTTP PATCH");
         case http_method_t::PUT:
             {
                 exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
-                curl_off_t size = data->length();
+                curl_off_t size = opts->data.size();
+                curl_data->set_send_data(std::move(opts->data));
                 if (size != 0) {
-                    callbacks->set_send_data(std::move(*data));
-                    exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_callbacks_t::read, "READ FUNCTION");
-                    exc_setopt(curl_handle, CURLOPT_READDATA, callbacks, "READ DATA");
+                    curl_data->set_send_data(std::move(opts->data));
+                    exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_data_t::read, "READ FUNCTION");
+                    exc_setopt(curl_handle, CURLOPT_READDATA, curl_data, "READ DATA");
                     exc_setopt(curl_handle, CURLOPT_INFILESIZE_LARGE, size, "DATA SIZE");
                 }
             }
             break;
         case http_method_t::POST:
-            exc_setopt(curl_handle, CURLOPT_POST, 1, "HTTP POST");
-            if (!data->empty()) {
-                // TODO: CURLOPT_POSTFIELDS
+            if (!opts->form_data.empty()) {
+                curl_data->forms.add(opts->form_data);
+                exc_setopt(curl_handle, CURLOPT_HTTPPOST, curl_data->forms.get(), "HTTP POST FORM");
+            } else {
+                exc_setopt(curl_handle, CURLOPT_POSTFIELDS, opts->data.data(), "HTTP POST DATA");
+                exc_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, opts->data.size(), "HTTP POST DATA SIZE");
             }
             break;
-        // TODO: PATCH
         case http_method_t::HEAD:
             exc_setopt(curl_handle, CURLOPT_NOBODY, 1, "HTTP HEAD");
             break;
@@ -224,42 +305,15 @@ void transfer_url_opt(const std::string &url,
     exc_setopt(curl_handle, CURLOPT_URL, full_url.c_str(), "URL");
 }
 
-// Used for adding headers, which cannot be freed until after the request is done
-class scoped_curl_slist_t {
-public:
-    scoped_curl_slist_t() :
-        slist(NULL) { }
-
-    ~scoped_curl_slist_t() {
-        if (slist != NULL) {
-            curl_slist_free_all(slist);
-        }
-    }
-
-    curl_slist *get() {
-        return slist;
-    }
-
-    void add(const std::string &str) {
-        slist = curl_slist_append(slist, str.c_str());
-        if (slist == NULL) {
-            throw curl_exc_t("appending headers", "allocation failure");
-        }
-    }
-
-private:
-    struct curl_slist *slist;
-};
-
 void transfer_header_opt(const std::vector<std::string> &header,
                          CURL *curl_handle,
-                         scoped_curl_slist_t *curl_headers) {
+                         curl_data_t *curl_data) {
     for (auto it = header.begin(); it != header.end(); ++it) {
-        curl_headers->add(*it);
+        curl_data->headers.add(*it);
     }
 
-    if (curl_headers->get() != NULL) {
-        exc_setopt(curl_handle, CURLOPT_HTTPHEADER, curl_headers->get(), "HEADER");
+    if (curl_data->headers.get() != NULL) {
+        exc_setopt(curl_handle, CURLOPT_HTTPHEADER, curl_data->headers.get(), "HEADER");
     }
 }
 
@@ -281,24 +335,23 @@ void transfer_verify_opt(bool verify, CURL *curl_handle) {
 
 void transfer_opts(http_opts_t *opts,
                    CURL *curl_handle,
-                   curl_callbacks_t *callbacks,
-                   scoped_curl_slist_t *curl_headers) {
+                   curl_data_t *curl_data) {
     transfer_auth_opt(opts->auth, curl_handle);
     transfer_url_opt(opts->url, opts->url_params, curl_handle);
     transfer_redirect_opt(opts->max_redirects, curl_handle);
     transfer_verify_opt(opts->verify, curl_handle);
 
-    transfer_header_opt(opts->header, curl_handle, curl_headers);
+    transfer_header_opt(opts->header, curl_handle, curl_data);
 
     // Set method last as it may override some options libcurl automatically sets
-    transfer_method_opt(opts->method, &opts->data, callbacks, curl_handle);
+    transfer_method_opt(opts, curl_handle, curl_data);
 }
 
 void set_default_opts(CURL *curl_handle,
                       const std::string &proxy,
-                      const curl_callbacks_t &callbacks) {
-    exc_setopt(curl_handle, CURLOPT_WRITEFUNCTION, &curl_callbacks_t::write, "WRITE FUNCTION");
-    exc_setopt(curl_handle, CURLOPT_WRITEDATA, &callbacks, "WRITE DATA");
+                      const curl_data_t &curl_data) {
+    exc_setopt(curl_handle, CURLOPT_WRITEFUNCTION, &curl_data_t::write, "WRITE FUNCTION");
+    exc_setopt(curl_handle, CURLOPT_WRITEDATA, &curl_data, "WRITE DATA");
 
     // Only allow http protocol
     exc_setopt(curl_handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS, "PROTOCOLS");
@@ -312,24 +365,23 @@ void set_default_opts(CURL *curl_handle,
     }
 }
 
+// TODO: return parsed json from errors? - github api
 // TODO: digest auth not working?
 // TODO: implement depaginate
 // TODO: implement streams
 http_result_t perform_http(http_opts_t *opts) {
-    scoped_curl_slist_t curl_headers;
-    curl_callbacks_t callbacks;
+    scoped_curl_handle_t curl_handle;
+    curl_data_t curl_data;
 
-    printf("curl_easy_init\n");
-    CURL* curl_handle = curl_easy_init();
-    if (curl_handle == NULL) {
+    if (curl_handle.get() == NULL) {
         return std::string("failed to initialize libcurl handle");
     }
 
     try {
         printf("set_default_opts\n");
-        set_default_opts(curl_handle, opts->proxy, callbacks);
+        set_default_opts(curl_handle.get(), opts->proxy, curl_data);
         printf("transfer_opts\n");
-        transfer_opts(opts, curl_handle, &callbacks, &curl_headers);
+        transfer_opts(opts, curl_handle.get(), &curl_data);
     } catch (curl_exc_t &ex) {
         return strprintf("failed to set options: %s", ex.what());
     }
@@ -338,12 +390,12 @@ http_result_t perform_http(http_opts_t *opts) {
     long response_code;
     do {
         printf("curl_easy_perform\n");
-        CURLcode curl_res = curl_easy_perform(curl_handle);
+        curl_res = curl_easy_perform(curl_handle.get());
         if (curl_res != CURLE_OK) {
             return strprintf("curl failed: %s", curl_easy_strerror(curl_res));
         }
         // Break on success, retry on temporary error
-        curl_res = curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &response_code);
+        curl_res = curl_easy_getinfo(curl_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
         if (curl_res == CURLE_SEND_ERROR ||
             curl_res == CURLE_RECV_ERROR ||
             curl_res == CURLE_COULDNT_CONNECT) {
@@ -367,12 +419,12 @@ http_result_t perform_http(http_opts_t *opts) {
         return strprintf("could not get response code: %s", curl_easy_strerror(curl_res));
     } else if (response_code < 200 || response_code >= 300) {
         // Truncate response data to 100 chars to avoid flooding people
-        if (callbacks.get_recv_data().length() > 100) {
+        if (curl_data.get_recv_data().length() > 100) {
             return strprintf("HTTP status code %ld, response: %s...",
-                             response_code, callbacks.get_recv_data().substr(0, 97).c_str());
+                             response_code, curl_data.get_recv_data().substr(0, 97).c_str());
         } else {
             return strprintf("HTTP status code %ld, response: %s",
-                             response_code, callbacks.get_recv_data().c_str());
+                             response_code, curl_data.get_recv_data().c_str());
         }
     }
 
@@ -381,27 +433,27 @@ http_result_t perform_http(http_opts_t *opts) {
     case http_result_format_t::AUTO:
         {
             char *content_type_buffer;
-            curl_easy_getinfo(curl_handle, CURLINFO_CONTENT_TYPE, &content_type_buffer);
+            curl_easy_getinfo(curl_handle.get(), CURLINFO_CONTENT_TYPE, &content_type_buffer);
 
             std::string content_type(content_type_buffer);
             for (size_t i = 0; i < content_type.length(); ++i) {
                 content_type[i] = tolower(content_type[i]);
             }
             if (content_type.find("application/json") == 0) {
-                return http_to_datum(callbacks.get_recv_data());
+                return http_to_datum(curl_data.get_recv_data());
             } else {
-                return make_counted<const ql::datum_t>(std::move(callbacks.get_recv_data()));
+                return make_counted<const ql::datum_t>(std::move(curl_data.get_recv_data()));
             }
         }
     case http_result_format_t::JSON:
-        return http_to_datum(callbacks.get_recv_data());
+        return http_to_datum(curl_data.get_recv_data());
     case http_result_format_t::TEXT:
-        return make_counted<const ql::datum_t>(std::move(callbacks.get_recv_data()));
+        return make_counted<const ql::datum_t>(std::move(curl_data.get_recv_data()));
     default:
         unreachable();
     }
 
-    return http_to_datum(callbacks.get_recv_data());
+    return http_to_datum(curl_data.get_recv_data());
 }
 
 counted_t<const ql::datum_t> http_to_datum(const std::string &json) {

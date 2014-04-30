@@ -138,15 +138,17 @@ private:
                 *method_out = http_method_t::GET;
             } else if (method_str == "HEAD") {
                 *method_out = http_method_t::HEAD;
-            } else if (method_str == "PUT") {
-                *method_out = http_method_t::PUT;
             } else if (method_str == "POST") {
                 *method_out = http_method_t::POST;
+            } else if (method_str == "PUT") {
+                *method_out = http_method_t::PUT;
+            } else if (method_str == "PATCH") {
+                *method_out = http_method_t::PATCH;
             } else if (method_str == "DELETE") {
                 *method_out = http_method_t::DELETE;
             } else {
                 rfail_target(method.get(), base_exc_t::GENERIC,
-                             "`method` (%s) is not recognized ('GET', 'HEAD', 'PUT', 'POST', and 'DELETE' are allowed).",
+                             "`method` (%s) is not recognized (GET, HEAD, POST, PUT, PATCH and DELETE are allowed).",
                              method_str.c_str());
             }
         }
@@ -196,19 +198,56 @@ private:
         }
     }
 
-    void get_data(scope_env_t *env, std::string *data_out) {
+    std::string print_http_param(const counted_t<const datum_t> &datum,
+                                 const char *val_name,
+                                 const char *key_name,
+                                 pb_rcheckable_t *val) {
+        if (datum->get_type() == datum_t::R_NUM) {
+            return strprintf("%" PR_RECONSTRUCTABLE_DOUBLE,
+                             datum->as_num());
+        } else if (datum->get_type() == datum_t::R_STR) {
+            return datum->as_str().to_std();
+        } else if (datum->get_type() == datum_t::R_NULL) {
+            return std::string();
+        }
+
+        rfail_target(val, base_exc_t::GENERIC,
+                     "Expected `%s.%s` to be a NUMBER, STRING or NULL, but found %s.",
+                     val_name, key_name, datum->get_type_name().c_str());
+    }
+
+    void get_data(scope_env_t *env,
+                  std::string *data_out,
+                  std::vector<std::pair<std::string, std::string> > *form_data_out,
+                  http_method_t method) {
         counted_t<val_t> data = optarg(env, "data");
         if (data.has()) {
             counted_t<const datum_t> datum_data = data->as_datum();
-            if (datum_data->get_type() == datum_t::R_STR) {
-                data_out->assign(datum_data->as_str().to_std());
-            } else if (datum_data->get_type() == datum_t::R_OBJECT ||
-                       datum_data->get_type() == datum_t::R_ARRAY) {
+            if (method == http_method_t::PUT ||
+                method == http_method_t::PATCH) {
+                // TODO: make sure this is actually expected behavior for all types
+                //  e.g. strings, arrays, objects, numbers
                 data_out->assign(datum_data->print());
+            } else if (method == http_method_t::POST) {
+                if (datum_data->get_type() == datum_t::R_STR) {
+                    // Use the put data for this, as we assume the user does any
+                    // encoding they need when they pass a string
+                    data_out->assign(datum_data->as_str().to_std());
+                } else if (datum_data->get_type() == datum_t::R_OBJECT) {
+                    const std::map<std::string, counted_t<const datum_t> > &form_map = datum_data->as_object();
+                    for (auto it = form_map.begin(); it != form_map.end(); ++it) {
+                        std::string val_str = print_http_param(it->second, "data",
+                                                               it->first.c_str(), data.get());
+                        form_data_out->push_back(std::make_pair(it->first, val_str));
+                    }
+                } else {
+                    rfail_target(data.get(), base_exc_t::GENERIC,
+                                 "Expected `data` to be a STRING or OBJECT, but found %s.",
+                                 datum_data->get_type_name().c_str());
+                }
             } else {
-                rfail_target(data.get(), base_exc_t::GENERIC,
-                             "Expected `data` to be a STRING, OBJECT or ARRAY, but found %s.",
-                             datum_data->get_type_name().c_str());
+                rfail_target(this, base_exc_t::GENERIC,
+                             "`data` should only be specified on a PUT, POST, or PATCH request.");
             }
         }
     }
@@ -220,17 +259,8 @@ private:
             if (datum_params->get_type() == datum_t::R_OBJECT) {
                 const std::map<std::string, counted_t<const datum_t> > &params_map = datum_params->as_object();
                 for (auto it = params_map.begin(); it != params_map.end(); ++it) {
-                    std::string val_str;
-                    if (it->second->get_type() == datum_t::R_NUM) {
-                        val_str = strprintf("%" PR_RECONSTRUCTABLE_DOUBLE,
-                                            it->second->as_num());
-                    } else if (it->second->get_type() == datum_t::R_STR) {
-                        val_str = it->second->as_str().to_std();
-                    } else if (it->second->get_type() != datum_t::R_NULL) {
-                        rfail_target(params.get(), base_exc_t::GENERIC,
-                                     "Expected `params.%s` to be a NUMBER, STRING or NULL, but found %s.",
-                                     it->first.c_str(), it->second->get_type_name().c_str());
-                    }
+                    std::string val_str = print_http_param(it->second, "params",
+                                                           it->first.c_str(), params.get());
                     params_out->push_back(std::make_pair(it->first, val_str));
                 }
                 
@@ -328,22 +358,13 @@ private:
         get_result_format(env, &opts_out->result_format);
         get_params(env, &opts_out->url_params);
         get_header(env, &opts_out->header);
-        get_data(env, &opts_out->data);
+        get_data(env, &opts_out->data, &opts_out->form_data, opts_out->method);
         get_timeout(env, &opts_out->timeout_ms);
         get_attempts(env, &opts_out->attempts);
         get_redirects(env, &opts_out->max_redirects);
         // TODO: make depaginate a function, also a string to select a predefined style
         get_bool_optarg("depaginate", env, &opts_out->depaginate);
         get_bool_optarg("verify", env, &opts_out->verify);
-
-        // For GET, HEAD, and DELETE queries, the data would not be sent,
-        //  just error to avoid confusion
-        if (opts_out->method != http_method_t::PUT &&
-            opts_out->method != http_method_t::POST &&
-            !opts_out->data.empty()) {
-            rfail_target(this, base_exc_t::GENERIC,
-                         "`data` should only be specified on a `PUT` or `POST` request.");
-        }
     }
 
     virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
