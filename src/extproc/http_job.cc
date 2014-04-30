@@ -131,7 +131,6 @@ public:
 private:
     // This is called for getting data in the response from the server
     size_t write_internal(char *ptr, const uint64_t size) {
-        printf("got write with size: %" PRIu64 "\n", size);
         // A little paranoid, maybe, but handle situations where we receive >4 GB on a 32-bit arch
         size_t size_left = size;
         while (size_left > 0) {
@@ -144,11 +143,9 @@ private:
 
     // This is called for writing data to the request when sending
     size_t read_internal(char *ptr, uint64_t size) {
-        printf("got read with size: %" PRIu64 "\n", size);
         size_t bytes_to_copy = std::min<uint64_t>( { size,
                                                      send_data.size() - send_data_offset,
                                                      std::numeric_limits<size_t>::max() } );
-        printf("performing read with size: %zu\n", bytes_to_copy);
         memcpy(ptr, send_data.data() + send_data_offset, bytes_to_copy);
         send_data_offset += bytes_to_copy;
         return bytes_to_copy;
@@ -360,7 +357,6 @@ void set_default_opts(CURL *curl_handle,
 
     // Use the proxy set when launched
     if (!proxy.empty()) {
-        printf("setting proxy: %s\n", proxy.c_str());
         exc_setopt(curl_handle, CURLOPT_PROXY, proxy.c_str(), "PROXY");
     }
 }
@@ -378,9 +374,7 @@ http_result_t perform_http(http_opts_t *opts) {
     }
 
     try {
-        printf("set_default_opts\n");
         set_default_opts(curl_handle.get(), opts->proxy, curl_data);
-        printf("transfer_opts\n");
         transfer_opts(opts, curl_handle.get(), &curl_data);
     } catch (curl_exc_t &ex) {
         return strprintf("failed to set options: %s", ex.what());
@@ -389,7 +383,6 @@ http_result_t perform_http(http_opts_t *opts) {
     CURLcode curl_res = CURLE_OK;
     long response_code;
     do {
-        printf("curl_easy_perform\n");
         curl_res = curl_easy_perform(curl_handle.get());
         if (curl_res != CURLE_OK) {
             return strprintf("curl failed: %s", curl_easy_strerror(curl_res));
