@@ -32,7 +32,10 @@ public:
 
 class curl_callbacks_t {
 public:
-    curl_callbacks_t(std::string &&body_str) : body(std::move(body_str)) { }
+    curl_callbacks_t(std::string &&body_str) :
+        body_offset(0),
+        body(std::move(body_str))
+    { }
 
     static size_t write(char *ptr, size_t size, size_t nmemb, void* instance) {
         curl_callbacks_t *self = reinterpret_cast<curl_callbacks_t*>(instance);
@@ -67,17 +70,18 @@ private:
             data.append(ptr, bytes_to_copy);
             size_left -= bytes_to_copy;
         }
-        // TODO: streaming stuff
         return size;
     }
 
     // This is called for writing data to the request when sending
     size_t read_internal(char *ptr, uint64_t size) {
-        printf("got read with size: %" PRIu64, size);
+        printf("got read with size: %" PRIu64 "\n", size);
         size_t bytes_to_copy = std::min<uint64_t>( { size,
                                                      body.size() - body_offset,
                                                      std::numeric_limits<size_t>::max() } );
+        printf("performing read with size: %zu\n", bytes_to_copy);
         memcpy(ptr, body.data() + body_offset, bytes_to_copy);
+        body_offset += bytes_to_copy;
         return bytes_to_copy;
     }
 
@@ -146,7 +150,6 @@ void exc_setopt(CURL *curl_handle, CURLoption opt, T val, const char *info) {
 }
 
 void transfer_auth_opt(const http_opts_t::http_auth_t &auth, CURL *curl_handle) {
-    // TODO: support an array of auth objects to use - rather than just one
     if (auth.type != http_auth_type_t::NONE) {
         long curl_auth_type;
         switch (auth.type) {
@@ -178,7 +181,6 @@ void transfer_method_opt(http_method_t method, CURL *curl_handle) {
             exc_setopt(curl_handle, CURLOPT_POST, 1, "HTTP POST");
             break;
         case http_method_t::HEAD:
-            // TODO: error if a body is set - won't be sent by libcurl?
             exc_setopt(curl_handle, CURLOPT_NOBODY, 1, "HTTP HEAD");
             break;
         case http_method_t::DELETE:
@@ -251,7 +253,6 @@ void transfer_header_opt(const std::vector<std::string> &header,
 
 void transfer_redirect_opt(uint32_t max_redirects, CURL *curl_handle) {
     long val = (max_redirects > 0) ? 1 : 0;
-    printf("max redirects: %d, followlocation: %ld\n", max_redirects, val);
     exc_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, val, "ALLOW REDIRECT");
     val = max_redirects;
     exc_setopt(curl_handle, CURLOPT_MAXREDIRS, val, "MAX REDIRECTS");
@@ -280,8 +281,6 @@ void transfer_opts(const http_opts_t &opts,
     transfer_method_opt(opts.method, curl_handle);
 }
 
-// TODO: should we set any default socket options with CURLOPT_SOCKOPTFUNCTION ?
-// TODO: get proxy info from command-line
 void set_default_opts(CURL *curl_handle,
                       const std::string &proxy,
                       const curl_callbacks_t &callbacks) {
@@ -290,6 +289,8 @@ void set_default_opts(CURL *curl_handle,
 
     // Only allow http protocol
     exc_setopt(curl_handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS, "PROTOCOLS");
+
+    exc_setopt(curl_handle, CURLOPT_ACCEPT_ENCODING, "deflate=1;gzip=0.5", "PROTOCOLS");
 
     // Use the proxy set when launched
     if (!proxy.empty()) {
@@ -301,10 +302,11 @@ void set_default_opts(CURL *curl_handle,
         exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_callbacks_t::read, "READ FUNCTION");
         exc_setopt(curl_handle, CURLOPT_READDATA, &callbacks, "READ DATA");
     }
-    // TODO: set BUFFERSIZE for more resolution when streaming results?
 }
 
+// TODO: support PATCH
 // TODO: better errors
+// TODO: digest auth not working?
 // TODO: implement depaginate
 // TODO: implement streams
 http_result_t perform_http(http_opts_t *opts) {
@@ -362,7 +364,8 @@ http_result_t perform_http(http_opts_t *opts) {
         return strprintf("HTTP status code %ld, response: %s", response_code, callbacks.get_data().c_str());
     }
 
-    printf("parse http response\n");
+    printf("parse http response, size: %zu\n", callbacks.get_data().size());
+    printf(" - %s\n", callbacks.get_data().c_str());
     counted_t<const ql::datum_t> res;
     switch (opts->result_format) {
     case http_result_format_t::AUTO:
@@ -370,8 +373,9 @@ http_result_t perform_http(http_opts_t *opts) {
             char *content_type_buffer;
             curl_easy_getinfo(curl_handle, CURLINFO_CONTENT_TYPE, &content_type_buffer);
 
+            // TODO: case-insensitivity
             std::string content_type(content_type_buffer);
-            if (content_type == "application/json") {
+            if (content_type.find("application/json") == 0) {
                 return http_to_datum(callbacks.get_data());
             } else {
                 return make_counted<const ql::datum_t>(std::move(callbacks.get_data()));

@@ -313,9 +313,9 @@ private:
         counted_t<val_t> option = optarg(env, optarg_name);
         if (option.has()) {
             counted_t<const datum_t> datum_option = option->as_datum();
-            if (datum_option->get_type() != datum_t::R_STR) {
+            if (datum_option->get_type() != datum_t::R_BOOL) {
                 rfail_target(this, base_exc_t::GENERIC,
-                             "Expected `%s` to be a NUMBER, but found %s.",
+                             "Expected `%s` to be a BOOL, but found %s.",
                              optarg_name.c_str(), datum_option->get_type_name().c_str());
             }
             *bool_out = datum_option->as_bool();
@@ -334,6 +334,15 @@ private:
         get_redirects(env, &opts_out->max_redirects);
         get_bool_optarg("depaginate", env, &opts_out->depaginate);
         get_bool_optarg("verify", env, &opts_out->verify);
+
+        // For GET, HEAD, and DELETE queries, the body would not be sent,
+        //  just error to avoid confusion
+        if (opts_out->method != http_method_t::PUT &&
+            opts_out->method != http_method_t::POST &&
+            !opts_out->body.empty()) {
+            rfail_target(this, base_exc_t::GENERIC,
+                         "`body` should not be specified on a `PUT` or `POST` request.");
+        }
     }
 
     virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
