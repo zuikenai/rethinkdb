@@ -339,6 +339,7 @@ private:
     virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
         scoped_ptr_t<http_opts_t> opts(new http_opts_t());
         opts->url.assign(arg(env, 0)->as_str().to_std());
+        opts->proxy.assign(env->env->reql_http_proxy);
         get_optargs(env, opts.get());
 
         http_result_t http_result;

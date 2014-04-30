@@ -293,6 +293,7 @@ void set_default_opts(CURL *curl_handle,
 
     // Use the proxy set when launched
     if (!proxy.empty()) {
+        printf("setting proxy: %s\n", proxy.c_str());
         exc_setopt(curl_handle, CURLOPT_PROXY, proxy.c_str(), "PROXY");
     }
 
