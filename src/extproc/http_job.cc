@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <cmath>
 #include <limits>
+#include <ctype.h>
 
 #include <curl/curl.h>
 
@@ -32,10 +33,7 @@ public:
 
 class curl_callbacks_t {
 public:
-    curl_callbacks_t(std::string &&body_str) :
-        body_offset(0),
-        body(std::move(body_str))
-    { }
+    curl_callbacks_t() : send_data_offset(0) { }
 
     static size_t write(char *ptr, size_t size, size_t nmemb, void* instance) {
         curl_callbacks_t *self = reinterpret_cast<curl_callbacks_t*>(instance);
@@ -51,12 +49,12 @@ public:
         return self->read_internal(ptr, bytes_to_copy);
     };
 
-    std::string &get_data() {
-        return data;
+    void set_send_data(std::string &&_send_data) {
+        send_data.assign(std::move(_send_data));
     }
 
-    const std::string &get_body() const {
-        return body;
+    std::string &get_recv_data() {
+        return recv_data;
     }
 
 private:
@@ -67,7 +65,7 @@ private:
         size_t size_left = size;
         while (size_left > 0) {
             size_t bytes_to_copy = std::min<uint64_t>(size_left, std::numeric_limits<size_t>::max());
-            data.append(ptr, bytes_to_copy);
+            recv_data.append(ptr, bytes_to_copy);
             size_left -= bytes_to_copy;
         }
         return size;
@@ -77,18 +75,17 @@ private:
     size_t read_internal(char *ptr, uint64_t size) {
         printf("got read with size: %" PRIu64 "\n", size);
         size_t bytes_to_copy = std::min<uint64_t>( { size,
-                                                     body.size() - body_offset,
+                                                     send_data.size() - send_data_offset,
                                                      std::numeric_limits<size_t>::max() } );
         printf("performing read with size: %zu\n", bytes_to_copy);
-        memcpy(ptr, body.data() + body_offset, bytes_to_copy);
-        body_offset += bytes_to_copy;
+        memcpy(ptr, send_data.data() + send_data_offset, bytes_to_copy);
+        send_data_offset += bytes_to_copy;
         return bytes_to_copy;
     }
 
-    std::string data;
-
-    uint64_t body_offset;
-    std::string body;
+    uint64_t send_data_offset;
+    std::string send_data;
+    std::string recv_data;
 };
 
 // The job_t runs in the context of the main rethinkdb process
@@ -169,17 +166,33 @@ void transfer_auth_opt(const http_opts_t::http_auth_t &auth, CURL *curl_handle) 
     }
 }
 
-void transfer_method_opt(http_method_t method, CURL *curl_handle) {
+void transfer_method_opt(http_method_t method,
+                         std::string *data,
+                         curl_callbacks_t *callbacks,
+                         CURL *curl_handle) {
     switch (method) {
         case http_method_t::GET:
             exc_setopt(curl_handle, CURLOPT_HTTPGET, 1, "HTTP GET");
             break;
         case http_method_t::PUT:
-            exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
+            {
+                exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
+                curl_off_t size = data->length();
+                if (size != 0) {
+                    callbacks->set_send_data(std::move(*data));
+                    exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_callbacks_t::read, "READ FUNCTION");
+                    exc_setopt(curl_handle, CURLOPT_READDATA, callbacks, "READ DATA");
+                    exc_setopt(curl_handle, CURLOPT_INFILESIZE_LARGE, size, "DATA SIZE");
+                }
+            }
             break;
         case http_method_t::POST:
             exc_setopt(curl_handle, CURLOPT_POST, 1, "HTTP POST");
+            if (!data->empty()) {
+                // TODO: CURLOPT_POSTFIELDS
+            }
             break;
+        // TODO: PATCH
         case http_method_t::HEAD:
             exc_setopt(curl_handle, CURLOPT_NOBODY, 1, "HTTP HEAD");
             break;
@@ -194,7 +207,6 @@ void transfer_method_opt(http_method_t method, CURL *curl_handle) {
 void transfer_url_opt(const std::string &url,
                       const std::vector<std::pair<std::string, std::string> > &url_params,
                       CURL *curl_handle) {
-    // TODO: what happens when verify is true, but protocol is http, or vice-versa
     std::string full_url = url;
     for (auto it = url_params.begin(); it != url_params.end(); ++it) {
         char *key = it->first.length() == 0 ? NULL :
@@ -267,18 +279,19 @@ void transfer_verify_opt(bool verify, CURL *curl_handle) {
     exc_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, val, "SSL VERIFY HOST");
 }
 
-void transfer_opts(const http_opts_t &opts,
+void transfer_opts(http_opts_t *opts,
                    CURL *curl_handle,
+                   curl_callbacks_t *callbacks,
                    scoped_curl_slist_t *curl_headers) {
-    transfer_auth_opt(opts.auth, curl_handle);
-    transfer_url_opt(opts.url, opts.url_params, curl_handle);
-    transfer_redirect_opt(opts.max_redirects, curl_handle);
-    transfer_verify_opt(opts.verify, curl_handle);
+    transfer_auth_opt(opts->auth, curl_handle);
+    transfer_url_opt(opts->url, opts->url_params, curl_handle);
+    transfer_redirect_opt(opts->max_redirects, curl_handle);
+    transfer_verify_opt(opts->verify, curl_handle);
 
-    transfer_header_opt(opts.header, curl_handle, curl_headers);
+    transfer_header_opt(opts->header, curl_handle, curl_headers);
 
     // Set method last as it may override some options libcurl automatically sets
-    transfer_method_opt(opts.method, curl_handle);
+    transfer_method_opt(opts->method, &opts->data, callbacks, curl_handle);
 }
 
 void set_default_opts(CURL *curl_handle,
@@ -297,33 +310,26 @@ void set_default_opts(CURL *curl_handle,
         printf("setting proxy: %s\n", proxy.c_str());
         exc_setopt(curl_handle, CURLOPT_PROXY, proxy.c_str(), "PROXY");
     }
-
-    if (!callbacks.get_body().empty()) {
-        exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_callbacks_t::read, "READ FUNCTION");
-        exc_setopt(curl_handle, CURLOPT_READDATA, &callbacks, "READ DATA");
-    }
 }
 
-// TODO: support PATCH
-// TODO: better errors
 // TODO: digest auth not working?
 // TODO: implement depaginate
 // TODO: implement streams
 http_result_t perform_http(http_opts_t *opts) {
-    curl_callbacks_t callbacks(std::move(opts->body));
     scoped_curl_slist_t curl_headers;
+    curl_callbacks_t callbacks;
 
     printf("curl_easy_init\n");
     CURL* curl_handle = curl_easy_init();
     if (curl_handle == NULL) {
-        return std::string("failed to initialize curl handle");
+        return std::string("failed to initialize libcurl handle");
     }
 
     try {
         printf("set_default_opts\n");
         set_default_opts(curl_handle, opts->proxy, callbacks);
         printf("transfer_opts\n");
-        transfer_opts(*opts, curl_handle, &curl_headers);
+        transfer_opts(opts, curl_handle, &callbacks, &curl_headers);
     } catch (curl_exc_t &ex) {
         return strprintf("failed to set options: %s", ex.what());
     }
@@ -360,12 +366,16 @@ http_result_t perform_http(http_opts_t *opts) {
     if (curl_res != CURLE_OK) {
         return strprintf("could not get response code: %s", curl_easy_strerror(curl_res));
     } else if (response_code < 200 || response_code >= 300) {
-        // TODO: truncate response data?
-        return strprintf("HTTP status code %ld, response: %s", response_code, callbacks.get_data().c_str());
+        // Truncate response data to 100 chars to avoid flooding people
+        if (callbacks.get_recv_data().length() > 100) {
+            return strprintf("HTTP status code %ld, response: %s...",
+                             response_code, callbacks.get_recv_data().substr(0, 97).c_str());
+        } else {
+            return strprintf("HTTP status code %ld, response: %s",
+                             response_code, callbacks.get_recv_data().c_str());
+        }
     }
 
-    printf("parse http response, size: %zu\n", callbacks.get_data().size());
-    printf(" - %s\n", callbacks.get_data().c_str());
     counted_t<const ql::datum_t> res;
     switch (opts->result_format) {
     case http_result_format_t::AUTO:
@@ -373,23 +383,25 @@ http_result_t perform_http(http_opts_t *opts) {
             char *content_type_buffer;
             curl_easy_getinfo(curl_handle, CURLINFO_CONTENT_TYPE, &content_type_buffer);
 
-            // TODO: case-insensitivity
             std::string content_type(content_type_buffer);
+            for (size_t i = 0; i < content_type.length(); ++i) {
+                content_type[i] = tolower(content_type[i]);
+            }
             if (content_type.find("application/json") == 0) {
-                return http_to_datum(callbacks.get_data());
+                return http_to_datum(callbacks.get_recv_data());
             } else {
-                return make_counted<const ql::datum_t>(std::move(callbacks.get_data()));
+                return make_counted<const ql::datum_t>(std::move(callbacks.get_recv_data()));
             }
         }
     case http_result_format_t::JSON:
-        return http_to_datum(callbacks.get_data());
+        return http_to_datum(callbacks.get_recv_data());
     case http_result_format_t::TEXT:
-        return make_counted<const ql::datum_t>(std::move(callbacks.get_data()));
+        return make_counted<const ql::datum_t>(std::move(callbacks.get_recv_data()));
     default:
         unreachable();
     }
 
-    return http_to_datum(callbacks.get_data());
+    return http_to_datum(callbacks.get_recv_data());
 }
 
 counted_t<const ql::datum_t> http_to_datum(const std::string &json) {

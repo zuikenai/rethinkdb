@@ -7,7 +7,7 @@
 
 RDB_IMPL_ME_SERIALIZABLE_3(http_opts_t::http_auth_t, type, username, password);
 RDB_IMPL_ME_SERIALIZABLE_13(http_opts_t, auth, method, result_format, url,
-                            proxy, url_params, header, body, timeout_ms,
+                            proxy, url_params, header, data, timeout_ms,
                             attempts, max_redirects, depaginate, verify);
 
 std::string http_method_to_str(http_method_t method) {
@@ -29,7 +29,7 @@ http_opts_t::http_opts_t() :
     url(),
     url_params(),
     header(),
-    body(),
+    data(),
     timeout_ms(30000),
     attempts(5),
     max_redirects(0),

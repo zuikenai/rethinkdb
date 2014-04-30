@@ -95,7 +95,7 @@ struct http_opts_t {
     std::string url;
     std::vector<std::pair<std::string, std::string> > url_params;
     std::vector<std::string> header;
-    std::string body;
+    std::string data;
 
     uint64_t timeout_ms;
     uint64_t attempts;

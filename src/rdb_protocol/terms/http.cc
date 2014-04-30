@@ -36,7 +36,7 @@ class http_term_t : public op_term_t {
 public:
     http_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         op_term_t(env, term, argspec_t(1, -1),
-                  optargspec_t({"body",
+                  optargspec_t({"data",
                                 "timeout",
                                 "method",
                                 "params",
@@ -54,7 +54,7 @@ private:
         if (timeout.has()) {
             counted_t<const datum_t> datum_timeout = timeout->as_datum();
             if (datum_timeout->get_type() != datum_t::R_NUM) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(timeout.get(), base_exc_t::GENERIC,
                              "Expected `timeout` to be a NUMBER, but found %s.",
                              datum_timeout->get_type_name().c_str());
             }
@@ -68,10 +68,9 @@ private:
     }
 
     // Don't allow header strings to include newlines
-    void verify_header_string(const std::string &str) {
-        // TODO: backtrace
+    void verify_header_string(const std::string &str, pb_rcheckable_t *header) {
         if (str.find_first_of("\r\n") != std::string::npos) {
-            rfail_target(this, base_exc_t::GENERIC,
+            rfail_target(header, base_exc_t::GENERIC,
                          "A `header` item contains newline characters.");
         }
     }
@@ -87,7 +86,6 @@ private:
                     // If the value for the header is supposed to be empty, libcurl requires
                     // a semicolon instead of a colon
                     if (it->second->get_type() == datum_t::R_STR) {
-                        // TODO: filter out values that are only whitespace? ugh...
                         if (it->second->as_str().size() == 0) {
                             str = strprintf("%s;", it->first.c_str());
                         } else {
@@ -95,29 +93,30 @@ private:
                                             it->second->as_str().c_str());
                         }
                     } else if (it->second->get_type() == datum_t::R_NULL) {
+                        // TODO: it looks like libcurl omits these...
                         str = strprintf("%s;", it->first.c_str());
                     } else {
-                        rfail_target(this, base_exc_t::GENERIC,
+                        rfail_target(header.get(), base_exc_t::GENERIC,
                                      "Expected `header.%s` to be a STRING or NULL, but found %s.",
                                      it->first.c_str(), it->second->get_type_name().c_str());
                     }
-                    verify_header_string(str);
+                    verify_header_string(str, header.get());
                     header_out->push_back(str);
                 }
             } else if (datum_header->get_type() == datum_t::R_ARRAY) {
                 for (size_t i = 0; i < datum_header->size(); ++i) {
                     counted_t<const datum_t> line = datum_header->get(i);
                     if (line->get_type() != datum_t::R_STR) {
-                        rfail_target(this, base_exc_t::GENERIC,
+                        rfail_target(header.get(), base_exc_t::GENERIC,
                                      "Expected `header[%zu]` to be a STRING, but found %s.",
                                      i, line->get_type_name().c_str());
                     }
                     std::string str = line->as_str().to_std();
-                    verify_header_string(str);
+                    verify_header_string(str, header.get());
                     header_out->push_back(str);
                 }
             } else {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(header.get(), base_exc_t::GENERIC,
                              "Expected `header` to be an ARRAY or OBJECT, but found %s.",
                              datum_header->get_type_name().c_str());
             }
@@ -129,7 +128,7 @@ private:
         if (method.has()) {
             counted_t<const datum_t> datum_method = method->as_datum();
             if (datum_method->get_type() != datum_t::R_STR) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(method.get(), base_exc_t::GENERIC,
                              "Expected `method` to be a STRING, but found %s.",
                              datum_method->get_type_name().c_str());
             }
@@ -146,7 +145,7 @@ private:
             } else if (method_str == "DELETE") {
                 *method_out = http_method_t::DELETE;
             } else {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(method.get(), base_exc_t::GENERIC,
                              "`method` (%s) is not recognized ('GET', 'HEAD', 'PUT', 'POST', and 'DELETE' are allowed).",
                              method_str.c_str());
             }
@@ -155,13 +154,14 @@ private:
 
     void get_auth_item(const counted_t<const datum_t> &datum,
                        const std::string &name,
-                       std::string *str_out) {
+                       std::string *str_out,
+                       pb_rcheckable_t *auth) {
         counted_t<const datum_t> item = datum->get(name, NOTHROW);
         if (!item.has()) {
-            rfail_target(this, base_exc_t::GENERIC,
+            rfail_target(auth, base_exc_t::GENERIC,
                          "`auth.%s` not found in the auth object.", name.c_str());
         } else if (item->get_type() != datum_t::R_STR) {
-            rfail_target(this, base_exc_t::GENERIC,
+            rfail_target(auth, base_exc_t::GENERIC,
                          "Expected `auth.%s` to be a STRING, but found %s.",
                          name.c_str(), item->get_type_name().c_str());
         }
@@ -173,15 +173,15 @@ private:
         if (auth.has()) {
             counted_t<const datum_t> datum_auth = auth->as_datum();
             if (datum_auth->get_type() != datum_t::R_OBJECT) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(auth.get(), base_exc_t::GENERIC,
                              "Expected `auth` to be an OBJECT, but found %s.",
                              datum_auth->get_type_name().c_str());
             }
 
             std::string user, pass, type;
-            get_auth_item(datum_auth, "type", &type);
-            get_auth_item(datum_auth, "user", &user);
-            get_auth_item(datum_auth, "pass", &pass);
+            get_auth_item(datum_auth, "type", &type, auth.get());
+            get_auth_item(datum_auth, "user", &user, auth.get());
+            get_auth_item(datum_auth, "pass", &pass, auth.get());
 
             if (type == "none") {
                 // Do nothing - this is the default
@@ -190,25 +190,25 @@ private:
             } else if (type == "digest") {
                 auth_out->make_digest_auth(std::move(user), std::move(pass));
             } else {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(auth.get(), base_exc_t::GENERIC,
                              "`auth.type` is not recognized ('none', 'basic', and 'digest' are allowed).");
             }
         }
     }
 
-    void get_body(scope_env_t *env, std::string *body_out) {
-        counted_t<val_t> body = optarg(env, "body");
-        if (body.has()) {
-            counted_t<const datum_t> datum_body = body->as_datum();
-            if (datum_body->get_type() == datum_t::R_STR) {
-                body_out->assign(datum_body->as_str().to_std());
-            } else if (datum_body->get_type() == datum_t::R_OBJECT ||
-                       datum_body->get_type() == datum_t::R_ARRAY) {
-                body_out->assign(datum_body->print());
+    void get_data(scope_env_t *env, std::string *data_out) {
+        counted_t<val_t> data = optarg(env, "data");
+        if (data.has()) {
+            counted_t<const datum_t> datum_data = data->as_datum();
+            if (datum_data->get_type() == datum_t::R_STR) {
+                data_out->assign(datum_data->as_str().to_std());
+            } else if (datum_data->get_type() == datum_t::R_OBJECT ||
+                       datum_data->get_type() == datum_t::R_ARRAY) {
+                data_out->assign(datum_data->print());
             } else {
-                rfail_target(this, base_exc_t::GENERIC,
-                             "Expected `body` to be a STRING, OBJECT or ARRAY, but found %s.",
-                             datum_body->get_type_name().c_str());
+                rfail_target(data.get(), base_exc_t::GENERIC,
+                             "Expected `data` to be a STRING, OBJECT or ARRAY, but found %s.",
+                             datum_data->get_type_name().c_str());
             }
         }
     }
@@ -227,7 +227,7 @@ private:
                     } else if (it->second->get_type() == datum_t::R_STR) {
                         val_str = it->second->as_str().to_std();
                     } else if (it->second->get_type() != datum_t::R_NULL) {
-                        rfail_target(this, base_exc_t::GENERIC,
+                        rfail_target(params.get(), base_exc_t::GENERIC,
                                      "Expected `params.%s` to be a NUMBER, STRING or NULL, but found %s.",
                                      it->first.c_str(), it->second->get_type_name().c_str());
                     }
@@ -235,7 +235,7 @@ private:
                 }
                 
             } else {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(params.get(), base_exc_t::GENERIC,
                              "Expected `params` to be an OBJECT, but found %s.",
                              datum_params->get_type_name().c_str());
             }
@@ -247,7 +247,7 @@ private:
         if (result_format.has()) {
             counted_t<const datum_t> datum_result_format = result_format->as_datum();
             if (datum_result_format->get_type() != datum_t::R_STR) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(result_format.get(), base_exc_t::GENERIC,
                              "Expected `result_format` to be a STRING, but found %s.",
                              datum_result_format->get_type_name().c_str());
             }
@@ -260,7 +260,7 @@ private:
             } else if (result_format_str == "text") {
                 *result_format_out = http_result_format_t::TEXT;
             } else {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(result_format.get(), base_exc_t::GENERIC,
                              "`result_format` (%s) is not recognized, ('auto', 'json', and 'text' are allowed).",
                              result_format_str.c_str());
             }
@@ -272,14 +272,14 @@ private:
         if (attempts.has()) {
             counted_t<const datum_t> datum_attempts = attempts->as_datum();
             if (datum_attempts->get_type() != datum_t::R_NUM) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(attempts.get(), base_exc_t::GENERIC,
                              "Expected `attempts` to be a NUMBER, but found %s.",
                              datum_attempts->get_type_name().c_str());
             }
 
             int64_t temp = datum_attempts->as_int();
             if (temp < 0) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(attempts.get(), base_exc_t::GENERIC,
                              "`attempts` (%" PRIi64 ") cannot be negative.", temp);
             }
             *attempts_out = temp;
@@ -291,17 +291,17 @@ private:
         if (redirects.has()) {
             counted_t<const datum_t> datum_redirects = redirects->as_datum();
             if (datum_redirects->get_type() != datum_t::R_NUM) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(redirects.get(), base_exc_t::GENERIC,
                              "Expected `redirects` to be a NUMBER, but found %s.",
                              datum_redirects->get_type_name().c_str());
             }
 
             int64_t temp = datum_redirects->as_int();
             if (temp < 0) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(redirects.get(), base_exc_t::GENERIC,
                              "`redirects` (%" PRIi64 ") cannot be negative.", temp);
             } else if (temp > std::numeric_limits<uint32_t>::max()) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(redirects.get(), base_exc_t::GENERIC,
                              "`redirects` (%" PRIi64 ") cannot be greater than 2^32 - 1.", temp);
             }
 
@@ -314,7 +314,7 @@ private:
         if (option.has()) {
             counted_t<const datum_t> datum_option = option->as_datum();
             if (datum_option->get_type() != datum_t::R_BOOL) {
-                rfail_target(this, base_exc_t::GENERIC,
+                rfail_target(option.get(), base_exc_t::GENERIC,
                              "Expected `%s` to be a BOOL, but found %s.",
                              optarg_name.c_str(), datum_option->get_type_name().c_str());
             }
@@ -328,20 +328,21 @@ private:
         get_result_format(env, &opts_out->result_format);
         get_params(env, &opts_out->url_params);
         get_header(env, &opts_out->header);
-        get_body(env, &opts_out->body);
+        get_data(env, &opts_out->data);
         get_timeout(env, &opts_out->timeout_ms);
         get_attempts(env, &opts_out->attempts);
         get_redirects(env, &opts_out->max_redirects);
+        // TODO: make depaginate a function, also a string to select a predefined style
         get_bool_optarg("depaginate", env, &opts_out->depaginate);
         get_bool_optarg("verify", env, &opts_out->verify);
 
-        // For GET, HEAD, and DELETE queries, the body would not be sent,
+        // For GET, HEAD, and DELETE queries, the data would not be sent,
         //  just error to avoid confusion
         if (opts_out->method != http_method_t::PUT &&
             opts_out->method != http_method_t::POST &&
-            !opts_out->body.empty()) {
+            !opts_out->data.empty()) {
             rfail_target(this, base_exc_t::GENERIC,
-                         "`body` should not be specified on a `PUT` or `POST` request.");
+                         "`data` should only be specified on a `PUT` or `POST` request.");
         }
     }
 
