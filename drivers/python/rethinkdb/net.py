@@ -34,6 +34,10 @@ class Cursor(object):
             self.time_format = self.opts['time_format']
 
     def _extend(self, response):
+        if self.end_flag:
+            assert response.type == p.Response.CLIENT_ERROR
+            return
+
         self.end_flag = response.type != p.Response.SUCCESS_PARTIAL
         self.responses.append(response)
 
