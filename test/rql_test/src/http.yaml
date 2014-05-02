@@ -9,9 +9,9 @@ tests:
       ot: {'args':{},'headers':{'Accept-Encoding':'deflate=1;gzip=0.5'} }
 
     - py: |
-          r.http('httpbin.org/headers', header={'Test':'entry','Disregard':'this'})
-           .pluck({'headers':{'Test':True,'Disregard':True}})
-      ot: {'headers':{'Test':'entry','Disregard':'this'} }
+          r.http('httpbin.org/headers', header={'Test':'entry','Accept-Encoding':'override'})
+           .pluck({'headers':{'Test':True,'Accept-Encoding':True}})
+      ot: {'headers':{'Test':'entry','Accept-Encoding':'override'} }
 
     # Test URL params
     - py: r.http('httpbin.org/get', params={'fake':123,'things':'stuff','nil':None}).pluck('args')

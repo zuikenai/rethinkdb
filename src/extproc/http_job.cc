@@ -16,8 +16,8 @@ http_result_t perform_http(http_opts_t *opts);
 
 class curl_exc_t : public std::exception {
 public:
-    curl_exc_t(const std::string &info, const std::string &err_msg) :
-        error_string(strprintf("%s '%s'", info.c_str(), err_msg.c_str())) { }
+    curl_exc_t(const std::string &err_msg) :
+        error_string(err_msg) { }
     ~curl_exc_t() throw () { }
     const char *what() const throw () {
         return error_string.c_str();
@@ -88,7 +88,7 @@ public:
         void add(const std::string &str) {
             slist = curl_slist_append(slist, str.c_str());
             if (slist == NULL) {
-                throw curl_exc_t("appending headers", "allocation failure");
+                throw curl_exc_t("appending headers, allocation failure");
             }
         }
 
@@ -204,7 +204,8 @@ template <class T>
 void exc_setopt(CURL *curl_handle, CURLoption opt, T val, const char *info) {
     CURLcode curl_res = curl_easy_setopt(curl_handle, opt, val);
     if (curl_res != CURLE_OK) {
-        throw curl_exc_t(std::string("setopt ") + info, curl_easy_strerror(curl_res));
+        throw curl_exc_t(strprintf("set option %s, '%s'",
+                                   info, curl_easy_strerror(curl_res)));
     }
 }
 
@@ -364,14 +365,14 @@ http_result_t perform_http(http_opts_t *opts) {
     curl_data_t curl_data;
 
     if (curl_handle.get() == NULL) {
-        return std::string("failed to initialize libcurl handle");
+        return std::string("initialization");
     }
 
     try {
         set_default_opts(curl_handle.get(), opts->proxy, curl_data);
         transfer_opts(opts, curl_handle.get(), &curl_data);
     } catch (curl_exc_t &ex) {
-        return strprintf("failed to set options: %s", ex.what());
+        return ex.what();
     }
 
     CURLcode curl_res = CURLE_OK;
@@ -379,7 +380,7 @@ http_result_t perform_http(http_opts_t *opts) {
     do {
         curl_res = curl_easy_perform(curl_handle.get());
         if (curl_res != CURLE_OK) {
-            return strprintf("curl failed: %s", curl_easy_strerror(curl_res));
+            return strprintf("perform, '%s'", curl_easy_strerror(curl_res));
         }
         // Break on success, retry on temporary error
         curl_res = curl_easy_getinfo(curl_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
@@ -403,16 +404,9 @@ http_result_t perform_http(http_opts_t *opts) {
     } while (opts->attempts > 0);
 
     if (curl_res != CURLE_OK) {
-        return strprintf("could not get response code: %s", curl_easy_strerror(curl_res));
+        return strprintf("response code, '%s'", curl_easy_strerror(curl_res));
     } else if (response_code < 200 || response_code >= 300) {
-        // Truncate response data to 100 chars to avoid flooding people
-        if (curl_data.get_recv_data().length() > 100) {
-            return strprintf("HTTP status code %ld, response: %s...",
-                             response_code, curl_data.get_recv_data().substr(0, 97).c_str());
-        } else {
-            return strprintf("HTTP status code %ld, response: %s",
-                             response_code, curl_data.get_recv_data().c_str());
-        }
+        return strprintf("HTTP status code %ld", response_code);
     }
 
     counted_t<const ql::datum_t> res;
