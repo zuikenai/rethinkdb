@@ -53,6 +53,8 @@ public:
                                 "result_format" }))
     { }
 private:
+    // The `timeout` optarg specifies the number of seconds to wait before erroring
+    // out of the HTTP request.  This must be a NUMBER, but may be fractional.
     void get_timeout(scope_env_t *env, uint64_t *timeout_out) {
         counted_t<val_t> timeout = optarg(env, "timeout");
         if (timeout.has()) {
@@ -79,6 +81,14 @@ private:
         }
     }
 
+    // The `header` optarg allows the user to specify HTTP header values.
+    // The optarg must be an OBJECT or an ARRAY of STRINGs.
+    // As an OBJECT, each value must be a STRING or NULL, and each key/value pair
+    //  will be converted into a single header line with the format "key: value".
+    //  If the value is NULL, the header line will be "key:".
+    // As an ARRAY, each item must be a STRING, and each item will result
+    //  in exactly one header line, being copied directly over
+    // Header lines are not allowed to contain newlines.
     void get_header(scope_env_t *env, std::vector<std::string> *header_out) {
         counted_t<val_t> header = optarg(env, "header");
         if (header.has()) {
@@ -127,6 +137,8 @@ private:
         }
     }
 
+    // The `method` optarg must be a STRING, and specify one of the following
+    // supported HTTP request methods: GET, HEAD, POST, PUT, PATCH, or DELETE.
     void get_method(scope_env_t *env, http_method_t *method_out) {
         counted_t<val_t> method = optarg(env, "method");
         if (method.has()) {
@@ -174,6 +186,10 @@ private:
         str_out->assign(item->as_str().to_std());
     }
 
+    // The `auth` optarg takes an object consisting of the following fields:
+    //  type - STRING, the type of authentication to perform 'basic' or 'digest'
+    //  user - STRING, the username to use
+    //  pass - STRING, the password to use
     void get_auth(scope_env_t *env, http_opts_t::http_auth_t *auth_out) {
         counted_t<val_t> auth = optarg(env, "auth");
         if (auth.has()) {
@@ -189,15 +205,13 @@ private:
             get_auth_item(datum_auth, "user", &user, auth.get());
             get_auth_item(datum_auth, "pass", &pass, auth.get());
 
-            if (type == "none") {
-                // Do nothing - this is the default
-            } else if (type == "basic") {
+            if (type == "basic") {
                 auth_out->make_basic_auth(std::move(user), std::move(pass));
             } else if (type == "digest") {
                 auth_out->make_digest_auth(std::move(user), std::move(pass));
             } else {
                 rfail_target(auth.get(), base_exc_t::GENERIC,
-                             "`auth.type` is not recognized ('none', 'basic', and 'digest' are allowed).");
+                             "`auth.type` is not recognized ('basic', and 'digest' are allowed).");
             }
         }
     }
@@ -220,6 +234,16 @@ private:
                      val_name, key_name, datum->get_type_name().c_str());
     }
 
+    // The `data` optarg is used to pass in the data to be passed in the body of the
+    // request.  The sematics for this depend on the type of request being performed.
+    // This optarg is only allowed for PUT, POST, or PATCH requests.
+    // PUT and PATCH requests take any value and print it to JSON to pass to the remote
+    //  server
+    // POST requests take either a STRING or OBJECT
+    //  POST with a STRING will pass the literal string in the request body
+    //  POST with an OBJECT must have NUMBER, STRING, or NULL values.  These will be
+    //   converted into a string of form-encoded key-value pairs of the format
+    //   "key=val&key=val" in the request body.
     void get_data(scope_env_t *env,
                   std::string *data_out,
                   std::vector<std::pair<std::string, std::string> > *form_data_out,
@@ -256,6 +280,9 @@ private:
         }
     }
 
+    // The `params` optarg specifies parameters to append to the requested URL, in the
+    // format "?key=val&key=val". The optarg must be an OBJECT with NUMBER, STRING, or
+    // NULL values. A NULL value will result in "key=" with no value.
     void get_params(scope_env_t *env, std::vector<std::pair<std::string, std::string> > *params_out) {
         counted_t<val_t> params = optarg(env, "params");
         if (params.has()) {
@@ -276,6 +303,12 @@ private:
         }
     }
 
+    // The `result_format` optarg specifies how to interpret the HTTP result body from
+    // the server. This option must be a STRING, and one of `auto`, `json`, or `text`.
+    //  json - The result should be JSON and parsed into native Datum objects
+    //  text - The result should be returned as a literal string
+    //  auto - The result will be parsed as JSON if the Content-Type is application/json,
+    //         or a string otherwise.
     void get_result_format(scope_env_t *env, http_result_format_t *result_format_out) {
         counted_t<val_t> result_format = optarg(env, "result_format");
         if (result_format.has()) {
@@ -301,6 +334,9 @@ private:
         }
     }
 
+    // The `attempts` optarg specifies the maximum number of times to attempt the request.
+    // Reattempts will only be made when an HTTP error is returned that could feasibly be
+    // temporary.  This must be specified as an INTEGER >= 0.
     void get_attempts(scope_env_t *env, uint64_t *attempts_out) {
         counted_t<val_t> attempts = optarg(env, "attempts");
         if (attempts.has()) {
@@ -320,6 +356,8 @@ private:
         }
     }
 
+    // The `redirects` optarg specifies the maximum number of redirects to follow before
+    // erroring the query.  This must be passed as an INTEGER between 0 and 2^32 - 1.
     void get_redirects(scope_env_t *env, uint32_t *redirects_out) {
         counted_t<val_t> redirects = optarg(env, "redirects");
         if (redirects.has()) {
@@ -343,6 +381,8 @@ private:
         }
     }
 
+    // This is a generic function for parsing out a boolean optarg yet still providing a
+    // helpful message.  At the moment, it is only used for `depaginate` and `verify`.
     void get_bool_optarg(const std::string &optarg_name, scope_env_t *env, bool *bool_out) {
         counted_t<val_t> option = optarg(env, optarg_name);
         if (option.has()) {
