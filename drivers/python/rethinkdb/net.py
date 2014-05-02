@@ -27,7 +27,8 @@ class Cursor(object):
         self.opts = opts
         self.responses = [ ]
         self.outstanding_requests = 0
-        self.end_flag = False
+        self.end_flag = False # True if the last datum has been read
+        self.closed = False   # True if the last datum has been read or the cursor has been closed
 
         self.time_format = 'native'
         if 'time_format' in self.opts:
@@ -38,23 +39,28 @@ class Cursor(object):
             assert response.type == p.Response.CLIENT_ERROR
             return
 
+        if self.closed:
+            return
+
         self.end_flag = response.type != p.Response.SUCCESS_PARTIAL
+        self.closed = self.end_flag
         self.responses.append(response)
 
-        if len(self.responses) == 1 and not self.end_flag:
+        if len(self.responses) == 1 and not self.closed:
             self.conn._async_continue_cursor(self)
 
     def __iter__(self):
         time_format = self.time_format
         deconstruct = Datum.deconstruct
         while True:
-            if len(self.responses) == 0 and not self.end_flag:
-                self.conn._continue_cursor(self)
-            if len(self.responses) == 1 and not self.end_flag:
-                self.conn._async_continue_cursor(self)
+            if len(self.responses) == 0:
+                if self.closed:
+                    break
+                else:
+                    self.conn._continue_cursor(self)
 
-            if len(self.responses) == 0 and self.end_flag:
-                break
+            if len(self.responses) == 1 and not self.closed:
+                self.conn._async_continue_cursor(self)
 
             self.conn._check_error_response(self.responses[0], self.term)
             if self.responses[0].type != p.Response.SUCCESS_PARTIAL and self.responses[0].type != p.Response.SUCCESS_SEQUENCE:
@@ -65,8 +71,8 @@ class Cursor(object):
             del self.responses[0]
 
     def close(self):
-        if not self.end_flag:
-            self.end_flag = True
+        if not self.closed:
+            self.closed = True
             self.conn._end_cursor(self)
 
 class Connection(object):
