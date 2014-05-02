@@ -96,32 +96,6 @@ public:
         struct curl_slist *slist;
     } headers;
 
-    class scoped_curl_form_t {
-    public:
-        scoped_curl_form_t() : first_item(NULL), last_item(NULL) { }
-        ~scoped_curl_form_t() {
-            curl_formfree(first_item);
-        }
-
-        void add(const std::vector<std::pair<std::string, std::string> > &items) {
-            for (auto it = items.begin(); it != items.end(); ++it) {
-                curl_formadd(&first_item, &last_item,
-                             CURLFORM_PTRNAME, it->first.data(),
-                             CURLFORM_NAMELENGTH, it->first.size(),
-                             CURLFORM_PTRCONTENTS, it->second.data(),
-                             CURLFORM_CONTENTSLENGTH, it->second.size(),
-                             CURLFORM_END);
-            }
-        }
-
-        curl_httppost *get() {
-            return first_item;
-        }
-    private:
-        struct curl_httppost *first_item;
-        struct curl_httppost *last_item;
-    } forms;
-
 private:
     // This is called for getting data in the response from the server
     size_t write_internal(char *ptr, const uint64_t size) {
@@ -200,6 +174,21 @@ bool http_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out)
     return true;
 }
 
+std::string exc_encode(CURL *curl_handle, const std::string &str) {
+    std::string res;
+
+    if (str.size() != 0) {
+        char *curl_res = curl_easy_escape(curl_handle, str.data(), str.size());
+        if (curl_res == NULL) {
+            throw curl_exc_t("encode string");
+        }
+        res.assign(curl_res);
+        curl_free(curl_res);
+    }
+
+    return res;
+}
+
 template <class T>
 void exc_setopt(CURL *curl_handle, CURLoption opt, T val, const char *info) {
     CURLcode curl_res = curl_easy_setopt(curl_handle, opt, val);
@@ -229,6 +218,39 @@ void transfer_auth_opt(const http_opts_t::http_auth_t &auth, CURL *curl_handle) 
     }
 }
 
+void add_read_callback(CURL *curl_handle,
+                       std::string &&data,
+                       curl_data_t *curl_data) {
+    curl_off_t size = data.size();
+    if (size != 0) {
+        curl_data->set_send_data(std::move(data));
+        exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_data_t::read, "READ FUNCTION");
+        exc_setopt(curl_handle, CURLOPT_READDATA, curl_data, "READ DATA");
+        exc_setopt(curl_handle, CURLOPT_INFILESIZE_LARGE, size, "DATA SIZE");
+    }
+}
+
+void url_encode_kv(CURL *curl_handle,
+                    const std::string &key,
+                    const std::string &val,
+                    std::string *str_out) {
+    str_out->append(exc_encode(curl_handle, key));
+    str_out->push_back('=');
+    str_out->append(exc_encode(curl_handle, val));
+}
+
+std::string url_encode_fields(CURL *curl_handle,
+                              const std::vector<std::pair<std::string, std::string> > &fields) {
+    std::string data;
+    for (auto it = fields.begin(); it != fields.end(); ++it) {
+        if (it != fields.begin()) {
+            data.push_back('&');
+        }
+        url_encode_kv(curl_handle, it->first, it->second, &data);
+    }
+    return data;
+}
+
 void transfer_method_opt(http_opts_t *opts,
                          CURL *curl_handle,
                          curl_data_t *curl_data) {
@@ -247,20 +269,16 @@ void transfer_method_opt(http_opts_t *opts,
         case http_method_t::PUT:
             {
                 exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
-                curl_off_t size = opts->data.size();
-                curl_data->set_send_data(std::move(opts->data));
-                if (size != 0) {
-                    curl_data->set_send_data(std::move(opts->data));
-                    exc_setopt(curl_handle, CURLOPT_READFUNCTION, &curl_data_t::read, "READ FUNCTION");
-                    exc_setopt(curl_handle, CURLOPT_READDATA, curl_data, "READ DATA");
-                    exc_setopt(curl_handle, CURLOPT_INFILESIZE_LARGE, size, "DATA SIZE");
-                }
+                add_read_callback(curl_handle, std::move(opts->data), curl_data);
             }
             break;
         case http_method_t::POST:
             if (!opts->form_data.empty()) {
-                curl_data->forms.add(opts->form_data);
-                exc_setopt(curl_handle, CURLOPT_HTTPPOST, curl_data->forms.get(), "HTTP POST FORM");
+                // This is URL-encoding the form data, which isn't *exactly* the same as
+                // x-www-url-formencoded, but it should be compatible
+                add_read_callback(curl_handle,
+                                  url_encode_fields(curl_handle, opts->form_data),
+                                  curl_data);
             } else {
                 exc_setopt(curl_handle, CURLOPT_POSTFIELDS, opts->data.data(), "HTTP POST DATA");
                 exc_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, opts->data.size(), "HTTP POST DATA SIZE");
@@ -280,20 +298,8 @@ void transfer_method_opt(http_opts_t *opts,
 void transfer_url_opt(const std::string &url,
                       const std::vector<std::pair<std::string, std::string> > &url_params,
                       CURL *curl_handle) {
-    std::string full_url = url;
-    for (auto it = url_params.begin(); it != url_params.end(); ++it) {
-        char *key = it->first.length() == 0 ? NULL :
-            curl_easy_escape(curl_handle, it->first.data(), it->first.length());
-        char *val = it->second.length() == 0 ? NULL :
-            curl_easy_escape(curl_handle, it->second.data(), it->second.length());
-        full_url += strprintf("%s%s=%s",
-                              it == url_params.begin() ? "?" : "&",
-                              key == NULL ? "": key,
-                              val == NULL ? "": val);
-        curl_free(key);
-        curl_free(val);
-    }
-
+    // TODO: handle the case where there are already parameters at the end of the url
+    std::string full_url = url + url_encode_fields(curl_handle, url_params);
     exc_setopt(curl_handle, CURLOPT_URL, full_url.c_str(), "URL");
 }
 
@@ -404,9 +410,9 @@ http_result_t perform_http(http_opts_t *opts) {
     } while (opts->attempts > 0);
 
     if (curl_res != CURLE_OK) {
-        return strprintf("response code, '%s'", curl_easy_strerror(curl_res));
+        return strprintf("read response code, '%s'", curl_easy_strerror(curl_res));
     } else if (response_code < 200 || response_code >= 300) {
-        return strprintf("HTTP status code %ld", response_code);
+        return strprintf("status code %ld", response_code);
     }
 
     counted_t<const ql::datum_t> res;

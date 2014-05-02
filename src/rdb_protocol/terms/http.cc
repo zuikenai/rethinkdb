@@ -21,7 +21,7 @@ public:
     // This http resulted in an error
     counted_t<val_t> operator()(const std::string &err_val) const {
         rfail_target(parent, base_exc_t::GENERIC, 
-                     "Error in HTTP %s of `%s`: %s",
+                     "Error in HTTP %s of `%s`: %s.",
                      http_method_to_str(opts->method).c_str(),
                      opts->url.c_str(), err_val.c_str());
     }
@@ -427,7 +427,7 @@ private:
             http_result = strprintf("timed out after %" PRIu64 ".%03" PRIu64 " seconds",
                                     opts->timeout_ms / 1000, opts->timeout_ms % 1000);
         } catch (const std::exception &ex) {
-            http_result = std::string("encounted an exception: ") + ex.what();
+            http_result = std::string("encounted an exception - ") + ex.what();
         } catch (...) {
             http_result = std::string("encountered an unknown exception");
         }
