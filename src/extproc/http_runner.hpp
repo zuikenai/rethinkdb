@@ -2,20 +2,14 @@
 #ifndef EXTPROC_HTTP_RUNNER_HPP_
 #define EXTPROC_HTTP_RUNNER_HPP_
 
+#include <exception>
 #include <string>
 #include <vector>
-#include <set>
 
-#include "errors.hpp"
-#include <boost/make_shared.hpp>
 #include <boost/variant.hpp>
-
-#include "containers/scoped.hpp"
 #include "containers/counted.hpp"
 #include "rdb_protocol/datum.hpp"
-#include "concurrency/wait_any.hpp"
-#include "arch/timing.hpp"
-#include "http/json.hpp"
+#include "concurrency/signal.hpp"
 
 // http calls result either in a DATUM return value or an error string
 typedef boost::variant<counted_t<const ql::datum_t>, std::string> http_result_t;

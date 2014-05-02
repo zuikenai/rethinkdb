@@ -1,20 +1,14 @@
 // Copyright 2010-2014 RethinkDB, all rights reserved.
 #include "extproc/http_job.hpp"
 
-#include <stdint.h>
-#include <cmath>
 #include <limits>
 #include <ctype.h>
 
 #include <curl/curl.h>
 
-#include "debug.hpp"
-
 #include "containers/archive/boost_types.hpp"
 #include "containers/archive/stl_types.hpp"
 #include "extproc/extproc_job.hpp"
-#include "rdb_protocol/rdb_protocol_json.hpp"
-#include "rdb_protocol/pseudo_time.hpp"
 
 // Returns an empty counted_t on error.
 counted_t<const ql::datum_t> http_to_datum(const std::string &json);

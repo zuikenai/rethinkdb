@@ -75,7 +75,7 @@ bool service_address_ports_t::is_bind_all() const {
 
 bool do_serve(io_backender_t *io_backender,
               bool i_am_a_server,
-              // NB. filepath & persistent_file are used if i_am_a_server is true.
+              // NB. filepath & persistent_file are used only if i_am_a_server is true.
               const base_path_t &base_path,
               metadata_persistence::cluster_persistent_file_t *cluster_metadata_file,
               metadata_persistence::auth_persistent_file_t *auth_metadata_file,

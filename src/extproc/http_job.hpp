@@ -1,21 +1,14 @@
-// Copyright 2010-2013 RethinkDB, all rights reserved.
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #ifndef EXTPROC_HTTP_JOB_HPP_
 #define EXTPROC_HTTP_JOB_HPP_
 
-#include <vector>
-#include <string>
-
 #include "errors.hpp"
-#include <boost/make_shared.hpp>
 
-#include "utils.hpp"
-#include "containers/archive/archive.hpp"
-#include "containers/counted.hpp"
-#include "concurrency/signal.hpp"
 #include "extproc/extproc_pool.hpp"
 #include "extproc/extproc_job.hpp"
 #include "extproc/http_runner.hpp"
-#include "rdb_protocol/datum.hpp"
+#include "containers/archive/archive.hpp"
+#include "concurrency/signal.hpp"
 
 class http_job_t {
 public:
