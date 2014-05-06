@@ -961,12 +961,12 @@ std::string get_reql_http_proxy_option(const std::map<std::string, options::valu
     // [protocol://]host[:port]
     //
     // The chunks in the regex used to parse and verify the format are:
-    //   protocol - (?:(\\w+)(?:://))? - captures the alphanumeric protocol,
-    //     discarding the '://' from the end
+    //   protocol - (?:([A-z][A-z0-9+-.]*)(?:://))? - captures the protocol, adhering to
+    //     RFC 3986, discarding the '://' from the end
     //   host - ([A-z0-9.-]+) - captures the hostname or ip address, consisting of letters,
     //     numbers, dashes, and dots
     //   port - (?::(\d+))? - captures the numeric port, discarding the preceding ':'
-    RE2 re2_parser("(?:(\\w+)(?:://))?([A-z0-9.-]+)(?::(\\d+))?");
+    RE2 re2_parser("(?:([A-z][A-z0-9+-.]*)(?:://))?([A-z0-9_.-]+)(?::(\\d+))?");
     std::string protocol, host, port_str;
     if (!RE2::FullMatch(proxy.get(), re2_parser, &protocol, &host, &port_str)) {
         throw std::runtime_error(strprintf("--reql-http-proxy format unrecognized, "

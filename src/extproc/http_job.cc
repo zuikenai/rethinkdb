@@ -231,9 +231,9 @@ void add_read_callback(CURL *curl_handle,
 }
 
 void url_encode_kv(CURL *curl_handle,
-                    const std::string &key,
-                    const std::string &val,
-                    std::string *str_out) {
+                   const std::string &key,
+                   const std::string &val,
+                   std::string *str_out) {
     str_out->append(exc_encode(curl_handle, key));
     str_out->push_back('=');
     str_out->append(exc_encode(curl_handle, val));

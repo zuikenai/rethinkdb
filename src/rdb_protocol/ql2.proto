@@ -260,17 +260,17 @@ message Term {
 
         // Takes an HTTP URL and gets it.  If the get succeeds and
         //  returns valid JSON, it is converted into a DATUM
-        HTTP = 152; // STRING {data: !OBJECT | !STRING,
+        HTTP = 152; // STRING {data: OBJECT | STRING,
                     //         timeout: !NUMBER,
-                    //         method: !STRING,
-                    //         params: !OBJECT,
-                    //         header: !OBJECT | !ARRAY,
-                    //         attempts: !NUMBER,
-                    //         redirects: !NUMBER,
-                    //         verify: !BOOL,
-                    //         depaginate: !BOOL,
-                    //         auth: !OBJECT,
-                    //         result_format: !STRING,
+                    //         method: STRING,
+                    //         params: OBJECT,
+                    //         header: OBJECT | ARRAY,
+                    //         attempts: NUMBER,
+                    //         redirects: NUMBER,
+                    //         verify: BOOL,
+                    //         depaginate: BOOL,
+                    //         auth: OBJECT,
+                    //         result_format: STRING,
                     //         } -> STRING | STREAM
 
         // Takes a string and throws an error with that message.
