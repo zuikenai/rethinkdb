@@ -15,6 +15,7 @@
 #include "buffer_cache/alt/alt_serialize_onto_blob.hpp"
 #include "containers/archive/boost_types.hpp"
 #include "containers/archive/buffer_group_stream.hpp"
+#include "containers/archive/varint.hpp"
 #include "containers/archive/vector_stream.hpp"
 #include "containers/scoped.hpp"
 #include "rdb_protocol/blob_wrapper.hpp"
@@ -1012,6 +1013,9 @@ static const int8_t HAS_VALUE = 0;
 static const int8_t HAS_NO_VALUE = 1;
 
 void rdb_modification_info_t::rdb_serialize(write_message_t &msg) const {  // NOLINT(runtime/references)
+    const uint64_t ser_version = 0;
+    serialize_varint_uint64(&msg, ser_version);
+
     if (!deleted.first.get()) {
         guarantee(deleted.second.empty());
         msg << HAS_NO_VALUE;
@@ -1031,6 +1035,11 @@ void rdb_modification_info_t::rdb_serialize(write_message_t &msg) const {  // NO
 
 archive_result_t rdb_modification_info_t::rdb_deserialize(read_stream_t *s) {
     archive_result_t res;
+
+    uint64_t ser_version;
+    res = deserialize_varint_uint64(s, &ser_version);
+    if (bad(res)) { return res; }
+    if (ser_version != 0) { return archive_result_t::VERSION_ERROR; }
 
     int8_t has_value;
     res = deserialize(s, &has_value);
@@ -1052,8 +1061,8 @@ archive_result_t rdb_modification_info_t::rdb_deserialize(read_stream_t *s) {
     return archive_result_t::SUCCESS;
 }
 
-RDB_IMPL_ME_SERIALIZABLE_2(rdb_modification_report_t, primary_key, info);
-RDB_IMPL_ME_SERIALIZABLE_1(rdb_erase_major_range_report_t, range_to_erase);
+RDB_IMPL_ME_SERIALIZABLE_2(rdb_modification_report_t, 0, primary_key, info);
+RDB_IMPL_ME_SERIALIZABLE_1(rdb_erase_major_range_report_t, 0, range_to_erase);
 
 rdb_modification_report_cb_t::rdb_modification_report_cb_t(
         store_t *store,
