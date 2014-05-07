@@ -11,7 +11,7 @@
 #include "extproc/extproc_job.hpp"
 
 // Returns an empty counted_t on error.
-counted_t<const ql::datum_t> http_to_datum(const std::string &json);
+http_result_t http_to_datum(const std::string &json, http_method_t method);
 http_result_t perform_http(http_opts_t *opts);
 
 class curl_exc_t : public std::exception {
@@ -386,7 +386,7 @@ http_result_t perform_http(http_opts_t *opts) {
     do {
         curl_res = curl_easy_perform(curl_handle.get());
         if (curl_res != CURLE_OK) {
-            return strprintf("perform, '%s'", curl_easy_strerror(curl_res));
+            return std::string(curl_easy_strerror(curl_res));
         }
         // Break on success, retry on temporary error
         curl_res = curl_easy_getinfo(curl_handle.get(), CURLINFO_RESPONSE_CODE, &response_code);
@@ -410,7 +410,7 @@ http_result_t perform_http(http_opts_t *opts) {
     } while (opts->attempts > 0);
 
     if (curl_res != CURLE_OK) {
-        return strprintf("read response code, '%s'", curl_easy_strerror(curl_res));
+        return strprintf("reading response code, '%s'", curl_easy_strerror(curl_res));
     } else if (response_code < 200 || response_code >= 300) {
         return strprintf("status code %ld", response_code);
     }
@@ -427,26 +427,31 @@ http_result_t perform_http(http_opts_t *opts) {
                 content_type[i] = tolower(content_type[i]);
             }
             if (content_type.find("application/json") == 0) {
-                return http_to_datum(curl_data.get_recv_data());
+                return http_to_datum(curl_data.get_recv_data(), opts->method);
             } else {
                 return make_counted<const ql::datum_t>(std::move(curl_data.get_recv_data()));
             }
         }
     case http_result_format_t::JSON:
-        return http_to_datum(curl_data.get_recv_data());
+        return http_to_datum(curl_data.get_recv_data(), opts->method);
     case http_result_format_t::TEXT:
         return make_counted<const ql::datum_t>(std::move(curl_data.get_recv_data()));
     default:
         unreachable();
     }
-
-    return http_to_datum(curl_data.get_recv_data());
+    unreachable();
 }
 
-counted_t<const ql::datum_t> http_to_datum(const std::string &json) {
+http_result_t http_to_datum(const std::string &json, http_method_t method) {
+    // If this was a HEAD request, we should not be handling data, just return R_NULL
+    // so the user knows the request succeeded (JSON parsing would fail on an empty body)
+    if (method == http_method_t::HEAD) {
+        return make_counted<const ql::datum_t>(ql::datum_t::R_NULL);
+    }
+
     scoped_cJSON_t cjson(cJSON_Parse(json.c_str()));
     if (cjson.get() == NULL) {
-        return make_counted<const ql::datum_t>(ql::datum_t::R_NULL);
+        return std::string("Failed to parse JSON response");
     }
 
     return make_counted<const ql::datum_t>(cjson);
