@@ -264,31 +264,33 @@ void transfer_method_opt(http_opts_t *opts,
             exc_setopt(curl_handle, CURLOPT_HTTPGET, 1, "HTTP GET");
             break;
         case http_method_t::PATCH:
-            // Fallthrough intentional - patch uses the same data as put
+            exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
             exc_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "PATCH", "HTTP PATCH");
+            add_read_callback(curl_handle, std::move(opts->data), curl_data);
+            break;
         case http_method_t::PUT:
-            {
-                exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
-                add_read_callback(curl_handle, std::move(opts->data), curl_data);
-            }
+            exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
+            add_read_callback(curl_handle, std::move(opts->data), curl_data);
             break;
         case http_method_t::POST:
             if (!opts->form_data.empty()) {
                 // This is URL-encoding the form data, which isn't *exactly* the same as
                 // x-www-url-formencoded, but it should be compatible
-                add_read_callback(curl_handle,
-                                  url_encode_fields(curl_handle, opts->form_data),
-                                  curl_data);
-            } else {
-                exc_setopt(curl_handle, CURLOPT_POSTFIELDS, opts->data.data(), "HTTP POST DATA");
-                exc_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, opts->data.size(), "HTTP POST DATA SIZE");
+                opts->data = url_encode_fields(curl_handle, opts->form_data);
             }
+
+            exc_setopt(curl_handle, CURLOPT_POST, 1, "HTTP POST");
+            exc_setopt(curl_handle, CURLOPT_POSTFIELDS, opts->data.data(), "HTTP POST DATA");
+            exc_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, opts->data.size(), "HTTP POST DATA SIZE");
             break;
         case http_method_t::HEAD:
             exc_setopt(curl_handle, CURLOPT_NOBODY, 1, "HTTP HEAD");
             break;
         case http_method_t::DELETE:
+            exc_setopt(curl_handle, CURLOPT_UPLOAD, 1, "HTTP PUT");
             exc_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE", "HTTP DELETE");
+            add_read_callback(curl_handle, std::move(opts->data), curl_data);
+            break;
             break;
         default:
             unreachable();
@@ -298,8 +300,31 @@ void transfer_method_opt(http_opts_t *opts,
 void transfer_url_opt(const std::string &url,
                       const std::vector<std::pair<std::string, std::string> > &url_params,
                       CURL *curl_handle) {
-    // TODO: handle the case where there are already parameters at the end of the url
-    std::string full_url = url + url_encode_fields(curl_handle, url_params);
+    std::string full_url = url;
+    std::string params = url_encode_fields(curl_handle, url_params);
+
+    // Handle cases where the url already has parameters, or is missing a '/' at the end
+    if (params.size() > 0) {
+        size_t params_pos = url.rfind('?');
+        size_t slash_pos = url.rfind('/');
+
+        if (slash_pos == std::string::npos) {
+            full_url.push_back('/');
+        }
+
+        if (params_pos == std::string::npos ||
+            (slash_pos != std::string::npos &&
+             slash_pos > params_pos)) {
+            full_url.push_back('?');
+        } else if (slash_pos != std::string::npos &&
+                   params_pos != std::string::npos &&
+                   slash_pos < params_pos) {
+            full_url.push_back('&');
+        }
+
+        full_url.append(params);
+    }
+
     exc_setopt(curl_handle, CURLOPT_URL, full_url.c_str(), "URL");
 }
 
@@ -362,8 +387,6 @@ void set_default_opts(CURL *curl_handle,
     }
 }
 
-// TODO: return parsed json from errors? - github api
-// TODO: digest auth not working?
 // TODO: implement depaginate
 // TODO: implement streams
 http_result_t perform_http(http_opts_t *opts) {

@@ -252,10 +252,14 @@ private:
         if (data.has()) {
             counted_t<const datum_t> datum_data = data->as_datum();
             if (method == http_method_t::PUT ||
-                method == http_method_t::PATCH) {
-                // TODO: make sure this is actually expected behavior for all types
-                //  e.g. strings, arrays, objects, numbers
-                data_out->assign(datum_data->print());
+                method == http_method_t::PATCH ||
+                method == http_method_t::DELETE) {
+                if (datum_data->get_type() == datum_t::R_STR) {
+                    data_out->assign(datum_data->as_str().to_std());
+                } else {
+                    // TODO: set content type to application/json?
+                    data_out->assign(datum_data->print());
+                }
             } else if (method == http_method_t::POST) {
                 if (datum_data->get_type() == datum_t::R_STR) {
                     // Use the put data for this, as we assume the user does any
@@ -275,7 +279,7 @@ private:
                 }
             } else {
                 rfail_target(this, base_exc_t::GENERIC,
-                             "`data` should only be specified on a PUT, POST, or PATCH request.");
+                             "`data` should only be specified on a PUT, POST, PATCH, or DELETE request.");
             }
         }
     }
@@ -399,10 +403,10 @@ private:
     void get_optargs(scope_env_t *env, http_opts_t *opts_out) {
         get_auth(env, &opts_out->auth);
         get_method(env, &opts_out->method);
+        get_data(env, &opts_out->data, &opts_out->form_data, opts_out->method);
         get_result_format(env, &opts_out->result_format);
         get_params(env, &opts_out->url_params);
         get_header(env, &opts_out->header);
-        get_data(env, &opts_out->data, &opts_out->form_data, opts_out->method);
         get_timeout(env, &opts_out->timeout_ms);
         get_attempts(env, &opts_out->attempts);
         get_redirects(env, &opts_out->max_redirects);
