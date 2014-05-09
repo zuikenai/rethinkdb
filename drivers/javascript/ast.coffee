@@ -461,7 +461,7 @@ class JavaScript extends RDBOp
     st: 'js'
 
 class Http extends RDBOp
-    tt: "HTTP"
+    tt: protoTermType.HTTP
     st: 'http'
 
 class Json extends RDBOp
