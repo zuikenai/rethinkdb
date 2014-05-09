@@ -39,7 +39,7 @@ private:
 class http_term_t : public op_term_t {
 public:
     http_term_t(compile_env_t *env, const protob_t<const Term> &term) :
-        op_term_t(env, term, argspec_t(1, -1),
+        op_term_t(env, term, argspec_t(1),
                   optargspec_t({"data",
                                 "timeout",
                                 "method",
