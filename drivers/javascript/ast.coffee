@@ -343,6 +343,7 @@ translateBackOptargs = (optargs) ->
             when 'left_bound' then 'leftBound'
             when 'right_bound' then 'rightBound'
             when 'default_timezone' then 'defaultTimezone'
+            when 'result_format' then 'resultFormat'
             else key
 
         result[key] = val
@@ -360,6 +361,7 @@ translateOptargs = (optargs) ->
             when 'leftBound' then 'left_bound'
             when 'rightBound' then 'right_bound'
             when 'defaultTimezone' then 'default_timezone'
+            when 'resultFormat' then 'result_format'
             else key
 
         if key is undefined or val is undefined then continue
