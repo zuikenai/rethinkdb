@@ -130,7 +130,7 @@ http_job_t::http_job_t(extproc_pool_t *pool, signal_t *interruptor) :
 
 http_result_t http_job_t::http(const http_opts_t *opts) {
     write_message_t msg;
-    msg << *opts;
+    serialize(&msg, *opts);
     {
         int res = send_write_message(extproc_job.write_stream(), &msg);
         if (res != 0) { throw http_worker_exc_t("failed to send data to the worker"); }
@@ -167,7 +167,7 @@ bool http_job_t::worker_fn(read_stream_t *stream_in, write_stream_t *stream_out)
     }
 
     write_message_t msg;
-    msg << result;
+    serialize(&msg, result);
     int res = send_write_message(stream_out, &msg);
     if (res != 0) { return false; }
 
