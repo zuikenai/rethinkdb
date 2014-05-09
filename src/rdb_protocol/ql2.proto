@@ -260,7 +260,7 @@ message Term {
 
         // Takes an HTTP URL and gets it.  If the get succeeds and
         //  returns valid JSON, it is converted into a DATUM
-        HTTP = 152; // STRING {data: OBJECT | STRING,
+        HTTP = 153; // STRING {data: OBJECT | STRING,
                     //         timeout: !NUMBER,
                     //         method: STRING,
                     //         params: OBJECT,
