@@ -16,7 +16,7 @@ std::string http_method_to_str(http_method_t method) {
     case http_method_t::HEAD:   return std::string("HEAD");
     case http_method_t::POST:   return std::string("POST");
     case http_method_t::PUT:    return std::string("PUT");
-    case http_method_t::PATCH:   return std::string("PATCH");
+    case http_method_t::PATCH:  return std::string("PATCH");
     case http_method_t::DELETE: return std::string("DELETE");
     default:                    return std::string("UNKNOWN");
     }
