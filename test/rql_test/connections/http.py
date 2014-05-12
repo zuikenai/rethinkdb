@@ -21,8 +21,8 @@ def expect_error(query, err_type, err_info):
 
 def expect_eq(left, right):
     if left != right:
-        raise RuntimeError("Actual result not equal to expected result:" + 
-                           "\n  ACTUAL: %s" % str(left) + 
+        raise RuntimeError("Actual result not equal to expected result:" +
+                           "\n  ACTUAL: %s" % str(left) +
                            "\n  EXPECTED: %s" % str(right))
 
 def err_string(method, url, msg):

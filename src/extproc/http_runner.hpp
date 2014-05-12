@@ -5,8 +5,11 @@
 #include <exception>
 #include <string>
 #include <vector>
+#include <utility>
 
+#include "errors.hpp"
 #include <boost/variant.hpp>
+
 #include "containers/counted.hpp"
 #include "rdb_protocol/datum.hpp"
 #include "concurrency/signal.hpp"

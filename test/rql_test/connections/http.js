@@ -76,7 +76,7 @@ function object_eq(v1, v2) {
 
 function expect_eq(left, right) {
     if (!object_eq(left, right)) {
-        throw new Error("Actual result not equal to expected result:" + 
+        throw new Error("Actual result not equal to expected result:" +
                         "\n  ACTUAL: " + JSON.stringify(left) +
                         "\n  EXPECTED: " + JSON.stringify(right));
     }

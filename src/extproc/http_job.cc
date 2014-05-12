@@ -1,10 +1,10 @@
 // Copyright 2010-2014 RethinkDB, all rights reserved.
 #include "extproc/http_job.hpp"
 
-#include <limits>
 #include <ctype.h>
-
 #include <curl/curl.h>
+
+#include <limits>
 
 #include "containers/archive/boost_types.hpp"
 #include "containers/archive/stl_types.hpp"
@@ -15,7 +15,7 @@ http_result_t perform_http(http_opts_t *opts);
 
 class curl_exc_t : public std::exception {
 public:
-    curl_exc_t(std::string err_msg) :
+    explicit curl_exc_t(std::string err_msg) :
         error_string(std::move(err_msg)) { }
     ~curl_exc_t() throw () { }
     const char *what() const throw () {
@@ -205,7 +205,7 @@ void exc_setopt(CURL *curl_handle, CURLoption opt, T val, const char *info) {
 
 void transfer_auth_opt(const http_opts_t::http_auth_t &auth, CURL *curl_handle) {
     if (auth.type != http_auth_type_t::NONE) {
-        long curl_auth_type;
+        long curl_auth_type; // NOLINT(runtime/int)
         switch (auth.type) {
         case http_auth_type_t::BASIC:
             curl_auth_type = CURLAUTH_BASIC;
@@ -358,7 +358,7 @@ void transfer_header_opt(const std::vector<std::string> &header,
 }
 
 void transfer_redirect_opt(uint32_t max_redirects, CURL *curl_handle) {
-    long val = (max_redirects > 0) ? 1 : 0;
+    long val = (max_redirects > 0) ? 1 : 0; // NOLINT(runtime/int)
     exc_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, val, "ALLOW REDIRECT");
     val = max_redirects;
     exc_setopt(curl_handle, CURLOPT_MAXREDIRS, val, "MAX REDIRECTS");
@@ -367,7 +367,7 @@ void transfer_redirect_opt(uint32_t max_redirects, CURL *curl_handle) {
 }
 
 void transfer_verify_opt(bool verify, CURL *curl_handle) {
-    long val = verify ? 1 : 0;
+    long val = verify ? 1 : 0; // NOLINT(runtime/int)
     exc_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, val, "SSL VERIFY PEER");
     val = verify ? 2 : 0;
     exc_setopt(curl_handle, CURLOPT_SSL_VERIFYHOST, val, "SSL VERIFY HOST");
@@ -419,35 +419,37 @@ http_result_t perform_http(http_opts_t *opts) {
     try {
         set_default_opts(curl_handle.get(), opts->proxy, curl_data);
         transfer_opts(opts, curl_handle.get(), &curl_data);
-    } catch (curl_exc_t &ex) {
+    } catch (const curl_exc_t &ex) {
         return ex.what();
     }
 
     CURLcode curl_res = CURLE_OK;
-    long response_code;
-    while (opts->attempts > 0) {
+    long response_code; // NOLINT(runtime/int)
+    for (uint64_t attempts = 0; attempts < opts->attempts; ++attempts) {
+        // Do the HTTP operation, then check for errors
         curl_res = curl_easy_perform(curl_handle.get());
-
-        if (curl_res != CURLE_OK) {
-            return std::string(curl_easy_strerror(curl_res));
-        }
-
-        // Break on success, retry on temporary error
-        curl_res = curl_easy_getinfo(curl_handle.get(),
-                                     CURLINFO_RESPONSE_CODE,
-                                     &response_code);
 
         if (curl_res == CURLE_SEND_ERROR ||
             curl_res == CURLE_RECV_ERROR ||
             curl_res == CURLE_COULDNT_CONNECT) {
-            --opts->attempts;
-        } else if (curl_res != CURLE_OK ||
-                   // Error codes that may be resolved by retrying
-                   (response_code != 408 &&
-                    response_code != 500 &&
-                    response_code != 502 &&
-                    response_code != 503 &&
-                    response_code != 504)) {
+            // Could be a temporary error, try again
+            continue;
+        } else if (curl_res != CURLE_OK) {
+            return std::string(curl_easy_strerror(curl_res));
+        }
+
+        curl_res = curl_easy_getinfo(curl_handle.get(),
+                                     CURLINFO_RESPONSE_CODE,
+                                     &response_code);
+
+        // Break on success, retry on temporary error
+        if (curl_res != CURLE_OK ||
+            // Error codes that may be resolved by retrying
+            (response_code != 408 &&
+             response_code != 500 &&
+             response_code != 502 &&
+             response_code != 503 &&
+             response_code != 504)) {
             break;
         }
     }

@@ -202,7 +202,7 @@ def test_digest_auth()
 
     # httpbin has a 500 error on this
     # Wrong authentication type
-    #expect_error(r.http(url, {:header => {'Cookie' => 'dummy'}, 
+    #expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
     #                          :redirects => 5,
     #                          :auth => {:type => 'basic', :user => 'azure', :pass => 'hunter2'}}),
     #             RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
@@ -245,8 +245,8 @@ $tests = {
 }
 
 $tests.each do |name, m|
-     puts "Running test #{name}"  
+     puts "Running test #{name}"
      m.call()
      puts " - PASS"
 end
-    
+
