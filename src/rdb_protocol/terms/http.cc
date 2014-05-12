@@ -204,7 +204,6 @@ void http_term_t::get_header(scope_env_t *env,
                 datum_header->as_object();
             for (auto it = header_map.begin(); it != header_map.end(); ++it) {
                 std::string str;
-                // TODO: should we allow empty header lines?
                 if (it->second->get_type() == datum_t::R_STR) {
                     str = strprintf("%s: %s", it->first.c_str(),
                                     it->second->as_str().c_str());
