@@ -17,6 +17,11 @@ function expect_no_error(err) {
     }
 }
 
+function pass(name, conn) {
+    console.log(name + " - PASS");
+    conn.close();
+}
+
 function expect_error(res, err, err_type, err_info) {
     if (err) {
         if (err['name'] !== err_type) {
@@ -88,6 +93,7 @@ function test_get(conn) {
             expect_no_error(err);
             expect_eq(res['args'], {});
             expect_eq(res['headers']['Accept-Encoding'], 'deflate=1;gzip=0.5');
+            pass("get", conn);
         });
 }
 
@@ -105,6 +111,7 @@ function test_params(conn) {
             expect_no_error(err);
             expect_eq(res['args']['fake'], '123');
             expect_eq(res['args']['dummy'], 'true');
+            pass("params", conn);
         });
 }
 
@@ -121,6 +128,7 @@ function test_headers(conn) {
             expect_no_error(err);
             expect_eq(res['headers']['Test'], 'entry');
             expect_eq(res['headers']['Accept-Encoding'], 'override');
+            pass("headers", conn);
         });
 }
 
@@ -135,6 +143,7 @@ function test_head(conn) {
     r.http(url, {method:'HEAD', resultFormat:'json'}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res, null);
+            pass("head", conn);
         });
 }
 
@@ -170,6 +179,7 @@ function test_post(conn) {
     r.http(url, {method:'POST', data:post_3_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['data'], post_3_data)
+            pass("post", conn);
         });
 }
 
@@ -179,13 +189,15 @@ function test_put(conn) {
     r.http(url, {method:'PUT', data:put_1_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['json']['nested'], put_1_data['nested']);
-            // TODO: expect_eq(res['json']['time'], datetime.datetime(1970, 1, 1, 0, 16, 40, tzinfo=res['json']['time'].tzinfo));
+            expected_time = new Date(1970, 1, 1, 0, 16, 40);
+            expect_eq(res['json']['time'].getTime(), expected_time.getTime());
         });
 
     var put_2_data = '<arbitrary> +%data!$%^</arbitrary>'
     r.http(url, {method:'PUT', data:put_2_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['data'], put_2_data);
+            pass("put", conn);
         });
 }
 
@@ -195,13 +207,15 @@ function test_patch(conn) {
     r.http(url, {method:'PATCH', data:patch_1_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['json']['nested'], patch_1_data['nested']);
-            // TODO: expect_eq(res['json']['time'], datetime.datetime(1970, 1, 1, 0, 16, 40, tzinfo=res['json']['time'].tzinfo));
+            expected_time = new Date(1970, 1, 1, 0, 16, 40);
+            expect_eq(res['json']['time'].getTime(), expected_time.getTime());
         });
 
     var patch_2_data = '<arbitrary> +%data!$%^</arbitrary>'
     r.http(url, {method:'PATCH', data:patch_2_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['data'], patch_2_data);
+            pass("patch", conn);
         });
 }
 
@@ -211,13 +225,15 @@ function test_delete(conn) {
     r.http(url, {method:'DELETE', data:delete_1_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['json']['nested'], delete_1_data['nested']);
-            // TODO: expect_eq(res['json']['time'], datetime.datetime(1970, 1, 1, 0, 16, 40, tzinfo=res['json']['time'].tzinfo));
+            expected_time = new Date(1970, 1, 1, 0, 16, 40);
+            expect_eq(res['json']['time'].getTime(), expected_time.getTime());
         });
 
     delete_2_data = '<arbitrary> +%data!$%^</arbitrary>'
     r.http(url, {method:'DELETE', data:delete_2_data}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['data'], delete_2_data);
+            pass("delete", conn);
         });
 }
 
@@ -234,6 +250,7 @@ function test_redirects(conn) {
     r.http(url, {redirects:2}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['headers']['Host'], 'httpbin.org');
+            pass("redirects", conn);
         });
 }
 
@@ -241,13 +258,15 @@ function test_gzip(conn) {
     r.http('httpbin.org/gzip').run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res['gzipped'], true);
+            pass("gzip", conn);
         });
 }
 
 function test_failed_json_parse(conn) {
     var url = 'httpbin.org/html'
     r.http(url, {resultFormat:'json'}).run(conn, function(err, res) {
-            expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'Failed to parse JSON response'));
+            expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'failed to parse JSON response'));
+            pass("failed json parse", conn);
         });
 }
 
@@ -273,6 +292,7 @@ function test_basic_auth(conn) {
     r.http(url, {auth:{type:'basic',user:'azure',pass:'hunter2'}}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res, {authenticated:true,user:'azure'});
+            pass("basic auth", conn);
         });
 }
 
@@ -306,11 +326,12 @@ function test_digest_auth(conn) {
            auth:{type:'digest',user:'azure',pass:'hunter2'}}).run(conn, function(err, res) {
             expect_no_error(err);
             expect_eq(res, {authenticated:true,user:'azure'});
+            pass("digest auth", conn);
         });
 }
 
 function test_verify(conn) {
-    function test_part(url) {
+    function test_part(url, done) {
         r.http(url, {verify:true, redirects:5}).run(conn, function(err, res) {
                 expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'Peer certificate cannot be authenticated with given CA certificates'));
             });
@@ -318,40 +339,41 @@ function test_verify(conn) {
         r.http(url, {verify:false, redirects:5}).split().nth(0).run(conn, function(err, res) {
                 expect_no_error(err);
                 expect_eq(res, '<html>');
+                done();
             });
     }
 
-    test_part('http://dev.rethinkdb.com');
-    test_part('https://dev.rethinkdb.com');
+    test_part('http://dev.rethinkdb.com', function() { });
+    test_part('https://dev.rethinkdb.com', function() { pass("verify", conn); });
 }
+
+tests = {
+         verify: test_verify,
+         get: test_get,
+         head: test_head,
+         params: test_params,
+         headers: test_headers,
+         post: test_post,
+         put: test_put,
+         patch: test_patch,
+         delete: test_delete,
+         redirects: test_redirects,
+         gzip: test_gzip,
+         failed_json_parse: test_failed_json_parse,
+         digest_auth: test_digest_auth,
+         basic_auth: test_basic_auth
+         };
 
 var port = parseInt(process.argv[2], 10)
 console.log('Connecting to localhost:' + port.toString());
 
-r.connect({port:port}, function(err, c) {
-    if (err) {
-        throw new Error('Failed to connect to localhost:' + port.toString());
-    }
+for (var name in tests) {
+    r.connect({port:port}, function(err, c) {
+        if (err) {
+            throw new Error('Failed to connect to localhost:' + port.toString());
+        }
 
-    tests = {
-             verify: test_verify,
-             get: test_get,
-             head: test_head,
-             params: test_params,
-             headers: test_headers,
-             post: test_post,
-             put: test_put,
-             patch: test_patch,
-             delete: test_delete,
-             redirects: test_redirects,
-             gzip: test_gzip,
-             failed_json_parse: test_failed_json_parse,
-             digest_auth: test_digest_auth,
-             basic_auth: test_basic_auth
-             };
-
-    for (var name in tests) {
         tests[name](c);
-    }
-});
+    });
+}
 

@@ -141,7 +141,7 @@ def test_gzip():
 def test_failed_json_parse():
     url = 'httpbin.org/html'
     expect_error(r.http(url, result_format='json'),
-                 r.RqlRuntimeError, err_string('GET', url, 'Failed to parse JSON response'))
+                 r.RqlRuntimeError, err_string('GET', url, 'failed to parse JSON response'))
 
 def test_basic_auth():
     url = 'http://httpbin.org/basic-auth/azure/hunter2'

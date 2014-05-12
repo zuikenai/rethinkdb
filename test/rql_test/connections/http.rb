@@ -115,7 +115,7 @@ def test_put()
     url = 'httpbin.org/put'
     res = r.http(url, {:method => 'PUT', :data => $obj_data}).run()
     expect_eq(res['json']['nested'], $obj_data['nested'])
-    # TODO: expect_eq(res['json']['time'], datetime.datetime(1970, 1, 1, 0, 16, 40, tzinfo=res['json']['time'].tzinfo))
+    expect_eq(res['json']['time'], Time.at(1000));
 
     res = r.http(url, {:method => 'PUT', :data => $str_data}).run()
     expect_eq(res['data'], $str_data)
@@ -125,7 +125,7 @@ def test_patch()
     url = 'httpbin.org/patch'
     res = r.http(url, {:method => 'PATCH', :data => $obj_data}).run()
     expect_eq(res['json']['nested'], $obj_data['nested'])
-    # TODO: expect_eq(res['json']['time'], datetime.datetime(1970, 1, 1, 0, 16, 40, tzinfo=res['json']['time'].tzinfo))
+    expect_eq(res['json']['time'], Time.at(1000));
 
     res = r.http(url, {:method => 'PATCH', :data => $str_data}).run()
     expect_eq(res['data'], $str_data)
@@ -135,7 +135,7 @@ def test_delete()
     url = 'httpbin.org/delete'
     res = r.http(url, {:method => 'DELETE', :data => $obj_data}).run()
     expect_eq(res['json']['nested'], $obj_data['nested'])
-    # TODO: expect_eq(res['json']['time'], datetime.datetime(1970, 1, 1, 0, 16, 40, tzinfo=res['json']['time'].tzinfo))
+    expect_eq(res['json']['time'], Time.at(1000));
 
     res = r.http(url, {:method => 'DELETE', :data => $str_data}).run()
     expect_eq(res['data'], $str_data)
@@ -159,7 +159,7 @@ end
 def test_failed_json_parse()
     url = 'httpbin.org/html'
     expect_error(r.http(url, {:result_format => 'json'}),
-                 RethinkDB::RqlRuntimeError, err_string('GET', url, 'Failed to parse JSON response'))
+                 RethinkDB::RqlRuntimeError, err_string('GET', url, 'failed to parse JSON response'))
 end
 
 def test_basic_auth()
