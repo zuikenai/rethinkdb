@@ -17,6 +17,8 @@ DIST_FILE_LIST_REL += configure COPYRIGHT Makefile NOTES.md README.md
 
 DIST_FILE_LIST := $(foreach x,$(DIST_FILE_LIST_REL),$/$x)
 
+SIGNITURE_NAME := Developer ID Installer: Hexagram 49, Inc. (99WDWQ7WDJ)
+
 # Ubuntu quantal and later require nodejs-legacy.
 ifeq ($(shell echo $(UBUNTU_RELEASE) | grep '^[q-zQ-Z]'),)
   NODEJS_NEW := 0
@@ -122,7 +124,6 @@ build-osx: install-osx
 	mkdir -p $(OSX_PACKAGE_DIR)/install
 	pkgbuild --root $(OSX_PACKAGE_DIR)/pkg --identifier rethinkdb $(OSX_PACKAGE_DIR)/install/rethinkdb.pkg
 	mkdir $(OSX_PACKAGE_DIR)/dmg
-	SIGNITURE_NAME := "Developer ID Installer: Hexagram 49, Inc. (99WDWQ7WDJ)"
 	if [[ `/usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]*\)/'` =~ "$(SIGNITURE_NAME)" ]]; then 
 	    /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg
 	else
