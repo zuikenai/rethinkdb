@@ -17,8 +17,6 @@ DIST_FILE_LIST_REL += configure COPYRIGHT Makefile NOTES.md README.md
 
 DIST_FILE_LIST := $(foreach x,$(DIST_FILE_LIST_REL),$/$x)
 
-SIGNITURE_NAME := Developer ID Installer: Hexagram 49, Inc. (99WDWQ7WDJ)
-
 # Ubuntu quantal and later require nodejs-legacy.
 ifeq ($(shell echo $(UBUNTU_RELEASE) | grep '^[q-zQ-Z]'),)
   NODEJS_NEW := 0
@@ -117,6 +115,15 @@ build-deb: deb-src-dir
 .PHONY: install-osx
 install-osx: install-binaries install-web
 
+ifneq ("","$(findstring $(SIGNITURE_NAME),$(shell /usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]+[:graph:][:blank:]/'))")
+  PRODUCT_BUILD = /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg --sign "$(SIGNITURE_NAME)"
+else
+  ifeq ($(REQUIRE_SIGNED),1)
+    $(error Certificate not found: $(SIGNITURE_NAME))
+  endif
+  PRODUCT_BUILD = /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg
+endif
+
 .PHONY: build-osx
 build-osx: DESTDIR = $(OSX_PACKAGE_DIR)/pkg
 build-osx: SPLIT_SYMBOLS = 1
@@ -124,11 +131,7 @@ build-osx: install-osx
 	mkdir -p $(OSX_PACKAGE_DIR)/install
 	pkgbuild --root $(OSX_PACKAGE_DIR)/pkg --identifier rethinkdb $(OSX_PACKAGE_DIR)/install/rethinkdb.pkg
 	mkdir $(OSX_PACKAGE_DIR)/dmg
-ifneq ("","$(findstring $(SIGNITURE_NAME),$(shell /usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]+[:graph:][:blank:]/'))")
-	/usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg --sign "$(SIGNITURE_NAME)"
-else
-	/usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg
-endif
+	$(PRODUCT_BUILD)
 # TODO: the PREFIX should not be hardcoded in the uninstall script 
 	cp $(OSX_PACKAGING_DIR)/uninstall-rethinkdb.sh $(OSX_PACKAGE_DIR)/dmg/uninstall-rethinkdb.sh
 	chmod +x $(OSX_PACKAGE_DIR)/dmg/uninstall-rethinkdb.sh
