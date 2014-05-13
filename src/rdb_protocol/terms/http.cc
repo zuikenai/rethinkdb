@@ -168,7 +168,7 @@ void http_term_t::get_timeout_ms(scope_env_t *env,
                                  uint64_t *timeout_ms_out) {
     counted_t<val_t> timeout = optarg(env, "timeout");
     if (timeout.has()) {
-        *timeout_ms_out = timeout->as_int();
+        *timeout_ms_out = timeout->as_int<uint64_t>();
         if (*timeout_ms_out > std::numeric_limits<uint64_t>::max() / 1000) {
             *timeout_ms_out = std::numeric_limits<uint64_t>::max();
         } else {
@@ -444,12 +444,7 @@ void http_term_t::get_attempts(scope_env_t *env,
                                uint64_t *attempts_out) {
     counted_t<val_t> attempts = optarg(env, "attempts");
     if (attempts.has()) {
-        int64_t temp = attempts->as_int();
-        if (temp < 0) {
-            rfail_target(attempts.get(), base_exc_t::GENERIC,
-                         "`attempts` (%" PRIi64 ") cannot be negative.", temp);
-        }
-        *attempts_out = temp;
+        *attempts_out = attempts->as_int<uint64_t>();
     }
 }
 
@@ -459,17 +454,7 @@ void http_term_t::get_redirects(scope_env_t *env,
                                 uint32_t *redirects_out) {
     counted_t<val_t> redirects = optarg(env, "redirects");
     if (redirects.has()) {
-        int64_t temp = redirects->as_int();
-        if (temp < 0) {
-            rfail_target(redirects.get(), base_exc_t::GENERIC,
-                         "`redirects` (%" PRIi64 ") cannot be negative.", temp);
-        } else if (temp > std::numeric_limits<uint32_t>::max()) {
-            rfail_target(redirects.get(), base_exc_t::GENERIC,
-                         "`redirects` (%" PRIi64 ") cannot be greater than "
-                         "2^32 - 1.", temp);
-        }
-
-        *redirects_out = temp;
+        *redirects_out = redirects->as_int<uint32_t>();
     }
 }
 
