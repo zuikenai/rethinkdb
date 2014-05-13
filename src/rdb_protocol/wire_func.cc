@@ -82,9 +82,6 @@ private:
 
 
 void wire_func_t::rdb_serialize(write_message_t *wm) const {
-    const uint64_t ser_version = 0;
-    serialize_varint_uint64(wm, ser_version);
-
     if (func_can_be_null()) {
         serialize(wm, func.has());
         if (!func.has()) return;
@@ -96,11 +93,6 @@ void wire_func_t::rdb_serialize(write_message_t *wm) const {
 
 archive_result_t wire_func_t::rdb_deserialize(read_stream_t *s) {
     archive_result_t res;
-
-    uint64_t ser_version;
-    res = deserialize_varint_uint64(s, &ser_version);
-    if (bad(res)) { return res; }
-    if (ser_version != 0) { return archive_result_t::VERSION_ERROR; }
 
     if (func_can_be_null()) {
         bool has;

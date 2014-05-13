@@ -135,9 +135,6 @@ var_visibility_t var_scope_t::compute_visibility() const {
 }
 
 void var_scope_t::rdb_serialize(write_message_t *wm) const {
-    const uint64_t ser_version = 0;
-    serialize_varint_uint64(wm, ser_version);
-
     serialize(wm, vars);
     serialize(wm, implicit_depth);
     if (implicit_depth == 1) {
@@ -151,11 +148,6 @@ void var_scope_t::rdb_serialize(write_message_t *wm) const {
 
 archive_result_t var_scope_t::rdb_deserialize(read_stream_t *s) {
     archive_result_t res;
-
-    uint64_t ser_version;
-    res = deserialize_varint_uint64(s, &ser_version);
-    if (bad(res)) { return res; }
-    if (ser_version != 0) { return archive_result_t::VERSION_ERROR; }
 
     std::map<sym_t, counted_t<const datum_t> > local_vars;
     res = deserialize(s, &local_vars);

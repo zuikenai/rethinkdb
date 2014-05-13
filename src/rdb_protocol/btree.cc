@@ -987,9 +987,6 @@ static const int8_t HAS_VALUE = 0;
 static const int8_t HAS_NO_VALUE = 1;
 
 void rdb_modification_info_t::rdb_serialize(write_message_t *wm) const {
-    const uint64_t ser_version = 0;
-    serialize_varint_uint64(wm, ser_version);
-
     if (!deleted.first.get()) {
         guarantee(deleted.second.empty());
         serialize(wm, HAS_NO_VALUE);
@@ -1009,11 +1006,6 @@ void rdb_modification_info_t::rdb_serialize(write_message_t *wm) const {
 
 archive_result_t rdb_modification_info_t::rdb_deserialize(read_stream_t *s) {
     archive_result_t res;
-
-    uint64_t ser_version;
-    res = deserialize_varint_uint64(s, &ser_version);
-    if (bad(res)) { return res; }
-    if (ser_version != 0) { return archive_result_t::VERSION_ERROR; }
 
     int8_t has_value;
     res = deserialize(s, &has_value);

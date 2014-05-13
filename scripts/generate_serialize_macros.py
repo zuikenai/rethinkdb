@@ -19,17 +19,12 @@ def generate_make_serializable_macro(nfields):
     print "#define RDB_EXPAND_SERIALIZABLE_%d(function_attr, type_t, version%s) \\" % \
         (nfields, "".join(", field%d" % (i+1) for i in xrange(nfields)))
     zeroarg = ("UNUSED " if nfields == 0 else "")
-    print "    function_attr void serialize(write_message_t *msg, const type_t &thing) { \\"
-    print "        serialize_varint_uint64(msg, version); \\"
+    print "    function_attr void serialize(%swrite_message_t *msg, const type_t &thing) { \\" % zeroarg
     for i in xrange(nfields):
         print "        serialize(msg, thing.field%d); \\" % (i + 1)
     print "    } \\"
     print "    function_attr archive_result_t deserialize(read_stream_t *s, %stype_t *thing) { \\" % zeroarg
     print "        archive_result_t res = archive_result_t::SUCCESS; \\"
-    print "        uint64_t ser_version; \\"
-    print "        res = deserialize_varint_uint64(s, &ser_version); \\"
-    print "        if (bad(res)) { return res; } \\"
-    print "        if (ser_version != version) { return archive_result_t::VERSION_ERROR; } \\"
     for i in xrange(nfields):
         print "        res = deserialize(s, deserialize_deref(thing->field%d)); \\" % (i + 1)
         print "        if (bad(res)) { return res; } \\"
@@ -41,20 +36,16 @@ def generate_make_serializable_macro(nfields):
     print "#define RDB_IMPL_SERIALIZABLE_%d(...) RDB_EXPAND_SERIALIZABLE_%d(, __VA_ARGS__)" % (nfields, nfields)
 
 def generate_make_me_serializable_macro(nfields):
+    zeroarg = ("UNUSED " if nfields == 0 else "")
     print "#define RDB_MAKE_ME_SERIALIZABLE_%d(version%s) \\" % \
         (nfields, "".join(", field%d" % (i+1) for i in xrange(nfields)))
     print "    friend class write_message_t; \\"
-    print "    void rdb_serialize(write_message_t *msg) const { \\"
-    print "        serialize_varint_uint64(msg, version); \\"
+    print "    void rdb_serialize(%swrite_message_t *msg) const { \\" % zeroarg
     for i in xrange(nfields):
         print "        serialize(msg, field%d); \\" % (i + 1)
     print "    } \\"
-    print "    archive_result_t rdb_deserialize(read_stream_t *s) { \\"
+    print "    archive_result_t rdb_deserialize(%sread_stream_t *s) { \\" % zeroarg
     print "        archive_result_t res = archive_result_t::SUCCESS; \\"
-    print "        uint64_t ser_version; \\"
-    print "        res = deserialize_varint_uint64(s, &ser_version); \\"
-    print "        if (bad(res)) { return res; } \\"
-    print "        if (ser_version != version) { return archive_result_t::VERSION_ERROR; } \\"
     for i in xrange(nfields):
         print "        res = deserialize(s, deserialize_deref(field%d)); \\" % (i + 1)
         print "        if (bad(res)) { return res; } \\"
@@ -64,19 +55,15 @@ def generate_make_me_serializable_macro(nfields):
 
 
 def generate_impl_me_serializable_macro(nfields):
+    zeroarg = ("UNUSED " if nfields == 0 else "")
     print "#define RDB_IMPL_ME_SERIALIZABLE_%d(typ, version%s) \\" % \
         (nfields, "".join(", field%d" % (i+1) for i in xrange(nfields)))
-    print "    void typ::rdb_serialize(write_message_t *msg) const { \\"
-    print "        serialize_varint_uint64(msg, version); \\"
+    print "    void typ::rdb_serialize(%swrite_message_t *msg) const { \\" % zeroarg
     for i in xrange(nfields):
         print "        serialize(msg, field%d); \\" % (i + 1)
     print "    } \\"
-    print "    archive_result_t typ::rdb_deserialize(read_stream_t *s) { \\"
+    print "    archive_result_t typ::rdb_deserialize(%sread_stream_t *s) { \\" % zeroarg
     print "        archive_result_t res = archive_result_t::SUCCESS; \\"
-    print "        uint64_t ser_version; \\"
-    print "        res = deserialize_varint_uint64(s, &ser_version); \\"
-    print "        if (bad(res)) { return res; } \\"
-    print "        if (ser_version != version) { return archive_result_t::VERSION_ERROR; } \\"
     for i in xrange(nfields):
         print "        res = deserialize(s, deserialize_deref(field%d)); \\" % (i + 1)
         print "        if (bad(res)) { return res; } \\"
