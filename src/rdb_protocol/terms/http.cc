@@ -168,7 +168,7 @@ void http_term_t::get_timeout_ms(scope_env_t *env,
                                  uint64_t *timeout_ms_out) {
     counted_t<val_t> timeout = optarg(env, "timeout");
     if (timeout.has()) {
-        *timeout_ms_out = timeout->as_num();
+        *timeout_ms_out = timeout->as_int();
         if (*timeout_ms_out > std::numeric_limits<uint64_t>::max() / 1000) {
             *timeout_ms_out = std::numeric_limits<uint64_t>::max();
         } else {

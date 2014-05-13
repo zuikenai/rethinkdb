@@ -99,11 +99,10 @@ private:
 };
 
 size_t multiply_with_overflow_check(size_t a, size_t b, const std::string &info) {
-    size_t res = a * b;
-    if (res < a || res < b) {
+    if (b == 0 || a > std::numeric_limits<size_t>::max() / b) {
         throw curl_exc_t(info + " data size too large");
     }
-    return res;
+    return a * b;
 }
 
 size_t curl_data_t::write(char *ptr, size_t size, size_t nmemb, void* instance) {
