@@ -115,13 +115,17 @@ build-deb: deb-src-dir
 .PHONY: install-osx
 install-osx: install-binaries install-web
 
-ifneq ("","$(findstring $(SIGNITURE_NAME),$(shell /usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]+[:graph:][:blank:]/'))")
-  PRODUCT_BUILD = /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg --sign "$(SIGNITURE_NAME)"
+ifneq (Darwin,$(OS))
+  PRODUCT_BUILD := $(error MacOS package can only be built on that OS)
 else
-  ifeq ($(REQUIRE_SIGNED),1)
-    $(error Certificate not found: $(SIGNITURE_NAME))
+  ifneq ("","$(findstring $(SIGNATURE_NAME),$(shell /usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]+[:graph:][:blank:]/'))")
+    PRODUCT_BUILD = /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg --sign "$(SIGNATURE_NAME)"
+  else
+    ifeq ($(REQUIRE_SIGNED),1)
+      $(error Certificate not found: $(SIGNITURE_NAME))
+    endif
+    PRODUCT_BUILD = /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg
   endif
-  PRODUCT_BUILD = /usr/bin/productbuild --distribution $(OSX_PACKAGING_DIR)/Distribution.xml --package-path $(OSX_PACKAGE_DIR)/install/ $(OSX_PACKAGE_DIR)/dmg/rethinkdb-$(RETHINKDB_VERSION).pkg
 endif
 
 .PHONY: build-osx

@@ -118,7 +118,7 @@ THREADED_COROUTINES ?= 0
 
 # Require MacOS package to be signed with a developer certificate
 REQUIRE_SIGNED ?= 0
-SIGNITURE_NAME ?= Developer ID Installer: Hexagram 49, Inc. (99WDWQ7WDJ)
+SIGNATURE_NAME ?= Developer ID Installer: Hexagram 49, Inc. (99WDWQ7WDJ)
 
 # TODO: Document these variables
 STATIC_LIBGCC ?= 0
