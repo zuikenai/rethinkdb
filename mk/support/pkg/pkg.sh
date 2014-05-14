@@ -41,6 +41,10 @@ pkg_environment () {
     fi
     test -d "$install_dir/lib" && echo "export LDFLAGS=\"\${LDFLAGS:-} -L$(niceabspath "$install_dir/lib")\"" || :
     test -d "$install_dir/bin" && echo "export PATH=\"$(niceabspath "$install_dir/bin"):\$PATH\"" || :
+    local pcdir="$install_dir/lib/pkgconfig"
+    if [[ -e "$pcdir" ]]; then
+        echo "export PKG_CONFIG_PATH=\"$pcdir\${PKG_CONFIG_PATH:+:}\${PKG_CONFIG_PATH:-}\""
+    fi
 }
 
 pkg_make_tmp_fetch_dir () {
@@ -62,6 +66,7 @@ pkg_fetch_archive () {
         *.tgz)     ext=tgz;     in_dir "$tmp_dir" tar -xzf "$archive" ;;
         *.tar.gz)  ext=tar.gz;  in_dir "$tmp_dir" tar -xzf "$archive" ;;
         *.tar.bz2) ext=tar.bz2; in_dir "$tmp_dir" tar -xjf "$archive" ;;
+        *.tar.xz)  ext=tar.bz2; in_dir "$tmp_dir" tar -xJf "$archive" ;;
         *) error "don't know how to extract $archive"
     esac
 
@@ -101,7 +106,7 @@ pkg_move_tmp_to_src () {
 
 pkg_copy_src_to_build () {
     mkdir -p "$build_dir"
-    cp -a "$src_dir/." "$build_dir"
+    cp -af "$src_dir/." "$build_dir"
 }
 
 pkg_install-include () {
