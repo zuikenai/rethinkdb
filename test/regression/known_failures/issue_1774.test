@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # test-issue-url: https://github.com/rethinkdb/rethinkdb/issues/1774
-# test-issue-description: test that writes can still proceede while a table is sharded
+# test-description: reads and writes can still proceed while a table is sharded
 
 import os, sys, threading, time, Queue
 
@@ -31,12 +31,10 @@ except r.RqlRuntimeError:
 	r.table_drop(tableName).run(connection)
 	r.table_create(tableName).run(connection)
 
-# -- run the test
-	
+# -- thread methods
+
 def fillTable(server, tableName, databaseName, stopSignal, returnChannel):
-	
 	threadConn = r.connect(host=server.host, port=server.driver_port, db=databaseName)
-	
 	counter = 0
 	while True:
 		try:
@@ -44,22 +42,47 @@ def fillTable(server, tableName, databaseName, stopSignal, returnChannel):
 			break
 		except Queue.Empty: pass
 		try:
-			r.table(tableName).insert({'id':counter, 'data':counter}).run(threadConn)
+			r.table(tableName).insert({'id':counter + 1, 'data':counter + 1}, durability='hard', upsert=False).run(threadConn)
 			counter += 1
 		except Exception, e:
 			returnChannel.put(e)
 		time.sleep(.01)
 	returnChannel.put(counter)
 
-stopSignal = Queue.Queue()
-returnChannel = Queue.Queue()
+def readTable(server, tableName, databaseName, stopSignal, returnChannel):
+	threadConn = r.connect(host=server.host, port=server.driver_port, db=databaseName)
+	counter = 0
+	while True:
+		try:
+			stopSignal.get_nowait()
+			break
+		except Queue.Empty: pass
+		try:
+			r.table(tableName).sample(1).run(threadConn)
+			counter += 1
+		except Exception, e:
+			returnChannel.put(e)
+		time.sleep(.01)
+	returnChannel.put(counter)
+
+# -- run the test
 
 # - start filling the table
 
-fillThread = threading.Thread(target=fillTable, args=(server, tableName, databaseName, stopSignal, returnChannel))
+fillStopSignal = Queue.Queue()
+fillReturnChannel = Queue.Queue()
+fillThread = threading.Thread(target=fillTable, args=(server, tableName, databaseName, fillStopSignal, fillReturnChannel))
 fillThread.daemon = True
 fillThread.start()
 time.sleep(1) # give it a moment to have something
+
+# - start reading the table
+
+readStopSignal = Queue.Queue()
+readReturnChannel = Queue.Queue()
+readThread = threading.Thread(target=readTable, args=(server, tableName, databaseName, readStopSignal, readReturnChannel))
+readThread.daemon = True
+readThread.start()
 
 # - perform the shard
 
@@ -68,36 +91,89 @@ admin.add_table_shard(tableName, '4')
 admin.wait_until_blueprint_satisfied(tableName, print_seconds=False)
 time.sleep(1) # another second to add more data
 
+# -- wind down the filler
+
+fillStopSignal.put(1)
+readStopSignal.put(1)
+time.sleep(1)
+
 # -- check for errors
 
-stopSignal.put(1)
-time.sleep(1)
-server.check_and_stop()
-recordsEntered = 0
-errorCounter = 0
+allPassed = True;
 uniqueErrors = {}
+
+# - collate the errors from filling
+
+recordsEntered = 0
+readErrorCounter = 0
 while True:
 	try:
-		returnValue = returnChannel.get_nowait()
+		returnValue = fillReturnChannel.get_nowait()
 		if isinstance(returnValue, Exception):
-			errorCounter += 1
-			if str(returnValue) not in uniqueErrors:
-				uniqueErrors[str(returnValue)] = 1
+			readErrorCounter += 1
+			errorString = 'while writing - %s' % str(returnValue)
+			if errorString not in uniqueErrors:
+				uniqueErrors[errorString] = 1
 			else:
-				uniqueErrors[str(returnValue)] += 1
+				uniqueErrors[errorString] += 1
 		else:
 			recordsEntered = returnValue
-				
 	except Queue.Empty: break
 
-if errorCounter != 0:
-	for errorMessage, errorCount in uniqueErrors.items():
-		print('%s x %s' % (errorCount, errorMessage))
-		print('Created %d records' % recordsEntered)
-	sys.exit(1)
+# - collate the errors from reading
 
-# -- TODO: check that everything made it to the database that we expected
+recordsRead = 0
+writeErrorCounter = 0
+while True:
+	try:
+		returnValue = readReturnChannel.get_nowait()
+		if isinstance(returnValue, Exception):
+			writeErrorCounter += 1
+			errorString = 'while reading - %s' % str(returnValue)
+			if errorString not in uniqueErrors:
+				uniqueErrors[errorString] = 1
+			else:
+				uniqueErrors[errorString] += 1
+		else:
+			recordsRead = returnValue
+	except Queue.Empty: break
+
+# - report on errors
+
+print('Created %d records, %d read' % (recordsEntered, recordsRead))
+
+if len(uniqueErrors.keys()) != 0:
+	allPassed = False
+	for errorMessage, errorCount in uniqueErrors.items():
+		sys.stderr.write('Failure: %s x %s\n' % (errorCount, errorMessage))
+
+# - make sure that our connection is still valid
+
+try:
+	r.db_list().run(connection)
+except rethinkdb.errors.RqlDriverError:
+	allPassed = False
+	sys.stderr.write('Failure: The database connnection went stale')
+	r.connect(host=server.host, port=server.driver_port)
+
+# - check that everything made it to the database that we expected
+
+actualRecordCount = r.table(tableName).count().run(connection)
+if actualRecordCount != recordsEntered:
+	sys.stderr.write('Failure: The count of records in the table (%d) does not match the number we added (%d)\n' % (actualRecordCount, recordsEntered))
+
+expectedSum = (actualRecordCount * (actualRecordCount + 1))/2
+actualSum = r.table(tableName).sum('data').run(connection)
+if expectedSum != actualSum:
+	sys.stderr.write('Failure: The sum of the data in the table (%d) does not match the number we expected (%d)\n' % (actualSum, expectedSum))
+
+# -- wind down the server
+
+server.check_and_stop()
 
 # --
 
-print('Test passed, created %d records' % recordsEntered)
+if allPassed is False:
+	sys.exit('Test failed!')
+
+print('Test passed')
