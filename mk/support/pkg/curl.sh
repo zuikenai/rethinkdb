@@ -17,3 +17,8 @@ pkg_install-include () {
 pkg_depends () {
     echo libidn zlib gnutls
 }
+
+
+pkg_link-flags () {
+    echo -Wl,-Bstatic `"$install_dir/bin/curl-config" --static-libs` -Wl,-Bdynamic
+}

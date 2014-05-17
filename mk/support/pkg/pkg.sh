@@ -144,6 +144,10 @@ pkg_depends_env () {
     done
 }
 
+pkg_link-flags () {
+    true
+}
+
 cross_build_env () {
     # Unsetting these variables will pick up the toolchain from PATH.
     # Assuming that cross-compilation is achieved by setting these variables,

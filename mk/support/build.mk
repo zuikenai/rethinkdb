@@ -88,12 +88,20 @@ clean-$2_$3:
 #  * The include directories for this package, because some packages cannot run the install
 #    and install-include rules in parallel
 #  * The `install.witness' file for each of the dependencies of the package
+# Some packages need to be linked with flags that can only be guessed after
+# the package has been installed.
 build-$2_% $(foreach target,$1,$(subst _$3/,_%/,$(target))) $(SUPPORT_BUILD_DIR)/$2_%/install.witness: \
   | $(SUPPORT_SRC_DIR)/$2_$3 $(filter $(SUPPORT_BUILD_DIR)/$2_$3/include, $(SUPPORT_INCLUDE_DIRS)) \
   $(foreach dep, $($2_DEPENDS), $(SUPPORT_BUILD_DIR)/$(dep)_$($(dep)_VERSION)/install.witness)
 	$$P BUILD $2_$3
 	$(PKG_RECURSIVE_MARKER)$$(PKG_SCRIPT) install $2 $$(call SUPPORT_LOG_REDIRECT, $$(SUPPORT_LOG_DIR)/$2_$3_install.log)
 	touch $(SUPPORT_BUILD_DIR)/$2_$3/install.witness
+
+$2_CUSTOM_LIBS = $$(shell $$(PKG_SCRIPT) link-flags $2)
+$2_LIB_NAME ?=
+ifneq (,$$($2_LIB_NAME))
+  $$($2_LIB_NAME)_LIBS := $$(if $$($2_CUSTOM_LIBS),$$($2_CUSTOM_LIBS),$$($$($2_LIB_NAME)_LIBS))
+endif
 
 endef
 
