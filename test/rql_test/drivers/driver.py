@@ -1,17 +1,28 @@
-from sys import path
-import sys
-import pdb
-import collections
-import types
-import re
+import collections, os, pytz, re, sys, types
 from datetime import datetime
-import pytz
-path.insert(0, '.')
-from test_util import shard_table
-path.insert(0, "../../drivers/python")
 
-from os import environ
-import rethinkdb as r
+# -- find and import test_util - TODO: replace with methods from common
+trialPath = os.path.realpath(os.path.dirname(__file__))
+while trialPath != os.path.sep:
+    if os.path.isfile(os.path.join(trialPath, 'test_util.py')):
+        stashedPath = sys.path
+        sys.path.insert(0, trialPath)
+        import test_util
+        sys.path = stashedPath
+        break
+    trialPath = os.path.dirname(trialPath)
+
+# -- find and import common
+trialPath = os.path.realpath(os.path.dirname(__file__))
+while trialPath != os.path.sep:
+    if os.path.isfile(os.path.join(trialPath, 'common', 'utils.py')):
+        stashedPath = sys.path
+        sys.path.insert(0, os.path.join(trialPath, 'common'))
+        import utils
+        sys.path = stashedPath
+        break
+    trialPath = os.path.dirname(trialPath)
+utils.import_pyton_driver()
 
 # JSPORT = int(sys.argv[1])
 CPPPORT = int(sys.argv[2])
@@ -294,7 +305,7 @@ def uuid():
     return Uuid()
 
 def shard(table_name):
-    shard_table(CLUSTER_PORT, BUILD, table_name)
+    test_util.shard_table(CLUSTER_PORT, BUILD, table_name)
 
 def int_cmp(i):
     return Int(i)
