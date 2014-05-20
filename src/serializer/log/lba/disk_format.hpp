@@ -110,7 +110,7 @@ struct lba_shard_metablock_t {
     int64_t lba_superblock_offset;
     int32_t lba_superblock_entries_count;
     int32_t padding2;
-};
+} __attribute__((packed));
 
 struct lba_metablock_mixin_t {
     lba_shard_metablock_t shards[LBA_SHARD_FACTOR];

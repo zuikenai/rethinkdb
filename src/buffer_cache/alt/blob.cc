@@ -30,7 +30,7 @@ blob_acq_t::~blob_acq_t() {
 namespace blob {
 
 int big_size_offset(int maxreflen) {
-    return maxreflen <= 255 ? 1 : 2;
+    return maxreflen <= 255 ? 4 : 4;
 }
 
 int big_offset_offset(int maxreflen) {
