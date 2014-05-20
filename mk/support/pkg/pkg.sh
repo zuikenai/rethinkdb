@@ -145,7 +145,7 @@ pkg_depends_env () {
 }
 
 pkg_link-flags () {
-    true
+    echo $install_dir/lib/lib$pkg.a
 }
 
 cross_build_env () {

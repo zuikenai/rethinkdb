@@ -97,10 +97,11 @@ build-$2_% $(foreach target,$1,$(subst _$3/,_%/,$(target))) $(SUPPORT_BUILD_DIR)
 	$(PKG_RECURSIVE_MARKER)$$(PKG_SCRIPT) install $2 $$(call SUPPORT_LOG_REDIRECT, $$(SUPPORT_LOG_DIR)/$2_$3_install.log)
 	touch $(SUPPORT_BUILD_DIR)/$2_$3/install.witness
 
-$2_CUSTOM_LIBS = $$(shell $$(PKG_SCRIPT) link-flags $2)
+$2_CUSTOM_LIBS = $$(shell $$(PKG_SCRIPT) link-flags $2 )
 $2_LIB_NAME ?=
-ifneq (,$$($2_LIB_NAME))
-  $$($2_LIB_NAME)_LIBS := $$(if $$($2_CUSTOM_LIBS),$$($2_CUSTOM_LIBS),$$($$($2_LIB_NAME)_LIBS))
+#ifneq (,$$($2_LIB_NAME))
+ifeq (curl,$$($2_LIB_NAME))
+  $$($2_LIB_NAME)_LIBS = $$(if $$($2_CUSTOM_LIBS),$$($2_CUSTOM_LIBS),$$($$($2_LIB_NAME)_LIBS))
 endif
 
 endef
