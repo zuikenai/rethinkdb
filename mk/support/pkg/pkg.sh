@@ -145,7 +145,11 @@ pkg_depends_env () {
 }
 
 pkg_link-flags () {
-    echo $install_dir/lib/lib$pkg.a
+    local lib="$install_dir/lib/lib$(lc $1).a"
+    if [[ ! -e "$lib" ]]; then
+        echo "pkg.sh: warning: static library not found: $lib" >&2
+    fi
+    echo "$lib"
 }
 
 cross_build_env () {
@@ -177,7 +181,8 @@ niceabspath () {
     if [[ -d "$1" ]]; then
         (cd "$1" && pwd) && return
     fi
-    local dir=$(dirname "$1")
+    local dir
+    dir=$(dirname "$1")
     if [[ -d "$dir" ]] && dir=$(cd "$dir" && pwd); then
         echo "$dir/$(basename "$1")" | sed 's|^//|/|'
         return
@@ -245,6 +250,9 @@ geturl () {
         ${CURL:-curl} --silent --location "$@"
     fi
 }
+
+# lowercase
+lc () { echo "$*" | tr '[:upper:]' '[:lower:]'; }
 
 pkg_script=$(niceabspath "$0")
 
