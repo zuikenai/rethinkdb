@@ -6,6 +6,7 @@ import errno
 import socket
 import struct
 import json
+import threading
 from os import environ
 
 from rethinkdb import ql2_pb2 as p
@@ -86,8 +87,11 @@ class Cursor(object):
             self.conn._end_cursor(self)
 
 class Connection(object):
+    thread_data = None
+    
     def __init__(self, host, port, db, auth_key, timeout):
-        self.socket = None
+        self.thread_data = threading.local()
+        self.thread_data.socket = None
         self.host = host
         self.next_token = 1
         self.db = db
@@ -116,7 +120,7 @@ class Connection(object):
         self.close(noreply_wait)
 
         try:
-            self.socket = socket.create_connection((self.host, self.port), self.timeout)
+            self.thread_data.socket = socket.create_connection((self.host, self.port), self.timeout)
         except Exception as err:
             raise RqlDriverError("Could not connect to %s:%s. Error: %s" % (self.host, self.port, err))
 
@@ -139,18 +143,18 @@ class Connection(object):
         # Connection is now initialized
 
         # Clear timeout so we don't timeout on long running queries
-        self.socket.settimeout(None)
+        self.thread_data.socket.settimeout(None)
 
     def close(self, noreply_wait=True):
-        if self.socket is not None:
+        if hasattr(self.thread_data, 'socket') and self.thread_data.socket is not None:
             if noreply_wait:
                 self.noreply_wait()
             try:
-                self.socket.shutdown(socket.SHUT_RDWR)
+                self.thread_data.socket.shutdown(socket.SHUT_RDWR)
             except socket.error:
                 pass
-            self.socket.close()
-            self.socket = None
+            self.thread_data.socket.close()
+            self.thread_data.socket = None
         for (token, cursor) in self.cursor_cache.iteritems():
             cursor.end_flag = True
             cursor.connection_closed = True
@@ -176,7 +180,7 @@ class Connection(object):
     def _sock_recv(self, length):
         while True:
             try:
-                return self.socket.recv(length)
+                return self.thread_data.socket.recv(length)
             except IOError as e:
                 if e.errno != errno.EINTR:
                     raise
@@ -184,7 +188,7 @@ class Connection(object):
     def _sock_sendall(self, data):
         while True:
             try:
-                return self.socket.sendall(data)
+                return self.thread_data.socket.sendall(data)
             except IOError as e:
                 if e.errno != errno.EINTR:
                     raise
@@ -287,7 +291,9 @@ class Connection(object):
 
     def _send_query(self, query, opts={}, async=False):
         # Error if this connection has closed
-        if self.socket is None:
+        if not hasattr(self.thread_data, 'socket'):
+            self.reconnect(noreply_wait=False)
+        if self.thread_data.socket is None:
             raise RqlDriverError("Connection is closed.")
 
         query.accepts_r_json = True
