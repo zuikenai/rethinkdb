@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# test-issue-url: https://github.com/rethinkdb/rethinkdb/issues/2427
+# test-description: python driver connections work in multiple threads simultaneously
+
+import os, signal, sys, threading, time
+
+# import our testing common
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
+import driver, utils
+
+utils.import_pyton_driver()
+
+server = driver.Process()
+connection = r.connect(host=server.host, port=server.driver_port)
+
+masterStartTime = time.time()
+returnCode = 0
+
+class bob(threading.Thread):
+    connection = None
+    stopSignal = False
+    daemon = True
+    def __init__(self, connection, name=None):
+        super(bob, self).__init__(name=name)
+        self.connection = connection
+        self.start()
+    def run(self):
+        global returnCode
+        
+        while self.stopSignal is False:
+            startTime = time.time()
+            try:
+                r.db_list().run(self.connection)
+            except Exception, e:
+                sys.stderr.write('Failure at %f-%f: %s\n' % (startTime - masterStartTime, time.time() - masterStartTime, str(e)))
+                returnCode = 1
+            if self.stopSignal is False:
+                time.sleep(.1)
+        print('%s has ended' % self.name)
+        
+    def stop(self):
+        global returnCode
+        
+        startTime = time.time()
+        self.stopSignal = True
+        self.join(timeout=1)
+        if self.isAlive() is True:
+            returnCode = 1
+            sys.stderr.write('Failure at %f-%f: join on %s failed\n' % (startTime - masterStartTime, time.time() - masterStartTime, self.name))
+
+alpha = bob(connection=connection, name='alpha')
+beta = bob(connection=connection, name='beta')
+time.sleep(1)
+
+print('Stopping at %f' % (time.time() - masterStartTime))
+alpha.stop()
+beta.stop()
+
+# the following hangs in bad cases, so we need to be able to kill it
+
+def alarmHandler(signum, frame):
+    sys.exit('Failure: r.db_list hung us')
+signal.signal(signal.SIGALRM, alarmHandler)
+signal.alarm(2)
+r.db_list().run(connection)
+signal.alarm(0)
+sys.exit(returnCode)
