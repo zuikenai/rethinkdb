@@ -3,7 +3,7 @@
 # test-issue-url: https://github.com/rethinkdb/rethinkdb/issues/1774
 # test-description: reads and writes can still proceed while a table is sharded
 
-import os, sys, threading, time, Queue
+import os, sys, time
 
 # import our testing common
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'common')))
