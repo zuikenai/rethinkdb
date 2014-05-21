@@ -44,12 +44,12 @@ class fillTable(utils.performContinuousAction):
 
 # - start filling the table
 
-fillTableProcess = fillTable(host=server.host, port=server.driver_port)
+fillTableProcess = fillTable(connection=r.connect(host=server.host, port=server.driver_port))
 time.sleep(3) # give it a moment to have something
 
 # - start reading the table
 
-readTableProcess = utils.performContinuousAction(host=server.host, port=server.driver_port, action=r.table(tableName).sample(1))
+readTableProcess = utils.performContinuousAction(connection=r.connect(host=server.host, port=server.driver_port), action=r.table(tableName).sample(1))
 
 # - perform the shard
 
@@ -87,7 +87,7 @@ try:
 	print('Success: conection is still valid')
 except r.errors.RqlDriverError:
 	allPassed = False
-	sys.stderr.write('Failure: The database connnection went stale')
+	sys.stderr.write('Failure: The database connnection went stale\n')
 	r.connect(host=server.host, port=server.driver_port)
 
 # - everything made it to the database that we expected
