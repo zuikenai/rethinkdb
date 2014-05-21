@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, subprocess, sys, tempfile, time
+import os, subprocess, sys, tempfile, threading, time
 
 import test_exceptions
 
@@ -162,7 +162,6 @@ class performContinuousAction(threading.Thread):
 	
 	daemon = True
 	stopSignal = False
-	returnChannel = None
 	
 	def __init__(self, host, port, action=None, autoStart=True, delay=.01, **kwargs):
 		super(performContinuousAction, self).__init__()
@@ -173,8 +172,6 @@ class performContinuousAction(threading.Thread):
 		self.kwargs = kwargs
 		
 		self.recordedErrors = {}
-		
-		self.returnChannel = Queue.Queue()
 		
 		if autoStart is True:
 			self.start()
@@ -197,7 +194,6 @@ class performContinuousAction(threading.Thread):
 					self.recordedErrors[errorString] += 1
 				self.errorCounter += 1
 			time.sleep(self.delay)
-		self.returnChannel.put(1)
 	
 	def stop(self):
 		self.stopSignal = True
