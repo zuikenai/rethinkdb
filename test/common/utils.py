@@ -158,3 +158,63 @@ def import_pyton_driver(importName='r', targetDir=None, buildDriver=True):
         return driverModule
     finally:
         sys.path = keptPaths
+
+class performContinuousAction(threading.Thread):
+	'''Use to continuously perform an action on a table. Either provide an action (reql command without run) on instantiation, or subclass and override runAction'''
+	
+	action = None
+	delay = None
+	
+	connection = None
+	sucessCounter = 0
+	errorCounter = 0
+	recordedErrors = None # error string => count
+	
+	daemon = True
+	stopSignal = False
+	returnChannel = None
+	
+	def __init__(self, host, port, action=None, autoStart=True, delay=.01, **kwargs):
+		super(performContinuousAction, self).__init__()
+		
+		self.connection = r.connect(host=host, port=port)
+		self.action = action
+		self.delay = delay
+		self.kwargs = kwargs
+		
+		self.recordedErrors = {}
+		
+		self.returnChannel = Queue.Queue()
+		
+		if autoStart is True:
+			self.start()
+	
+	def runAction(self):
+		self.action.run(self.connection)
+	
+	def run(self):
+		while True:
+			if self.stopSignal is True:
+				break
+			try:
+				self.runAction()
+				self.sucessCounter += 1
+			except Exception, e:
+				errorString = str(e)
+				if errorString not in self.recordedErrors:
+					self.recordedErrors[errorString] = 1
+				else:
+					self.recordedErrors[errorString] += 1
+				self.errorCounter += 1
+			time.sleep(self.delay)
+		self.returnChannel.put(1)
+	
+	def stop(self):
+		self.stopSignal = True
+		self.join()
+	
+	def errorSummary(self):
+		if self.isAlive():
+			self.stop()
+		
+		return self.recordedErrors
