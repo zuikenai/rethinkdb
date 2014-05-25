@@ -2,6 +2,7 @@ from os.path import abspath, join, dirname, pardir
 from test_framework import Test, TestTree
 from subprocess import check_output, check_call
 from collections import defaultdict
+from requirements import BUILD_FILE
 
 class AllUnitTests(Test):
     def __init__(self, filters=[]):
@@ -14,7 +15,7 @@ class AllUnitTests(Test):
         return AllUnitTests(self.filters + [filter])
 
     def configure(self, conf):
-        unit_executable = join(conf['BUILD_DIR'], "rethinkdb-unittest")
+        unit_executable = conf.require(BUILD_FILE("rethinkdb-unittest"))
         output = check_output([unit_executable, "--gtest_list_tests"])
         key = None
         dict = defaultdict(list)
