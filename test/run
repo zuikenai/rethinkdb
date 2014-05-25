@@ -52,37 +52,18 @@ def load_groups():
             full_path = os.path.join(dirpath, filename)
             groups[base_name] = group_from_file(full_path)
 
-# Take the requirements for the tests, and build a configuration
-def configure(reqs, args):
-    src_root = abspath(join(dirname(__file__), pardir))
-    if args.build_dir:
-        build_dir = args.build_dir
-    else:
-        build_dir = None
-        build_dir_mtime = 0
-        build_root_dir = join(src_root, 'build')
-        for subdir in os.listdir(build_root_dir):
-            path = join(build_root_dir, subdir)
-            if os.path.isdir(path) and (subdir.startswith("debug") or subdir.startswith("release")):
-                mtime = os.path.getmtime(path)
-                if mtime > build_dir_mtime:
-                    build_dir_mtime = mtime
-                    build_dir = path
-        if not build_dir:
-            raise Exception('Could not find a build directory in %s' % (build_root_dir,))
-    return dict(
-        SRC_ROOT = src_root,
-        BUILD_DIR = build_dir)
-
 argparser = argparse.ArgumentParser(parents=[test_framework.argparser])
 argparser.add_argument('-b', '--build-dir', default=None,
                        help='The rethinkdb build directory (Default: the latest one)')
+argparser.add_argument('-M', '--make', default=False, action='store_true',
+                       help='Build missing dependencies')
 
 
 if __name__ == '__main__':
     args = argparser.parse_args(sys.argv[1:])
     load_tests()
     load_groups()
-    ret = run(tests, groups, lambda reqs: configure(reqs, args), args)
+    ret = run(tests, groups, args)
     if ret is not None:
         sys.exit(1)
+

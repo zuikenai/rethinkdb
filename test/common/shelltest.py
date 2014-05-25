@@ -6,6 +6,7 @@ from os import environ
 from sys import stderr
 
 from test_framework import Test
+from requirements import SRC_ROOT, BUILD_DIR
 
 class ShellCommandTest(Test):
     def __init__(self, command, env={}, **kwargs):
@@ -16,8 +17,8 @@ class ShellCommandTest(Test):
     def configure(self, conf):
         env = self.env.copy()
         env.update({
-            'RETHINKDB': abspath(join(conf['SRC_ROOT'])),
-            'RETHINKDB_BUILD_DIR': abspath(conf['BUILD_DIR']),
+            'RETHINKDB': abspath(join(conf.require(SRC_ROOT))),
+            'RETHINKDB_BUILD_DIR': abspath(conf.require(BUILD_DIR)),
             'PYTHONUNBUFFERED': 'true',
         })
         return ShellCommandTest(self.command, env)

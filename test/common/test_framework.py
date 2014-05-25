@@ -72,11 +72,11 @@ argparser.add_argument('-n', '--dry-run', action='store_true',
                        help='Do not run any tests')
 
 
-def run(all_tests, all_groups, configure, args):
+def run(all_tests, all_groups, args):
     """ The main entry point
     all_tests: A tree of all the tests
     all_groups: A dict of named groups
-    configure: a function that takes a list of requirements and returns a configuration
+    config: a dict of the initial configuration
     args: arguments parsed using argparser
     """
     if args.groups and not args.list:
@@ -87,12 +87,10 @@ def run(all_tests, all_groups, configure, args):
         old_tests_mode(all_tests, args.load, filter, args.verbose, args.list, args.only_failed, args.tree, args.examine, args.html_report)
         return
     tests = all_tests.filter(filter)
-    reqs = tests.requirements()
-    conf = configure(reqs)
-    if args.print_config:
-        for k in conf:
-            print(k, '=', conf[k])
+    conf = Configuration(args)
     tests = tests.configure(conf)
+    if args.print_config:
+        conf.dump()
     filter.check_use()
     if args.list:
         list_tests_mode(tests, args.verbose, args.groups and all_groups)
@@ -818,9 +816,6 @@ class Test(object):
     def timeout(self):
         return self._timeout
 
-    def requirements(self):
-        return []
-
     def configure(self, conf):
         return self
 
@@ -878,11 +873,6 @@ class TestTree(Test):
                     yield (name + '.' + subname, test)
                 else:
                     yield name, test
-
-    def requirements(self):
-        for test in self.tests.values():
-            for req in test.requirements():
-                yield req
 
     def configure(self, conf):
         return TestTree({test: self.tests[test].configure(conf) for test in self.tests})
@@ -963,3 +953,49 @@ def group_from_file(path):
             if line:
                 patterns += line.split()
     return patterns
+
+# A cache of test requirements
+class Configuration(object):
+    def __init__(self, args):
+        self.args = args
+        self.config = { }
+
+    def require(self, req):
+        if req in self.config:
+            return self.config[req]
+        res = req(self)
+        self.config[req] = res
+        return res
+
+    def dump(self):
+        for req, res in self.config.items():
+            print(req, ':', res)
+
+    def arg(self, arg):
+        return getattr(self.args, arg)
+
+# A decorator for declaring requirements
+def requirement(fun):
+    return lambda *args, **kwargs: Requirement(fun, args, kwargs)
+
+# A wrapper class for requirements
+class Requirement(object):
+    def __init__(self, fun, args, kwargs):
+        self.fun = fun
+        self.args = args
+        self.kwargs = kwargs
+
+    def __hash__(self):
+        return hash(self.fun) | hash(self.args) | hash(tuple(sorted(self.kwargs.items())))
+
+    def __cmp__(self, other):
+        return cmp([self.fun, self.args, self.kwargs], [other.fun, other.args, other.kwargs])
+
+    def __call__(self, conf):
+        return self.fun(conf, *self.args, **self.kwargs)
+
+    def __repr__(self):
+        return (self.fun.__name__ + '('
+                + ', '.join(repr(x) for x in self.args)
+                + ', '.join(repr(x) + '=' + repr(y) for x, y in self.kwargs.items())
+                + ')')
