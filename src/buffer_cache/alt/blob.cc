@@ -91,19 +91,23 @@ char *small_buffer(char *ref, int maxreflen) {
 }
 
 int64_t big_size(const char *ref, int maxreflen) {
-    return *reinterpret_cast<const int64_t *>(ref + big_size_offset(maxreflen));
+    int64_t tmp;
+    memcpy(&tmp, (ref + big_size_offset(maxreflen)), sizeof(tmp));
+    return tmp;
 }
 
 void set_big_size(char *ref, int maxreflen, int64_t new_size) {
-    *reinterpret_cast<int64_t *>(ref + big_size_offset(maxreflen)) = new_size;
+    memcpy(ref + big_size_offset(maxreflen), &new_size, sizeof(new_size));
 }
 
 void set_big_offset(char *ref, int maxreflen, int64_t new_offset) {
-    *reinterpret_cast<int64_t *>(ref + big_offset_offset(maxreflen)) = new_offset;
+    memcpy(ref + big_offset_offset(maxreflen), &new_offset, sizeof(new_offset));
 }
 
 int64_t big_offset(const char *ref, int maxreflen) {
-    return *reinterpret_cast<const int64_t *>(ref + big_offset_offset(maxreflen));
+    int64_t tmp;
+    memcpy(&tmp, ref + big_offset_offset(maxreflen), sizeof(tmp));
+    return tmp;
 }
 
 const block_id_t *block_ids(const char *ref, int maxreflen) {
