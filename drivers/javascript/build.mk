@@ -15,7 +15,7 @@ JS_PKG_DIR := $(PACKAGES_DIR)/js
 
 $(PROTO_MODULE): $(PROTO_FILE) $(JS_BUILD_DIR)/.
 	$P convert_protofile
-	$(JS_SRC_DIR)/../convert_protofile --language ruby --input-file $(PROTO_FILE) --output-file $(PROTO_MODULE)
+	$(JS_SRC_DIR)/../convert_protofile --language javascript --input-file $(PROTO_FILE) --output-file $(PROTO_MODULE)
 
 # Must be synced with the list in package.json
 JS_PKG_FILES := $(DRIVER_COMPILED_COFFEE) $(JS_SRC_DIR)/README.md $(PROTO_MODULE) $(JS_SRC_DIR)/package.json
