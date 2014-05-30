@@ -6,8 +6,6 @@
 
 import os, re, sys
 
-supportedLanguages = ["javascript", "python", "ruby"]
-
 languageDefs = {
 	"python": {
 		"initialIndentLevel": 0,
@@ -47,7 +45,7 @@ languageDefs = {
 def convertFile(inputFile, outputFile, language):
 	assert(inputFile is not None and hasattr(inputFile, 'read'))
 	assert(outputFile is not None and hasattr(outputFile, 'write'))
-	assert(language in supportedLanguages)
+	assert(language in languageDefs)
 	
 	messageRegex = re.compile('\s*(message|enum) (?P<name>\w+) \{')
 	valueRegex = re.compile('\s*(?P<name>\w+)\s*=\s*(?P<value>\w+)')
@@ -118,7 +116,7 @@ if __name__ == '__main__':
 	# -- parse input
 	
 	parser = optparse.OptionParser()
-	parser.add_option("-l", "--language", dest="language", help="write output for language", metavar="LANG", choices=supportedLanguages, default=None)
+	parser.add_option("-l", "--language", dest="language", help="write output for language", metavar="LANG", choices=languageDefs.keys(), default=None)
 	parser.add_option("-i", "--input-file", dest="inputFile", help="read from FILE (default STDIN)", metavar="FILE", default=None)
 	parser.add_option("-o", "--output-file", dest="outputFile", help="write to FILE (default STDOUT)", metavar="FILE", default=None)
 	
