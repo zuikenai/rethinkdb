@@ -659,7 +659,7 @@ class Datum(RqlQuery):
         return repr(self.data)
 
 class MakeArray(RqlQuery):
-    tt = p.Term.MAKE_ARRAY
+    tt = p.Term.TermType.MAKE_ARRAY
 
     def compose(self, args, optargs):
         return T('[', T(*args, intsp=', '),']')
@@ -668,7 +668,7 @@ class MakeArray(RqlQuery):
         return FunCall(self, *args)
 
 class MakeObj(RqlQuery):
-    tt = p.Term.MAKE_OBJ
+    tt = p.Term.TermType.MAKE_OBJ
 
     # We cannot inherit from RqlQuery because of potential conflicts with
     # the `self` parameter. This is not a problem for other RqlQuery sub-
@@ -693,67 +693,67 @@ class MakeObj(RqlQuery):
         return T('r.expr({', T(*[T(repr(k), ': ', v) for (k,v) in optargs.iteritems()], intsp=', '), '})')
 
 class Var(RqlQuery):
-    tt = p.Term.VAR
+    tt = p.Term.TermType.VAR
 
     def compose(self, args, optargs):
         return 'var_'+args[0]
 
 class JavaScript(RqlTopLevelQuery):
-    tt = p.Term.JAVASCRIPT
+    tt = p.Term.TermType.JAVASCRIPT
     st = "js"
 
 class Http(RqlTopLevelQuery):
-    tt = p.Term.HTTP
+    tt = p.Term.TermType.HTTP
     st = "http"
 
 class UserError(RqlTopLevelQuery):
-    tt = p.Term.ERROR
+    tt = p.Term.TermType.ERROR
     st = "error"
 
 class Random(RqlTopLevelQuery):
-    tt = p.Term.RANDOM
+    tt = p.Term.TermType.RANDOM
     st = "random"
 
 class Changes(RqlMethodQuery):
-    tt = p.Term.CHANGES
+    tt = p.Term.TermType.CHANGES
     st = "changes"
 
 class Default(RqlMethodQuery):
-    tt = p.Term.DEFAULT
+    tt = p.Term.TermType.DEFAULT
     st = "default"
 
 class ImplicitVar(RqlQuery):
-    tt = p.Term.IMPLICIT_VAR
+    tt = p.Term.TermType.IMPLICIT_VAR
 
     def compose(self, args, optargs):
         return 'r.row'
 
 class Eq(RqlBiCompareOperQuery):
-    tt = p.Term.EQ
+    tt = p.Term.TermType.EQ
     st = "=="
 
 class Ne(RqlBiCompareOperQuery):
-    tt = p.Term.NE
+    tt = p.Term.TermType.NE
     st = "!="
 
 class Lt(RqlBiCompareOperQuery):
-    tt = p.Term.LT
+    tt = p.Term.TermType.LT
     st = "<"
 
 class Le(RqlBiCompareOperQuery):
-    tt = p.Term.LE
+    tt = p.Term.TermType.LE
     st = "<="
 
 class Gt(RqlBiCompareOperQuery):
-    tt = p.Term.GT
+    tt = p.Term.TermType.GT
     st = ">"
 
 class Ge(RqlBiCompareOperQuery):
-    tt = p.Term.GE
+    tt = p.Term.TermType.GE
     st = ">="
 
 class Not(RqlQuery):
-    tt = p.Term.NOT
+    tt = p.Term.TermType.NOT
 
     def compose(self, args, optargs):
         if isinstance(self.args[0], Datum):
@@ -761,55 +761,55 @@ class Not(RqlQuery):
         return T('(~', args[0], ')')
 
 class Add(RqlBiOperQuery):
-    tt = p.Term.ADD
+    tt = p.Term.TermType.ADD
     st = "+"
 
 class Sub(RqlBiOperQuery):
-    tt = p.Term.SUB
+    tt = p.Term.TermType.SUB
     st = "-"
 
 class Mul(RqlBiOperQuery):
-    tt = p.Term.MUL
+    tt = p.Term.TermType.MUL
     st = "*"
 
 class Div(RqlBiOperQuery):
-    tt = p.Term.DIV
+    tt = p.Term.TermType.DIV
     st = "/"
 
 class Mod(RqlBiOperQuery):
-    tt = p.Term.MOD
+    tt = p.Term.TermType.MOD
     st = "%"
 
 class Append(RqlMethodQuery):
-    tt = p.Term.APPEND
+    tt = p.Term.TermType.APPEND
     st = "append"
 
 class Prepend(RqlMethodQuery):
-    tt = p.Term.PREPEND
+    tt = p.Term.TermType.PREPEND
     st = "prepend"
 
 class Difference(RqlMethodQuery):
-    tt = p.Term.DIFFERENCE
+    tt = p.Term.TermType.DIFFERENCE
     st = "difference"
 
 class SetInsert(RqlMethodQuery):
-    tt = p.Term.SET_INSERT
+    tt = p.Term.TermType.SET_INSERT
     st = "set_insert"
 
 class SetUnion(RqlMethodQuery):
-    tt = p.Term.SET_UNION
+    tt = p.Term.TermType.SET_UNION
     st = "set_union"
 
 class SetIntersection(RqlMethodQuery):
-    tt = p.Term.SET_INTERSECTION
+    tt = p.Term.TermType.SET_INTERSECTION
     st = "set_intersection"
 
 class SetDifference(RqlMethodQuery):
-    tt = p.Term.SET_DIFFERENCE
+    tt = p.Term.TermType.SET_DIFFERENCE
     st = "set_difference"
 
 class Slice(RqlBracketQuery):
-    tt = p.Term.SLICE
+    tt = p.Term.TermType.SLICE
     st = 'slice'
 
     # Slice has a special bracket syntax, implemented here
@@ -822,55 +822,55 @@ class Slice(RqlBracketQuery):
             return RqlBracketQuery.compose(self, args, optargs)
 
 class Skip(RqlMethodQuery):
-    tt = p.Term.SKIP
+    tt = p.Term.TermType.SKIP
     st = 'skip'
 
 class Limit(RqlMethodQuery):
-    tt = p.Term.LIMIT
+    tt = p.Term.TermType.LIMIT
     st = 'limit'
 
 class GetField(RqlBracketQuery):
-    tt = p.Term.GET_FIELD
+    tt = p.Term.TermType.GET_FIELD
     st = 'get_field'
 
 class Contains(RqlMethodQuery):
-    tt = p.Term.CONTAINS
+    tt = p.Term.TermType.CONTAINS
     st = 'contains'
 
 class HasFields(RqlMethodQuery):
-    tt = p.Term.HAS_FIELDS
+    tt = p.Term.TermType.HAS_FIELDS
     st = 'has_fields'
 
 class WithFields(RqlMethodQuery):
-    tt = p.Term.WITH_FIELDS
+    tt = p.Term.TermType.WITH_FIELDS
     st = 'with_fields'
 
 class Keys(RqlMethodQuery):
-    tt = p.Term.KEYS
+    tt = p.Term.TermType.KEYS
     st = 'keys'
 
 class Object(RqlMethodQuery):
-    tt = p.Term.OBJECT
+    tt = p.Term.TermType.OBJECT
     st = 'object'
 
 class Pluck(RqlMethodQuery):
-    tt = p.Term.PLUCK
+    tt = p.Term.TermType.PLUCK
     st = 'pluck'
 
 class Without(RqlMethodQuery):
-    tt = p.Term.WITHOUT
+    tt = p.Term.TermType.WITHOUT
     st = 'without'
 
 class Merge(RqlMethodQuery):
-    tt = p.Term.MERGE
+    tt = p.Term.TermType.MERGE
     st = 'merge'
 
 class Between(RqlMethodQuery):
-    tt = p.Term.BETWEEN
+    tt = p.Term.TermType.BETWEEN
     st = 'between'
 
 class DB(RqlTopLevelQuery):
-    tt = p.Term.DB
+    tt = p.Term.TermType.DB
     st = 'db'
 
     def table_list(self, *args):
@@ -890,7 +890,7 @@ class DB(RqlTopLevelQuery):
         return Table(self, *args, **kwargs)
 
 class FunCall(RqlQuery):
-    tt = p.Term.FUNCALL
+    tt = p.Term.TermType.FUNCALL
 
     # This object should be constructed with arguments first, and the function itself as
     # the last parameter.  This makes it easier for the places where this object is
@@ -912,7 +912,7 @@ class FunCall(RqlQuery):
         return T(args[1], '.do(', args[0], ')')
 
 class Table(RqlQuery):
-    tt = p.Term.TABLE
+    tt = p.Term.TermType.TABLE
     st = 'table'
 
     def insert(self, *args, **kwargs):
@@ -955,321 +955,321 @@ class Table(RqlQuery):
             return T('r.table(', T(*(args), intsp=', '), ')')
 
 class Get(RqlMethodQuery):
-    tt = p.Term.GET
+    tt = p.Term.TermType.GET
     st = 'get'
 
 class GetAll(RqlMethodQuery):
-    tt = p.Term.GET_ALL
+    tt = p.Term.TermType.GET_ALL
     st = 'get_all'
 
 class Reduce(RqlMethodQuery):
-    tt = p.Term.REDUCE
+    tt = p.Term.TermType.REDUCE
     st = 'reduce'
 
 class Sum(RqlMethodQuery):
-    tt = p.Term.SUM
+    tt = p.Term.TermType.SUM
     st = 'sum'
 
 class Avg(RqlMethodQuery):
-    tt = p.Term.AVG
+    tt = p.Term.TermType.AVG
     st = 'avg'
 
 class Min(RqlMethodQuery):
-    tt = p.Term.MIN
+    tt = p.Term.TermType.MIN
     st = 'min'
 
 class Max(RqlMethodQuery):
-    tt = p.Term.MAX
+    tt = p.Term.TermType.MAX
     st = 'max'
 
 class Map(RqlMethodQuery):
-    tt = p.Term.MAP
+    tt = p.Term.TermType.MAP
     st = 'map'
 
 class Filter(RqlMethodQuery):
-    tt = p.Term.FILTER
+    tt = p.Term.TermType.FILTER
     st = 'filter'
 
 class ConcatMap(RqlMethodQuery):
-    tt = p.Term.CONCATMAP
+    tt = p.Term.TermType.CONCATMAP
     st = 'concat_map'
 
 class OrderBy(RqlMethodQuery):
-    tt = p.Term.ORDERBY
+    tt = p.Term.TermType.ORDERBY
     st = 'order_by'
 
 class Distinct(RqlMethodQuery):
-    tt = p.Term.DISTINCT
+    tt = p.Term.TermType.DISTINCT
     st = 'distinct'
 
 class Count(RqlMethodQuery):
-    tt = p.Term.COUNT
+    tt = p.Term.TermType.COUNT
     st = 'count'
 
 class Union(RqlMethodQuery):
-    tt = p.Term.UNION
+    tt = p.Term.TermType.UNION
     st = 'union'
 
 class Nth(RqlBracketQuery):
-    tt = p.Term.NTH
+    tt = p.Term.TermType.NTH
     st = 'nth'
 
 class Match(RqlMethodQuery):
-    tt = p.Term.MATCH
+    tt = p.Term.TermType.MATCH
     st = 'match'
 
 class Split(RqlMethodQuery):
-    tt = p.Term.SPLIT
+    tt = p.Term.TermType.SPLIT
     st = 'split'
 
 class Upcase(RqlMethodQuery):
-    tt = p.Term.UPCASE
+    tt = p.Term.TermType.UPCASE
     st = 'upcase'
 
 class Downcase(RqlMethodQuery):
-    tt = p.Term.DOWNCASE
+    tt = p.Term.TermType.DOWNCASE
     st = 'downcase'
 
 class IndexesOf(RqlMethodQuery):
-    tt = p.Term.INDEXES_OF
+    tt = p.Term.TermType.INDEXES_OF
     st = 'indexes_of'
 
 class IsEmpty(RqlMethodQuery):
-    tt = p.Term.IS_EMPTY
+    tt = p.Term.TermType.IS_EMPTY
     st = 'is_empty'
 
 class Group(RqlMethodQuery):
-    tt = p.Term.GROUP
+    tt = p.Term.TermType.GROUP
     st = 'group'
 
 class InnerJoin(RqlMethodQuery):
-    tt = p.Term.INNER_JOIN
+    tt = p.Term.TermType.INNER_JOIN
     st = 'inner_join'
 
 class OuterJoin(RqlMethodQuery):
-    tt = p.Term.OUTER_JOIN
+    tt = p.Term.TermType.OUTER_JOIN
     st = 'outer_join'
 
 class EqJoin(RqlMethodQuery):
-    tt = p.Term.EQ_JOIN
+    tt = p.Term.TermType.EQ_JOIN
     st = 'eq_join'
 
 class Zip(RqlMethodQuery):
-    tt = p.Term.ZIP
+    tt = p.Term.TermType.ZIP
     st = 'zip'
 
 class CoerceTo(RqlMethodQuery):
-    tt = p.Term.COERCE_TO
+    tt = p.Term.TermType.COERCE_TO
     st = 'coerce_to'
 
 class Ungroup(RqlMethodQuery):
-    tt = p.Term.UNGROUP
+    tt = p.Term.TermType.UNGROUP
     st = 'ungroup'
 
 class TypeOf(RqlMethodQuery):
-    tt = p.Term.TYPEOF
+    tt = p.Term.TermType.TYPEOF
     st = 'type_of'
 
 class Update(RqlMethodQuery):
-    tt = p.Term.UPDATE
+    tt = p.Term.TermType.UPDATE
     st = 'update'
 
 class Delete(RqlMethodQuery):
-    tt = p.Term.DELETE
+    tt = p.Term.TermType.DELETE
     st = 'delete'
 
 class Replace(RqlMethodQuery):
-    tt = p.Term.REPLACE
+    tt = p.Term.TermType.REPLACE
     st = 'replace'
 
 class Insert(RqlMethodQuery):
-    tt = p.Term.INSERT
+    tt = p.Term.TermType.INSERT
     st = 'insert'
 
 class DbCreate(RqlTopLevelQuery):
-    tt = p.Term.DB_CREATE
+    tt = p.Term.TermType.DB_CREATE
     st = "db_create"
 
 class DbDrop(RqlTopLevelQuery):
-    tt = p.Term.DB_DROP
+    tt = p.Term.TermType.DB_DROP
     st = "db_drop"
 
 class DbList(RqlTopLevelQuery):
-    tt = p.Term.DB_LIST
+    tt = p.Term.TermType.DB_LIST
     st = "db_list"
 
 class TableCreate(RqlMethodQuery):
-    tt = p.Term.TABLE_CREATE
+    tt = p.Term.TermType.TABLE_CREATE
     st = "table_create"
 
 class TableCreateTL(RqlTopLevelQuery):
-    tt = p.Term.TABLE_CREATE
+    tt = p.Term.TermType.TABLE_CREATE
     st = "table_create"
 
 class TableDrop(RqlMethodQuery):
-    tt = p.Term.TABLE_DROP
+    tt = p.Term.TermType.TABLE_DROP
     st = "table_drop"
 
 class TableDropTL(RqlTopLevelQuery):
-    tt = p.Term.TABLE_DROP
+    tt = p.Term.TermType.TABLE_DROP
     st = "table_drop"
 
 class TableList(RqlMethodQuery):
-    tt = p.Term.TABLE_LIST
+    tt = p.Term.TermType.TABLE_LIST
     st = "table_list"
 
 class TableListTL(RqlTopLevelQuery):
-    tt = p.Term.TABLE_LIST
+    tt = p.Term.TermType.TABLE_LIST
     st = "table_list"
 
 class IndexCreate(RqlMethodQuery):
-    tt = p.Term.INDEX_CREATE
+    tt = p.Term.TermType.INDEX_CREATE
     st = 'index_create'
 
 class IndexDrop(RqlMethodQuery):
-    tt = p.Term.INDEX_DROP
+    tt = p.Term.TermType.INDEX_DROP
     st = 'index_drop'
 
 class IndexList(RqlMethodQuery):
-    tt = p.Term.INDEX_LIST
+    tt = p.Term.TermType.INDEX_LIST
     st = 'index_list'
 
 class IndexStatus(RqlMethodQuery):
-    tt = p.Term.INDEX_STATUS
+    tt = p.Term.TermType.INDEX_STATUS
     st = 'index_status'
 
 class IndexWait(RqlMethodQuery):
-    tt = p.Term.INDEX_WAIT
+    tt = p.Term.TermType.INDEX_WAIT
     st = 'index_wait'
 
 class Sync(RqlMethodQuery):
-    tt = p.Term.SYNC
+    tt = p.Term.TermType.SYNC
     st = 'sync'
 
 class Branch(RqlTopLevelQuery):
-    tt = p.Term.BRANCH
+    tt = p.Term.TermType.BRANCH
     st = "branch"
 
 class Any(RqlBoolOperQuery):
-    tt = p.Term.ANY
+    tt = p.Term.TermType.ANY
     st = "or_"
     st_infix = "|"
 
 class All(RqlBoolOperQuery):
-    tt = p.Term.ALL
+    tt = p.Term.TermType.ALL
     st = "and_"
     st_infix = "&"
 
 class ForEach(RqlMethodQuery):
-    tt = p.Term.FOREACH
+    tt = p.Term.TermType.FOREACH
     st = 'for_each'
 
 class Info(RqlMethodQuery):
-    tt = p.Term.INFO
+    tt = p.Term.TermType.INFO
     st = 'info'
 
 class InsertAt(RqlMethodQuery):
-    tt = p.Term.INSERT_AT
+    tt = p.Term.TermType.INSERT_AT
     st = 'insert_at'
 
 class SpliceAt(RqlMethodQuery):
-    tt = p.Term.SPLICE_AT
+    tt = p.Term.TermType.SPLICE_AT
     st = 'splice_at'
 
 class DeleteAt(RqlMethodQuery):
-    tt = p.Term.DELETE_AT
+    tt = p.Term.TermType.DELETE_AT
     st = 'delete_at'
 
 class ChangeAt(RqlMethodQuery):
-    tt = p.Term.CHANGE_AT
+    tt = p.Term.TermType.CHANGE_AT
     st = 'change_at'
 
 class Sample(RqlMethodQuery):
-    tt = p.Term.SAMPLE
+    tt = p.Term.TermType.SAMPLE
     st = 'sample'
 
 class Json(RqlTopLevelQuery):
-    tt = p.Term.JSON
+    tt = p.Term.TermType.JSON
     st = 'json'
 
 class Args(RqlTopLevelQuery):
-    tt = p.Term.ARGS
+    tt = p.Term.TermType.ARGS
     st = 'args'
 
 class ToISO8601(RqlMethodQuery):
-    tt = p.Term.TO_ISO8601
+    tt = p.Term.TermType.TO_ISO8601
     st = 'to_iso8601'
 
 class During(RqlMethodQuery):
-    tt = p.Term.DURING
+    tt = p.Term.TermType.DURING
     st = 'during'
 
 class Date(RqlMethodQuery):
-    tt = p.Term.DATE
+    tt = p.Term.TermType.DATE
     st = 'date'
 
 class TimeOfDay(RqlMethodQuery):
-    tt = p.Term.TIME_OF_DAY
+    tt = p.Term.TermType.TIME_OF_DAY
     st = 'time_of_day'
 
 class Timezone(RqlMethodQuery):
-    tt = p.Term.TIMEZONE
+    tt = p.Term.TermType.TIMEZONE
     st = 'timezone'
 
 class Year(RqlMethodQuery):
-    tt = p.Term.YEAR
+    tt = p.Term.TermType.YEAR
     st = 'year'
 
 class Month(RqlMethodQuery):
-    tt = p.Term.MONTH
+    tt = p.Term.TermType.MONTH
     st = 'month'
 
 class Day(RqlMethodQuery):
-    tt = p.Term.DAY
+    tt = p.Term.TermType.DAY
     st = 'day'
 
 class DayOfWeek(RqlMethodQuery):
-    tt = p.Term.DAY_OF_WEEK
+    tt = p.Term.TermType.DAY_OF_WEEK
     st = 'day_of_week'
 
 class DayOfYear(RqlMethodQuery):
-    tt = p.Term.DAY_OF_YEAR
+    tt = p.Term.TermType.DAY_OF_YEAR
     st = 'day_of_year'
 
 class Hours(RqlMethodQuery):
-    tt = p.Term.HOURS
+    tt = p.Term.TermType.HOURS
     st = 'hours'
 
 class Minutes(RqlMethodQuery):
-    tt = p.Term.MINUTES
+    tt = p.Term.TermType.MINUTES
     st = 'minutes'
 
 class Seconds(RqlMethodQuery):
-    tt = p.Term.SECONDS
+    tt = p.Term.TermType.SECONDS
     st = 'seconds'
 
 class Time(RqlTopLevelQuery):
-    tt = p.Term.TIME
+    tt = p.Term.TermType.TIME
     st = 'time'
 
 class ISO8601(RqlTopLevelQuery):
-    tt = p.Term.ISO8601
+    tt = p.Term.TermType.ISO8601
     st = 'iso8601'
 
 class EpochTime(RqlTopLevelQuery):
-    tt = p.Term.EPOCH_TIME
+    tt = p.Term.TermType.EPOCH_TIME
     st = 'epoch_time'
 
 class Now(RqlTopLevelQuery):
-    tt = p.Term.NOW
+    tt = p.Term.TermType.NOW
     st = 'now'
 
 class InTimezone(RqlMethodQuery):
-    tt = p.Term.IN_TIMEZONE
+    tt = p.Term.TermType.IN_TIMEZONE
     st = 'in_timezone'
 
 class ToEpochTime(RqlMethodQuery):
-    tt = p.Term.TO_EPOCH_TIME
+    tt = p.Term.TermType.TO_EPOCH_TIME
     st = 'to_epoch_time'
 
 # Returns True if IMPLICIT_VAR is found in the subquery
@@ -1292,7 +1292,7 @@ def func_wrap(val):
     return val
 
 class Func(RqlQuery):
-    tt = p.Term.FUNC
+    tt = p.Term.TermType.FUNC
     lock = Lock()
     nextVarId = 1
 
@@ -1315,13 +1315,13 @@ class Func(RqlQuery):
             return T('lambda ', T(*[v.compose([v.args[0].compose(None, None)], []) for v in self.vrs], intsp=', '), ': ', args[1])
 
 class Asc(RqlTopLevelQuery):
-    tt = p.Term.ASC
+    tt = p.Term.TermType.ASC
     st = 'asc'
 
 class Desc(RqlTopLevelQuery):
-    tt = p.Term.DESC
+    tt = p.Term.TermType.DESC
     st = 'desc'
 
 class Literal(RqlTopLevelQuery):
-    tt = p.Term.LITERAL
+    tt = p.Term.TermType.LITERAL
     st = 'literal'
