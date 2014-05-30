@@ -13,7 +13,7 @@ $(RUBY_BUILD_DIR):
 	mkdir -p $(RUBY_BUILD_DIR)
 
 $(RUBY_PBFILE_STRIPPED): $(PROTOFILE) $(RUBY_BUILD_DIR)
-	./strip-protofile < $< > $@ 
+	../convert_protofile --language ruby --input-file $(PROTOFILE) --output-file $(RUBY_PBFILE_STRIPPED)
 
 GEMFILES = $(wildcard rethinkdb-*.gem)
 publish: $(GEMSPEC) driver-ruby
