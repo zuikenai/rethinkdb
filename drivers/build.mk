@@ -20,8 +20,4 @@ $(DRIVERS_DIR)/python/rethinkdb/ql2_pb2.py: $(TOP)/src/rdb_protocol/ql2.proto
 python-driver: $(DRIVERS_DIR)/python/rethinkdb/ql2_pb2.py
 
 .PHONY: $(DRIVERS_DIR)/all
-ifeq ($(BUILD_DRIVERS), 1)
-  $(DRIVERS_DIR)/all: drivers
-else
-  $(DRIVERS_DIR)/all:
-endif
+$(DRIVERS_DIR)/all: drivers
