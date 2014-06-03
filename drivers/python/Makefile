@@ -37,14 +37,14 @@ clean:
 	rm -f $(PY_PROTO_DEV_FILE)
 
 sdist: $(PY_BUILD_FILES) $(PY_PKG_DIR) $(PY_BUILD_DIR)/setup.py
-	cd $(PY_BUILD_DIR) && python setup.py --quiet sdist --dist-dir=$(abspath $(PY_PKG_DIR))
+	cd $(PY_BUILD_DIR) && python setup.py sdist --dist-dir=$(abspath $(PY_PKG_DIR))
 
 bdist: $(PY_BUILD_FILES) $(PY_PKG_DIR) $(PY_BUILD_DIR)/setup.py
-	cd $(PY_BUILD_DIR) && python setup.py --quiet bdist_egg --dist-dir=$(abspath $(PY_PKG_DIR))
+	cd $(PY_BUILD_DIR) && python setup.py bdist_egg --dist-dir=$(abspath $(PY_PKG_DIR))
 
 publish: sdist
-	cd $(PY_BUILD_DIR) && python setup.py --quiet register sdist --dist-dir=$(abspath $(PY_PKG_DIR)) upload 
+	cd $(PY_BUILD_DIR) && python setup.py register sdist --dist-dir=$(abspath $(PY_PKG_DIR)) upload 
 
 install: sdist
-	cd $(PY_BUILD_DIR) && python setup.py --quiet install
+	cd $(PY_BUILD_DIR) && python setup.py install
 
