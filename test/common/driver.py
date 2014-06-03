@@ -1,4 +1,4 @@
-# Copyright 2010-2012 RethinkDB, all rights reserved.
+# Copyright 2010-2014 RethinkDB, all rights reserved.
 import atexit, os, random, re, shutil, signal, socket, subprocess, sys, tempfile, time
 
 import utils
@@ -30,6 +30,24 @@ def unblock_path(source_port, dest_port):
     conn = socket.create_connection(("localhost", 46594))
     conn.sendall("unblock %s %s\n" % (str(source_port), str(dest_port)))
     conn.close()
+
+def find_subpath(subpath):
+    paths = [subpath, "../" + subpath, "../../" + subpath, "../../../" + subpath]
+    if "RETHINKDB" in os.environ:
+        paths = [os.path.join(os.environ["RETHINKDB"], subpath)]
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    raise RuntimeError("Can't find path %s.  Tried these paths: %s" % (subpath, paths))
+ 
+def find_rethinkdb_executable(mode = ""):
+    if mode == "":
+        build_dir = os.getenv('RETHINKDB_BUILD_DIR')
+        if build_dir:
+            return os.path.join(build_dir, 'rethinkdb')
+        else:
+            mode = 'debug'
+    return find_subpath("build/%s/rethinkdb" % mode)
 
 def cleanupMetaclusterFolder(path):
     if os.path.isdir(str(path)):
@@ -181,7 +199,7 @@ class Files(object):
             command_prefix = []
         
         if executable_path is None:
-            executable_path = os.path.join(utils.latest_build_dir(), 'rethinkdb')
+            executable_path = find_rethinkdb_executable()
         assert os.access(executable_path, os.X_OK), "no such executable: %r" % executable_path
 
         self.id_number = metacluster.get_new_unique_id()
@@ -204,7 +222,7 @@ class Files(object):
         if log_path is None:
             print "setting log_path to /dev/null."
             log_path = "/dev/null"
-        with open(log_path, "w") as log_file:
+        with open(log_path, "a") as log_file:
             subprocess.check_call(create_args, stdout = log_file, stderr = log_file)
 
 class _Process(object):
@@ -231,7 +249,7 @@ class _Process(object):
             command_prefix = []
         
         if executable_path is None:
-            executable_path = os.path.join(utils.latest_build_dir(), 'rethinkdb')
+            executable_path = find_rethinkdb_executable()
         assert os.access(executable_path, os.X_OK), "no such executable: %r" % executable_path
 
         for other_cluster in cluster.metacluster.clusters:
@@ -251,12 +269,13 @@ class _Process(object):
             if self.log_path is None:
                 self.log_file = sys.stdout
             else:
-                self.log_file = open(self.log_path, "w")
+                self.log_file = open(self.log_path, "a")
 
             if os.path.exists(self.logfile_path):
                 os.unlink(self.logfile_path)
 
-            print "Launching: "
+            print "Launching:"
+            print(self.args)
             self.process = subprocess.Popen(self.args, stdout = self.log_file, stderr = self.log_file)
 
             self.read_ports_from_log()

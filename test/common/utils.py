@@ -70,6 +70,25 @@ def latest_build_dir(check_executable=True):
     else:
         return canidatePath
 
+def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, buildOptions=None):
+    '''Call `make -C` on a folder to build it. If waitNotification is given wait notificationTimeout seconds and then print the notificaiton'''
+    
+    outputFile = tempfile.NamedTemporaryFile()
+    notificationDeadline = None
+    if waitNotification not in ("", None):
+        notificationDeadline = time.time() + notificationTimeout
+    
+    makeProcess = subprocess.Popen(['make', '-C', targetFolder], stdout=outputFile, stderr=subprocess.STDOUT)
+    
+    if notificationDeadline is not None:
+        while makeProcess.poll() is None and time.time() < notificationDeadline:
+            time.sleep(.1)
+        if time.time() > notificationDeadline:
+           print(waitNotification)
+    
+    if makeProcess.wait() != 0:
+        raise test_exceptions.NotBuildException(detail='Failed making: %s' % targetFolder, debugInfo=outputFile)
+       
 def import_pyton_driver(importName='r', targetDir=None, buildDriver=True):
     '''import the latest built version of the python driver into the caller's namespace, ensuring that the drivers are built'''
     import inspect, importlib
@@ -123,31 +142,23 @@ def import_pyton_driver(importName='r', targetDir=None, buildDriver=True):
     # -- build if asked for
     
     if buildDriver == True:
-        outputFile = tempfile.NamedTemporaryFile()
-        notificationDeadline = time.time() + 2
-        makeProcess = subprocess.Popen(['make', '-C', srcDir], stdout=outputFile, stderr=subprocess.STDOUT)
-        while makeProcess.poll() is None and time.time() < notificationDeadline:
-            time.sleep(.1)
-        if time.time() > notificationDeadline:
-            print('Building the python drivers. This make take a few moments.')
-        if makeProcess.wait() != 0:
-            sys.stderr.write('Error making python driver from <<%s>>. Make output follows:\n\n' % srcDir)
-            outputFile.seek(0)
-            print(outputFile.read())
-            raise test_exceptions.NotBuiltException(detail='Failed making python driver from: %s' % srcDir)
+        try:
+            build_in_folder(srcDir, waitNotification='Building the python drivers. This make take a few moments.')
+        except test_exceptions.NotBuiltException, e:
+            raise test_exceptions.NotBuildException(detail='Failed making Python driver from: %s' % srcDir, debugInfo=e.debugInfo)
     
     # --
     
     if not os.path.isdir(driverDir) or not os.path.basename(driverDir) == 'rethinkdb':
         raise ValueError('import_pyton_driver got an invalid driverDir: %s' % driverDir)
     
-    # - inject this into the callers name space
+    # - return the imported module
     
     keptPaths = sys.path
     try:
         sys.path.insert(0, os.path.dirname(driverDir))
         driverModule = importlib.import_module('rethinkdb')
-        assert(os.path.realpath(inspect.getfile(driverModule)).startswith(driverDir))
-        callingModule.__dict__[importName] = driverModule
+        assert(os.path.realpath(inspect.getfile(driverModule)).startswith(driverDir)), "The wrong version or the rethinkdb Python driver got imported. It should have been in %s but was %s" % (driverDir, os.path.realpath(inspect.getfile(driverModule)))
+        return driverModule
     finally:
         sys.path = keptPaths

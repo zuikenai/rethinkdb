@@ -22,7 +22,8 @@ while trialPath != os.path.sep:
         sys.path = stashedPath
         break
     trialPath = os.path.dirname(trialPath)
-utils.import_pyton_driver()
+
+r = utils.import_pyton_driver()
 
 # JSPORT = int(sys.argv[1])
 CPPPORT = int(sys.argv[2])
