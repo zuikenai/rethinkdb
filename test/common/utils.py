@@ -159,58 +159,78 @@ def import_pyton_driver(importName='r', targetDir=None, buildDriver=True):
     finally:
         sys.path = keptPaths
 
-class performContinuousAction(threading.Thread):
-	'''Use to continuously perform an action on a table. Either provide an action (reql command without run) on instantiation, or subclass and override runAction'''
-	
-	action = None
-	delay = None
-	
-	connection = None
-	sucessCounter = 0
-	errorCounter = 0
-	recordedErrors = None # error string => count
-	
-	daemon = True
-	stopSignal = False
-	
-	def __init__(self, connection, action=None, autoStart=True, delay=.01, **kwargs):
-		super(performContinuousAction, self).__init__()
-		
-		self.connection = connection
-		self.action = action
-		self.delay = delay
-		self.kwargs = kwargs
-		
-		self.recordedErrors = {}
-		
-		if autoStart is True:
-			self.start()
-	
-	def runAction(self):
-		self.action.run(self.connection)
-	
-	def run(self):
-		while self.stopSignal is False:
-			try:
-				self.runAction()
-				self.sucessCounter += 1
-			except Exception, e:
-				errorString = str(e)
-				if errorString not in self.recordedErrors:
-					self.recordedErrors[errorString] = 1
-				else:
-					self.recordedErrors[errorString] += 1
-				self.errorCounter += 1
-			time.sleep(self.delay)
-	
-	def stop(self):
-		self.stopSignal = True
-		self.join(timeout=.5)
-		if self.isAlive():
-		  raise Warning('performContinuousAction failed to stop when asked to, results might not be trustable')
-	
-	def errorSummary(self):
-		if self.isAlive():
-			self.stop()
-		
-		return self.recordedErrors
+class PerformContinuousAction(threading.Thread):
+    '''Use to continuously perform an action on a table. Either provide an action (reql command without run) on instantiation, or subclass and override runAction'''
+    
+    action = None
+    delay = None
+    kwargs = None
+    
+    connection = None
+    database = None
+    
+    startTime = None
+    durration = 0
+    sucessCount = 0
+    errorCount = 0
+    recordedErrors = None # error string => count
+    
+    daemon = True
+    stopSignal = False
+    
+    def __init__(self, connection, database=None, action=None, autoStart=True, delay=.01, **kwargs):
+        super(PerformContinuousAction, self).__init__()
+        
+        self.connection = connection
+        self.database = database
+        self.action = action
+        self.delay = delay
+        self.kwargs = kwargs
+        
+        self.recordedErrors = {}
+        
+        if self.database is not None:
+            connection.use(database)
+        
+        self.startTime = time.time()
+        if autoStart is True:
+            self.start()
+    
+    def runAction(self):
+        self.action.run(self.connection)
+    
+    def recordError(self, error):
+        errorString = None
+        if isinstance(error, Exception):
+            errorString = error.__class__.__name__ + " " + str(error)
+        else:
+            errorString = str(error)
+        
+        if errorString not in self.recordedErrors:
+            self.recordedErrors[errorString] = 1
+        else:
+            self.recordedErrors[errorString] += 1
+        self.errorCount += 1
+    
+    def run(self):
+        while self.stopSignal is False:
+            try:
+                self.runAction()
+                self.sucessCount += 1
+            except Exception, e:
+                self.recordError(e)
+                errorString = str(e)
+            time.sleep(self.delay)
+        self.durration = time.time() - self.startTime
+    
+    def stop(self):
+        self.stopSignal = True
+        self.join(timeout=.5)
+        if self.isAlive():
+          raise Warning('performContinuousAction failed to stop when asked to, results might not be trustable')
+    
+    def errorSummary(self):
+        if self.isAlive():
+            self.stop()
+        
+        return self.recordedErrors
