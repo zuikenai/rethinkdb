@@ -30,7 +30,7 @@ init () {
     default_static="tcmalloc_minimal"
 
     web_assets_deps="npm lessc coffee handlebars browserify bluebird"
-    required_bin_deps="protoc"
+    required_bin_deps="protoc python"
     optional_bin_deps="wget curl"
     bin_deps="cxx $web_assets_deps $required_bin_deps $optional_bin_deps"
     all_deps="$bin_deps $all_libs"
