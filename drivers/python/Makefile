@@ -1,8 +1,8 @@
-TOP ?= ../..
-PROTO_FILE_SRC=$(TOP)/src/rdb_protocol/ql2.proto
+RETHINKDB_HOME = ../..
+PROTO_FILE_SRC=$(RETHINKDB_HOME)/src/rdb_protocol/ql2.proto
 PROTO_FILE_PY_NAME=ql2_pb2.py
-PY_PKG_DIR=$(TOP)/build/packages/python
-PY_BUILD_DIR=$(TOP)/build/drivers/python
+PY_PKG_DIR=$(RETHINKDB_HOME)/build/packages/python
+PY_BUILD_DIR=$(RETHINKDB_HOME)/build/drivers/python
 PY_SRC_DIR=rethinkdb
 
 # convenience file for driver development
