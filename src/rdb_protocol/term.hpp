@@ -32,7 +32,14 @@ public:
     virtual const char *name() const = 0;
     counted_t<val_t> eval(scope_env_t *env, eval_flags_t eval_flags = NO_FLAGS);
 
-    // Allocates a new value in the current environment.
+    virtual bool is_deterministic() const = 0;
+
+    protob_t<const Term> get_src() const;
+    void prop_bt(Term *t) const;
+
+    virtual void accumulate_captures(var_captures_t *captures) const = 0;
+
+protected:
     counted_t<val_t> new_val(counted_t<const datum_t> d);
     counted_t<val_t> new_val(counted_t<const datum_t> d, counted_t<table_t> t);
     counted_t<val_t> new_val(counted_t<const datum_t> d,
@@ -44,13 +51,6 @@ public:
     counted_t<val_t> new_val(counted_t<table_t> t);
     counted_t<val_t> new_val(counted_t<func_t> f);
     counted_t<val_t> new_val_bool(bool b);
-
-    virtual bool is_deterministic() const = 0;
-
-    protob_t<const Term> get_src() const;
-    void prop_bt(Term *t) const;
-
-    virtual void accumulate_captures(var_captures_t *captures) const = 0;
 
 private:
     virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) = 0;
