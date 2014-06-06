@@ -40,6 +40,7 @@ public:
     virtual void accumulate_captures(var_captures_t *captures) const = 0;
 
 protected:
+    // These allocate a new values with this term_t's backtrace().
     counted_t<val_t> new_val(counted_t<const datum_t> d);
     counted_t<val_t> new_val(counted_t<const datum_t> d, counted_t<table_t> t);
     counted_t<val_t> new_val(counted_t<const datum_t> d,
