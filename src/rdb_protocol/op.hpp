@@ -95,10 +95,18 @@ private:
     virtual bool can_be_grouped() const;
     virtual bool is_grouped_seq_op() const;
 
-    virtual bool is_deterministic() const FINAL;
+    bool is_deterministic() const FINAL;
 
+    // Things that override op_is_deterministic should also override op_is_blocking.
     virtual bool op_is_deterministic() const {
         return true;
+    }
+
+    bool is_blocking() const FINAL;
+    virtual bool op_is_blocking() const {
+        // The value 'false' is a safe default.  ('true' would also be safe, but
+        // worse.)
+        return false;
     }
 
     counted_t<term_t> consume(size_t i);

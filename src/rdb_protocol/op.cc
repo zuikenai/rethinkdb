@@ -61,11 +61,14 @@ class faux_term_t : public term_t {
 public:
     faux_term_t(protob_t<const Term> src, counted_t<const datum_t> _d)
         : term_t(std::move(src)), d(std::move(_d)) { }
-    virtual const char *name() const { return "<EXPANDED FROM r.args>"; }
-    virtual bool is_deterministic() const { return true; }
-    virtual void accumulate_captures(var_captures_t *) const { }
+    const char *name() const FINAL { return "<EXPANDED FROM r.args>"; }
+    bool is_deterministic() const FINAL { return true; }
+    // RSI: What is this type???  Make sure that concurrent query evaluation analysis
+    // does not get confused by r.args terms.
+    bool is_blocking() const FINAL { return false; }
+    void accumulate_captures(var_captures_t *) const FINAL { }
 private:
-    virtual counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) {
+    counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) FINAL {
         return new_val(d);
     }
     counted_t<const datum_t> d;
@@ -286,6 +289,25 @@ bool op_term_t::is_deterministic() const {
         }
     }
     return true;
+}
+
+bool op_term_t::is_blocking() const {
+    if (op_is_blocking()) {
+        return true;
+    }
+    const std::vector<counted_t<term_t> > &original_args
+        = args->get_original_args();
+    for (size_t i = 0; i < original_args.size(); ++i) {
+        if (original_args[i]->is_blocking()) {
+            return true;
+        }
+    }
+    for (auto it = optargs.begin(); it != optargs.end(); ++it) {
+        if (it->second->is_blocking()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bounded_op_term_t::bounded_op_term_t(compile_env_t *env, protob_t<const Term> term,

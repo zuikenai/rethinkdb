@@ -185,10 +185,18 @@ public:
     counted_t<func_t> eval_to_func(const var_scope_t &env_scope);
 
 private:
-    virtual void accumulate_captures(var_captures_t *captures) const;
-    virtual bool is_deterministic() const;
-    virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t flags);
-    virtual const char *name() const { return "func"; }
+    void accumulate_captures(var_captures_t *captures) const FINAL;
+
+    // A lambda expression is, generally speaking, deterministic, and non-blocking.
+    // It's because all lambda expressions are evaluated immediately that we can
+    // blithely implement thes methods by calling body->is_deterministic() and
+    // body->is_blocking().
+    bool is_deterministic() const FINAL;
+    bool is_blocking() const FINAL;
+
+
+    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t flags) FINAL;
+    const char *name() const FINAL { return "func"; }
 
     std::vector<sym_t> arg_names;
     counted_t<term_t> body;

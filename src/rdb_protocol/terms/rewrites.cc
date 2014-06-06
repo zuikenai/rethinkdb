@@ -30,14 +30,17 @@ public:
     }
 
 private:
-    virtual void accumulate_captures(var_captures_t *captures) const {
+    void accumulate_captures(var_captures_t *captures) const FINAL {
         return real->accumulate_captures(captures);
     }
-    virtual bool is_deterministic() const {
+    bool is_deterministic() const FINAL {
         return real->is_deterministic();
     }
+    bool is_blocking() const FINAL {
+        return real->is_blocking();
+    }
 
-    virtual counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) {
+    counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         return real->eval(env);
     }
 

@@ -87,6 +87,11 @@ protected:
     }
 
 private:
+    bool op_is_blocking() const FINAL {
+        // Metadata write operations usually involve thread-switching.
+        return true;
+    }
+
 
     virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t flags) = 0;
     virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) {
@@ -462,7 +467,7 @@ public:
     table_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, 2), optargspec_t({ "use_outdated" })) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         counted_t<val_t> t = optarg(env, "use_outdated");
         bool use_outdated = t ? t->as_bool() : false;
         counted_t<const db_t> db;
@@ -481,7 +486,13 @@ private:
                            env->env, db, name, use_outdated, backtrace()));
     }
     bool op_is_deterministic() const FINAL { return false; }
-    virtual const char *name() const { return "table"; }
+    bool op_is_blocking() const FINAL {
+        // We construct a datum stream that, when iterated, loads a table.  That
+        // means this is a blocking operation (even if we don't block when
+        // constructing the datum stream itself).
+        return true;
+    }
+    const char *name() const FINAL { return "table"; }
 };
 
 class get_term_t : public op_term_t {

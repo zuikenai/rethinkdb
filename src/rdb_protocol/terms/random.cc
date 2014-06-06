@@ -71,7 +71,13 @@ public:
         return false;
     }
 
-    virtual const char *name() const { return "sample"; }
+    bool op_is_blocking() const FINAL {
+        // This is not deterministic, but it also does not introduce any blocking (it
+        // inherits the blocking aspect from the sequence it traverses).
+        return false;
+    }
+
+    const char *name() const FINAL { return "sample"; }
 };
 
 class random_term_t : public op_term_t {
@@ -81,6 +87,10 @@ public:
     }
 private:
     bool op_is_deterministic() const FINAL {
+        return false;
+    }
+
+    bool op_is_blocking() const FINAL {
         return false;
     }
 
@@ -98,7 +108,7 @@ private:
         return res;
     }
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         counted_t<val_t> use_float_arg = optarg(env, "float");
         bool use_float = use_float_arg ? use_float_arg->as_bool() : num_args() == 0;
 
@@ -180,7 +190,7 @@ private:
         }
     }
 
-    virtual const char *name() const { return "random"; }
+    const char *name() const FINAL { return "random"; }
 };
 
 counted_t<term_t> make_sample_term(compile_env_t *env, const protob_t<const Term> &term) {

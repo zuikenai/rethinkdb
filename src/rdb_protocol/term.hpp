@@ -32,6 +32,9 @@ public:
     counted_t<val_t> eval(scope_env_t *env, eval_flags_t eval_flags = NO_FLAGS);
 
     virtual bool is_deterministic() const = 0;
+    // Returns true if the term is a candidate for being evaluated alongside other
+    // terms.
+    virtual bool is_blocking() const = 0;
 
     protob_t<const Term> get_src() const;
     void prop_bt(Term *t) const;

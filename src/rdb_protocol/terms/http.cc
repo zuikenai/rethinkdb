@@ -30,14 +30,18 @@ public:
                                 "result_format" }))
     { }
 private:
-    virtual const char *name() const { return "http"; }
+    const char *name() const FINAL { return "http"; }
 
-    virtual bool op_is_deterministic() const FINAL {
+    bool op_is_deterministic() const FINAL {
         return false;
     }
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env,
-                                       UNUSED eval_flags_t flags);
+    bool op_is_blocking() const FINAL {
+        return true;
+    }
+
+    counted_t<val_t> eval_impl(scope_env_t *env,
+                               UNUSED eval_flags_t flags) FINAL;
 
     // Functions to get optargs into the http_opts_t
     void get_optargs(scope_env_t *env, http_opts_t *opts_out);

@@ -37,19 +37,24 @@ public:
     }
 
 private:
-    virtual void accumulate_captures(var_captures_t *captures) const {
+    void accumulate_captures(var_captures_t *captures) const FINAL {
         captures->vars_captured.insert(varname);
     }
 
-    virtual bool is_deterministic() const {
+    bool is_deterministic() const FINAL {
         return true;
     }
 
-    sym_t varname;
-    virtual counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) {
+    bool is_blocking() const FINAL {
+        return false;
+    }
+
+    counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         return new_val(env->scope.lookup_var(varname));
     }
-    virtual const char *name() const { return "var"; }
+    const char *name() const FINAL { return "var"; }
+
+    sym_t varname;
 };
 
 class implicit_var_term_t : public term_t {
@@ -66,18 +71,22 @@ public:
                : "Cannot use r.row in nested queries.  Use functions instead.");
     }
 private:
-    virtual void accumulate_captures(var_captures_t *captures) const {
+    void accumulate_captures(var_captures_t *captures) const FINAL {
         captures->implicit_is_captured = true;
     }
 
-    virtual bool is_deterministic() const {
+    bool is_deterministic() const FINAL {
         return true;
     }
 
-    virtual counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) {
+    bool is_blocking() const FINAL {
+        return false;
+    }
+
+    counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         return new_val(env->scope.lookup_implicit());
     }
-    virtual const char *name() const { return "implicit_var"; }
+    const char *name() const FINAL { return "implicit_var"; }
 };
 
 counted_t<term_t> make_var_term(compile_env_t *env, const protob_t<const Term> &term) {

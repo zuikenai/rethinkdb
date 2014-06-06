@@ -12,12 +12,13 @@ public:
     explicit datum_term_t(protob_t<const Term> t)
         : term_t(t), raw_val(new_val(make_counted<const datum_t>(&t->datum()))) { }
 private:
-    virtual void accumulate_captures(var_captures_t *) const { /* do nothing */ }
-    virtual bool is_deterministic() const { return true; }
-    virtual counted_t<val_t> term_eval(scope_env_t *, UNUSED eval_flags_t flags) {
+    void accumulate_captures(var_captures_t *) const FINAL { /* do nothing */ }
+    bool is_deterministic() const FINAL { return true; }
+    bool is_blocking() const FINAL { return false; }
+    counted_t<val_t> term_eval(scope_env_t *, UNUSED eval_flags_t flags) FINAL {
         return raw_val;
     }
-    virtual const char *name() const { return "datum"; }
+    const char *name() const FINAL { return "datum"; }
     counted_t<val_t> raw_val;
 };
 
