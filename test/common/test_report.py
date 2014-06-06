@@ -33,8 +33,9 @@ def format_tests(test_root, test_tree):
 
 def generate_html(output_file, reportData):
   file_out = open(output_file, 'w')
-  handleBarsPath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'mustache', 'mustache.js'))
-  pageHTML = test_report_template % { "pagedata":json.dumps(reportData, separators=(',',':')), 'mustachePath': handleBarsPath }
+  mustachePath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'mustache', 'mustache.js'))
+  mustacheContent = open(mustachePath).read()
+  pageHTML = test_report_template % { "pagedata":json.dumps(reportData, separators=(',',':')), 'mustacheContents': mustacheContent }
   file_out.write(pageHTML)
 
 def gen_report(test_root, tests):
@@ -79,7 +80,9 @@ test_report_template = """
         .test { background: red }
         .test.pass { background: green }
     </style>
-    <script type="text/javascript" src="%(mustachePath)s"></script>
+    <script>
+%(mustacheContents)s
+    </script>
     <script>
         function toggleVisibility(targetId) {
             var target = document.getElementById(targetId);
