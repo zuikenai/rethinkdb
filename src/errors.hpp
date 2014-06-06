@@ -200,6 +200,9 @@ release mode. */
 #undef BOOST_HAS_RVALUE_REFS
 #endif
 
+#ifdef __GNUC__
+#define GNUC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#endif
 
 /** RVALUE_THIS
  *
@@ -212,17 +215,31 @@ release mode. */
  *
  **/
 #if defined(__clang__)
-#if __has_extension(cxx_rvalue_references)
-#define RVALUE_THIS &&
+    #if __has_extension(cxx_rvalue_references)
+        #define RVALUE_THIS &&
+    #else
+        #define RVALUE_THIS
+    #endif
+#elif GNUC_VERSION >= 40801
+    #define RVALUE_THIS &&
 #else
-#define RVALUE_THIS
+    #define RVALUE_THIS
 #endif
-#elif __GNUC__ > 4 || (__GNUC__ == 4 && \
-    (__GNUC_MINOR__ > 8 || (__GNUC_MINOR__ == 8 && \
-                            __GNUC_PATCHLEVEL__ > 1)))
-#define RVALUE_THIS &&
+
+#if defined(__clang__)
+    #if __has_extension(cxx_override_control)
+        #define OVERRIDE override
+        #define FINAL final
+    #else
+        #define OVERRIDE
+        #define FINAL
+    #endif
+#elif GNUC_VERSION >= 40700
+    #define OVERRIDE override
+    #define FINAL final
 #else
-#define RVALUE_THIS
+    #define OVERRIDE
+    #define FINAL
 #endif
 
 
