@@ -129,7 +129,9 @@ counted_t<term_t> compile_term(compile_env_t *env, protob_t<const Term> t) {
     case Term::TO_ISO8601:         return make_to_iso8601_term(env, t);
     case Term::EPOCH_TIME:         return make_epoch_time_term(env, t);
     case Term::TO_EPOCH_TIME:      return make_to_epoch_time_term(env, t);
-    case Term::NOW:                return make_now_term(env, t);
+    case Term::NOW:
+        // We rewrite 'now' calls to a constant so that they're deterministic.
+        unreachable();
     case Term::IN_TIMEZONE:        return make_in_timezone_term(env, t);
     case Term::DURING:             return make_during_term(env, t);
     case Term::DATE:               return make_date_term(env, t);

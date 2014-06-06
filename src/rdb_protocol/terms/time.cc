@@ -63,21 +63,6 @@ private:
     virtual const char *name() const { return "to_epoch_time"; }
 };
 
-class now_term_t : public op_term_t {
-public:
-    now_term_t(compile_env_t *env, const protob_t<const Term> &term)
-        : op_term_t(env, term, argspec_t(0)) { }
-private:
-    counted_t<val_t> eval_impl(scope_env_t *, UNUSED eval_flags_t flags) {
-        // This should never get called because we rewrite `now` calls to a
-        // constant so that they're deterministic.
-        r_sanity_check(false);
-        unreachable();
-    }
-    bool is_deterministic() const { return false; }
-    virtual const char *name() const { return "now"; }
-};
-
 class in_timezone_term_t : public op_term_t {
 public:
     in_timezone_term_t(compile_env_t *env, const protob_t<const Term> &term)
@@ -212,9 +197,6 @@ counted_t<term_t> make_epoch_time_term(compile_env_t *env, const protob_t<const 
 }
 counted_t<term_t> make_to_epoch_time_term(compile_env_t *env, const protob_t<const Term> &term) {
     return make_counted<to_epoch_time_term_t>(env, term);
-}
-counted_t<term_t> make_now_term(compile_env_t *env, const protob_t<const Term> &term) {
-    return make_counted<now_term_t>(env, term);
 }
 counted_t<term_t> make_in_timezone_term(compile_env_t *env, const protob_t<const Term> &term) {
     return make_counted<in_timezone_term_t>(env, term);
