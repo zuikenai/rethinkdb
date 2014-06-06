@@ -39,6 +39,7 @@ public:
 
 private:
     bool op_is_deterministic() const FINAL { return false; }
+    // op_term_t's op_is_blocking is overridden in all the subclasses.
 };
 
 // If you don't have to modify any of the data, use
@@ -88,13 +89,14 @@ protected:
 
 private:
     bool op_is_blocking() const FINAL {
-        // Metadata write operations usually involve thread-switching.
+        // Metadata write operations usually involve thread-switching (unless we
+        // happen to be on the same thread).
         return true;
     }
 
 
     virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t flags) = 0;
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) FINAL {
         std::string op = write_eval_impl(env, flags);
         datum_ptr_t res(datum_t::R_OBJECT);
         UNUSED bool b = res.add(op, make_counted<datum_t>(1.0));
@@ -106,7 +108,11 @@ class db_term_t : public meta_op_term_t {
 public:
     db_term_t(compile_env_t *env, const protob_t<const Term> &term) : meta_op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    bool op_is_blocking() const FINAL {
+        return false;
+    }
+
+    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         name_string_t db_name = get_name(arg(env, 0), this, "Database");
         uuid_u uuid;
         {
@@ -121,7 +127,7 @@ private:
         }
         return new_val(make_counted<const db_t>(uuid, db_name.str()));
     }
-    virtual const char *name() const { return "db"; }
+    const char *name() const FINAL { return "db"; }
 };
 
 class db_create_term_t : public meta_write_op_t {
@@ -376,7 +382,11 @@ public:
     db_list_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_op_term_t(env, term, argspec_t(0)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    bool op_is_blocking() const FINAL {
+        return false;
+    }
+
+    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         std::vector<std::string> dbs;
         {
             databases_semilattice_metadata_t db_metadata
@@ -403,7 +413,7 @@ private:
 
         return new_val(make_counted<const datum_t>(std::move(arr)));
     }
-    virtual const char *name() const { return "db_list"; }
+    const char *name() const FINAL { return "db_list"; }
 };
 
 class table_list_term_t : public meta_op_term_t {
@@ -411,6 +421,10 @@ public:
     table_list_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_op_term_t(env, term, argspec_t(0, 1)) { }
 private:
+    bool op_is_blocking() const FINAL {
+        return false;
+    }
+
     virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
         uuid_u db_id;
         if (num_args() == 0) {
@@ -444,7 +458,7 @@ private:
         }
         return new_val(make_counted<const datum_t>(std::move(arr)));
     }
-    virtual const char *name() const { return "table_list"; }
+    const char *name() const FINAL { return "table_list"; }
 };
 
 class sync_term_t : public meta_write_op_t {
