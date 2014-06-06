@@ -67,7 +67,7 @@ public:
         return t.has() ? new_val(new_ds, t) : new_val(env->env, new_ds);
     }
 
-    bool is_deterministic() const {
+    bool op_is_deterministic() const FINAL {
         return false;
     }
 
@@ -80,7 +80,7 @@ public:
         op_term_t(env, term, argspec_t(0, 2), optargspec_t({"float"})) {
     }
 private:
-    virtual bool is_deterministic() const {
+    bool op_is_deterministic() const FINAL {
         return false;
     }
 

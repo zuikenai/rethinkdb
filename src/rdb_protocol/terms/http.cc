@@ -32,8 +32,7 @@ public:
 private:
     virtual const char *name() const { return "http"; }
 
-    // No HTTP term is considered deterministic
-    virtual bool is_deterministic() const {
+    virtual bool op_is_deterministic() const FINAL {
         return false;
     }
 

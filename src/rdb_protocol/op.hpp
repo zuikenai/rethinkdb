@@ -95,7 +95,11 @@ private:
     virtual bool can_be_grouped();
     virtual bool is_grouped_seq_op();
 
-    virtual bool is_deterministic() const;
+    virtual bool is_deterministic() const FINAL;
+
+    virtual bool op_is_deterministic() const {
+        return true;
+    }
 
     counted_t<term_t> consume(size_t i);
 

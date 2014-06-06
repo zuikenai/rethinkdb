@@ -270,6 +270,9 @@ void op_term_t::accumulate_captures(var_captures_t *captures) const {
 
 
 bool op_term_t::is_deterministic() const {
+    if (!op_is_deterministic()) {
+        return false;
+    }
     const std::vector<counted_t<term_t> > &original_args
         = args->get_original_args();
     for (size_t i = 0; i < original_args.size(); ++i) {

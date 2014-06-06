@@ -38,7 +38,7 @@ public:
         : op_term_t(env, std::move(term), std::move(argspec), std::move(optargspec)) { }
 
 private:
-    virtual bool is_deterministic() const { return false; }
+    bool op_is_deterministic() const FINAL { return false; }
 };
 
 // If you don't have to modify any of the data, use
@@ -480,7 +480,7 @@ private:
         return new_val(make_counted<table_t>(
                            env->env, db, name, use_outdated, backtrace()));
     }
-    virtual bool is_deterministic() const { return false; }
+    bool op_is_deterministic() const FINAL { return false; }
     virtual const char *name() const { return "table"; }
 };
 
