@@ -63,7 +63,7 @@ class op_term_t : public term_t {
 protected:
     op_term_t(compile_env_t *env, protob_t<const Term> term,
               argspec_t argspec, optargspec_t optargspec = optargspec_t({}));
-    virtual ~op_term_t();
+    ~op_term_t() OVERRIDE;
 
     size_t num_args() const; // number of arguments
     // Returns argument `i`.
@@ -90,10 +90,10 @@ private:
     // take `arg0` as one of its arguments.  (Actually, the `arg` function
     // should be passed down too so that the `arg_verifier` it shares with
     // `term_eval` doesn't have to be on this object.)
-    virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t eval_flags);
+    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t eval_flags) FINAL;
     virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t eval_flags) = 0;
-    virtual bool can_be_grouped();
-    virtual bool is_grouped_seq_op();
+    virtual bool can_be_grouped() const;
+    virtual bool is_grouped_seq_op() const;
 
     virtual bool is_deterministic() const FINAL;
 
@@ -115,7 +115,7 @@ public:
     explicit grouped_seq_op_term_t(Args... args) :
         op_term_t(std::forward<Args>(args)...) { }
 private:
-    virtual bool is_grouped_seq_op() { return true; }
+    bool is_grouped_seq_op() const FINAL { return true; }
 };
 
 class bounded_op_term_t : public op_term_t {
@@ -123,7 +123,7 @@ public:
     bounded_op_term_t(compile_env_t *env, protob_t<const Term> term,
                       argspec_t argspec, optargspec_t optargspec = optargspec_t({}));
 
-    virtual ~bounded_op_term_t() { }
+    ~bounded_op_term_t() OVERRIDE { }
 
 protected:
     bool is_left_open(scope_env_t *env);

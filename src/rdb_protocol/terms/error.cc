@@ -27,7 +27,7 @@ public:
     default_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         counted_t<const datum_t> func_arg;
         scoped_ptr_t<exc_t> err;
         counted_t<val_t> v;
@@ -79,8 +79,8 @@ private:
             }
         }
     }
-    virtual const char *name() const { return "error"; }
-    virtual bool can_be_grouped() { return false; }
+    const char *name() const FINAL { return "error"; }
+    bool can_be_grouped() const FINAL { return false; }
 };
 
 counted_t<term_t> make_error_term(compile_env_t *env, const protob_t<const Term> &term) {

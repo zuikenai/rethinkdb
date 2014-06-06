@@ -159,7 +159,7 @@ public:
     literal_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, 1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) FINAL {
         rcheck(flags & LITERAL_OK, base_exc_t::GENERIC,
                "Stray literal keyword found, literal can only be present inside merge "
                "and cannot nest inside other literals.");
@@ -175,8 +175,8 @@ private:
         permissible_ptypes.insert(pseudo::literal_string);
         return new_val(res.to_counted(permissible_ptypes));
     }
-    virtual const char *name() const { return "literal"; }
-    virtual bool can_be_grouped() { return false; }
+    const char *name() const FINAL { return "literal"; }
+    bool can_be_grouped() const FINAL { return false; }
 };
 
 class merge_term_t : public obj_or_seq_op_term_t {

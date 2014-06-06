@@ -234,8 +234,8 @@ counted_t<val_t> op_term_t::term_eval(scope_env_t *env, eval_flags_t eval_flags)
     return eval_impl(env, eval_flags);
 }
 
-bool op_term_t::can_be_grouped() { return true; }
-bool op_term_t::is_grouped_seq_op() { return false; }
+bool op_term_t::can_be_grouped() const { return true; }
+bool op_term_t::is_grouped_seq_op() const { return false; }
 
 counted_t<val_t> op_term_t::optarg(scope_env_t *env, const std::string &key) {
     std::map<std::string, counted_t<term_t> >::iterator it = optargs.find(key);
