@@ -425,7 +425,7 @@ private:
         return false;
     }
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
         uuid_u db_id;
         if (num_args() == 0) {
             counted_t<val_t> dbv = optarg(env, "db");
