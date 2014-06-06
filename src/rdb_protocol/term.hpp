@@ -29,7 +29,6 @@ public:
     explicit term_t(protob_t<const Term> _src);
     virtual ~term_t();
 
-    virtual const char *name() const = 0;
     counted_t<val_t> eval(scope_env_t *env, eval_flags_t eval_flags = NO_FLAGS);
 
     virtual bool is_deterministic() const = 0;
@@ -40,6 +39,8 @@ public:
     virtual void accumulate_captures(var_captures_t *captures) const = 0;
 
 protected:
+    virtual const char *name() const = 0;
+
     // These allocate a new values with this term_t's backtrace().
     counted_t<val_t> new_val(counted_t<const datum_t> d);
     counted_t<val_t> new_val(counted_t<const datum_t> d, counted_t<table_t> t);

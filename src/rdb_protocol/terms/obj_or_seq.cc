@@ -53,6 +53,7 @@ public:
 
         prop_bt(func.get());
     }
+
 private:
     virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) = 0;
 
