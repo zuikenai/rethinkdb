@@ -39,7 +39,7 @@ def find_subpath(subpath):
         if os.path.exists(path):
             return path
     raise RuntimeError("Can't find path %s.  Tried these paths: %s" % (subpath, paths))
- 
+
 def find_rethinkdb_executable(mode = ""):
     if mode == "":
         build_dir = os.getenv('RETHINKDB_BUILD_DIR')
