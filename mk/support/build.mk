@@ -80,7 +80,7 @@ clean-$2_$3:
 	$$P RM $(SUPPORT_BUILD_DIR)/$2_$3
 	rm -rf $(SUPPORT_BUILD_DIR)/$2_$3
 
-# The actual rule that builds the package
+# The actual rules that builds the package
 # The targets are all modified to contain a `%' instead of the version number, otherwise make
 # will re-run the recipe for each target.
 # The generated prerequisites are:
@@ -90,7 +90,11 @@ clean-$2_$3:
 #  * The `install.witness' file for each of the dependencies of the package
 # Some packages need to be linked with flags that can only be guessed after
 # the package has been installed.
-build-$2_% $(foreach target,$1,$(subst _$3/,_%/,$(target))) $(SUPPORT_BUILD_DIR)/$2_%/install.witness: \
+build-$2_$3: $(SUPPORT_BUILD_DIR)/$2_$3/install.witness
+$(foreach target, $1, $(target): $(SUPPORT_BUILD_DIR)/$2_$3/install.witness $(newline))
+
+
+$(SUPPORT_BUILD_DIR)/$2_$3/install.witness: \
   | $(SUPPORT_SRC_DIR)/$2_$3 $(filter $(SUPPORT_BUILD_DIR)/$2_$3/include, $(SUPPORT_INCLUDE_DIRS)) \
   $(foreach dep, $($2_DEPENDS), $(SUPPORT_BUILD_DIR)/$(dep)_$($(dep)_VERSION)/install.witness)
 	$$P BUILD $2_$3
@@ -98,8 +102,7 @@ build-$2_% $(foreach target,$1,$(subst _$3/,_%/,$(target))) $(SUPPORT_BUILD_DIR)
 	touch $(SUPPORT_BUILD_DIR)/$2_$3/install.witness
 
 ifneq (undefined,$$(origin $2_LIB_NAME))
-  $$($2_LIB_NAME)_EXTRA_LIBS :=
-  $$($2_LIB_NAME)_LIBS = $$(if $$($$($2_LIB_NAME)_EXTRA_LIBS), $$($$($2_LIB_NAME)_EXTRA_LIBS), $$(eval $$($2_LIB_NAME)_EXTRA_LIBS := $$(shell $(PKG_SCRIPT) link-flags $2 $$($2_LIB_NAME)))$$($$($2_LIB_NAME)_EXTRA_LIBS))
+  $$($2_LIB_NAME)_LIBS = $$(shell $(PKG_SCRIPT) link-flags $2 $$($2_LIB_NAME))
 endif
 
 endef

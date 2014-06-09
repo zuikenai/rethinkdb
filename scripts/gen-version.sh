@@ -74,7 +74,7 @@ git_gen_version () {
 }
 
 git_is_dirty () {
-    git update-index -q --refresh > /dev/null || true
+    git update-index -q --refresh > /dev/null 2> /dev/null || true
     [[ -n "$(git diff-index --name-only HEAD -- || true)" ]]
 }
 

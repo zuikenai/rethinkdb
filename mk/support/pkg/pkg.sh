@@ -39,7 +39,10 @@ pkg_environment () {
         echo "export CXXFLAGS=\"\${CXXFLAGS:-} -isystem $(niceabspath "$install_dir/include")\""
         echo "export   CFLAGS=\"\${CFLAGS:-}   -isystem $(niceabspath "$install_dir/include")\""
     fi
-    test -d "$install_dir/lib" && echo "export LDFLAGS=\"\${LDFLAGS:-} -L$(niceabspath "$install_dir/lib")\"" || :
+    if [[ -d "$install_dir/lib" ]]; then
+        echo "export LDFLAGS=\"\${LDFLAGS:-} -L$(niceabspath "$install_dir/lib")\""
+        echo "export LD_LIBRARY_PATH=\"$(niceabspath "$install_dir/lib")\${LD_LIBRARY_PATH:+:}\${LD_LIBRARY_PATH:-}\""
+    fi
     test -d "$install_dir/bin" && echo "export PATH=\"$(niceabspath "$install_dir/bin"):\$PATH\"" || :
     local pcdir="$install_dir/lib/pkgconfig"
     if [[ -e "$pcdir" ]]; then
@@ -147,7 +150,8 @@ pkg_depends_env () {
 pkg_link-flags () {
     local lib="$install_dir/lib/lib$(lc $1).a"
     if [[ ! -e "$lib" ]]; then
-        echo "pkg.sh: warning: static library not found: $lib" >&2
+        echo "pkg.sh: error: static library was not built: $lib" >&2
+        exit 1
     fi
     echo "$lib"
 }
