@@ -13,51 +13,51 @@
 namespace ql {
 
 rdb_namespace_interface_t::rdb_namespace_interface_t(
-        namespace_interface_t *internal, env_t *env)
-    : internal_(internal), env_(env) { }
+        namespace_interface_t *internal)
+    : internal_(internal) { }
 
 void rdb_namespace_interface_t::read(
+        env_t *env,
         const read_t &read,
         read_response_t *response,
-        order_token_t tok,
-        signal_t *interruptor)
+        order_token_t tok)
     THROWS_ONLY(interrupted_exc_t, cannot_perform_query_exc_t) {
-    profile::starter_t starter("Perform read.", env_->trace);
-    profile::splitter_t splitter(env_->trace);
-    r_sanity_check(read.profile == env_->profile());
+    profile::starter_t starter("Perform read.", env->trace);
+    profile::splitter_t splitter(env->trace);
+    r_sanity_check(read.profile == env->profile());
     /* Do the actual read. */
-    internal_->read(read, response, tok, interruptor);
+    internal_->read(read, response, tok, env->interruptor);
     /* Append the results of the parallel tasks to the current trace */
     splitter.give_splits(response->n_shards, response->event_log);
 }
 
 void rdb_namespace_interface_t::read_outdated(
+        env_t *env,
         const read_t &read,
-        read_response_t *response,
-        signal_t *interruptor)
+        read_response_t *response)
     THROWS_ONLY(interrupted_exc_t, cannot_perform_query_exc_t) {
-    profile::starter_t starter("Perform outdated read.", env_->trace);
-    profile::splitter_t splitter(env_->trace);
+    profile::starter_t starter("Perform outdated read.", env->trace);
+    profile::splitter_t splitter(env->trace);
     /* propagate whether or not we're doing profiles */
-    r_sanity_check(read.profile == env_->profile());
+    r_sanity_check(read.profile == env->profile());
     /* Do the actual read. */
-    internal_->read_outdated(read, response, interruptor);
+    internal_->read_outdated(read, response, env->interruptor);
     /* Append the results of the profile to the current task */
     splitter.give_splits(response->n_shards, response->event_log);
 }
 
 void rdb_namespace_interface_t::write(
+        env_t *env,
         write_t *write,
         write_response_t *response,
-        order_token_t tok,
-        signal_t *interruptor)
+        order_token_t tok)
     THROWS_ONLY(interrupted_exc_t, cannot_perform_query_exc_t) {
-    profile::starter_t starter("Perform write", env_->trace);
-    profile::splitter_t splitter(env_->trace);
+    profile::starter_t starter("Perform write", env->trace);
+    profile::splitter_t splitter(env->trace);
     /* propagate whether or not we're doing profiles */
-    write->profile = env_->profile();
+    write->profile = env->profile();
     /* Do the actual read. */
-    internal_->write(*write, response, tok, interruptor);
+    internal_->write(*write, response, tok, env->interruptor);
     /* Append the results of the profile to the current task */
     splitter.give_splits(response->n_shards, response->event_log);
 }
@@ -71,17 +71,12 @@ signal_t *rdb_namespace_interface_t::get_initial_ready_signal() {
     return internal_->get_initial_ready_signal();
 }
 
-bool rdb_namespace_interface_t::has() {
-    return internal_;
-}
-
 rdb_namespace_access_t::rdb_namespace_access_t(uuid_u id, env_t *env)
-    : internal_(env->cluster_access.ns_repo, id, env->interruptor),
-      env_(env)
+    : internal_(env->cluster_access.ns_repo, id, env->interruptor)
 { }
 
 rdb_namespace_interface_t rdb_namespace_access_t::get_namespace_if() {
-    return rdb_namespace_interface_t(internal_.get_namespace_if(), env_);
+    return rdb_namespace_interface_t(internal_.get_namespace_if());
 }
 
 template<class T>
@@ -140,10 +135,9 @@ rget_read_response_t reader_t::do_read(env_t *env, const read_t &read) {
     read_response_t res;
     try {
         if (use_outdated) {
-            ns_access.get_namespace_if().read_outdated(read, &res, env->interruptor);
+            ns_access.get_namespace_if().read_outdated(env, read, &res);
         } else {
-            ns_access.get_namespace_if().read(
-                read, &res, order_token_t::ignore, env->interruptor);
+            ns_access.get_namespace_if().read(env, read, &res, order_token_t::ignore);
         }
     } catch (const cannot_perform_query_exc_t &e) {
         rfail_datum(ql::base_exc_t::GENERIC, "cannot perform read: %s", e.what());

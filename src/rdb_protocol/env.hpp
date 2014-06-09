@@ -67,7 +67,13 @@ public:
     // db_create_term_t, etc.  Its home thread might be different from ours.
     boost::shared_ptr<semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >
         semilattice_metadata;
+
+    // This field can be NULL.  Importantly, this field is NULL everywhere except in
+    // the parser's env_t.  This is because you "cannot nest meta operations inside
+    // queries" -- as meta_write_op_t will complain.  However, term_walker.cc is what
+    // actually enforces this property.
     directory_read_manager_t<cluster_directory_metadata_t> *directory_read_manager;
+
 
     // Semilattice modification functions
     void join_and_wait_to_propagate(
@@ -89,25 +95,6 @@ class env_t : public home_thread_mixin_t {
 public:
     env_t(
         extproc_pool_t *_extproc_pool,
-        changefeed::client_t *_changefeed_client,
-        const std::string &_reql_http_proxy,
-        base_namespace_repo_t *_ns_repo,
-
-        clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
-            _namespaces_semilattice_metadata,
-
-        clone_ptr_t<watchable_t<databases_semilattice_metadata_t> >
-             _databases_semilattice_metadata,
-        boost::shared_ptr<semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >
-            _semilattice_metadata,
-        directory_read_manager_t<cluster_directory_metadata_t> *_directory_read_manager,
-        signal_t *_interruptor,
-        uuid_u _this_machine,
-        std::map<std::string, wire_func_t> optargs);
-
-    env_t(
-        extproc_pool_t *_extproc_pool,
-        changefeed::client_t *_changefeed_client,
         const std::string &_reql_http_proxy,
         base_namespace_repo_t *_ns_repo,
 
@@ -121,7 +108,8 @@ public:
         signal_t *_interruptor,
         uuid_u _this_machine);
 
-    env_t(rdb_context_t *ctx, signal_t *interruptor);
+    env_t(rdb_context_t *ctx, signal_t *interruptor,
+          std::map<std::string, wire_func_t> optargs);
 
     explicit env_t(signal_t *interruptor);
 
@@ -208,9 +196,6 @@ public:
     DISABLE_COPYING(scope_env_t);
 };
 
-scoped_ptr_t<env_t> make_complete_env(rdb_context_t *ctx,
-                                      signal_t *interruptor,
-                                      std::map<std::string, wire_func_t> optargs);
 }  // namespace ql
 
 #endif // RDB_PROTOCOL_ENV_HPP_

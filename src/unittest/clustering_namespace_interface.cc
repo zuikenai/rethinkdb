@@ -7,6 +7,7 @@
 #include "clustering/immediate_consistency/query/master.hpp"
 #include "clustering/reactor/blueprint.hpp"
 #include "clustering/reactor/namespace_interface.hpp"
+#include "containers/uuid.hpp"
 #include "rdb_protocol/protocol.hpp"
 #include "unittest/branch_history_manager.hpp"
 #include "unittest/clustering_utils.hpp"
@@ -18,18 +19,21 @@ namespace unittest {
 TPTEST(ClusteringNamespaceInterface, MissingMaster) {
     /* Set up a cluster so mailboxes can be created */
     simple_mailbox_cluster_t cluster;
-    std::map<key_range_t, machine_id_t> region_to_primary;
+    std::map<namespace_id_t, std::map<key_range_t, machine_id_t> > region_to_primary_maps;
 
     /* Set up a reactor directory with no reactors in it */
     std::map<peer_id_t, cow_ptr_t<reactor_business_card_t> > empty_reactor_directory;
     watchable_variable_t<std::map<peer_id_t, cow_ptr_t<reactor_business_card_t> > > reactor_directory(empty_reactor_directory);
 
+    rdb_context_t invalid_context;
+
     /* Set up a namespace dispatcher */
     cluster_namespace_interface_t namespace_interface(
         cluster.get_mailbox_manager(),
-        &region_to_primary,
+        &region_to_primary_maps,
         reactor_directory.get_watchable(),
-        NULL); //<-- this should be a valid context by passing null we're assuming this unit test doesn't do anything complicated enough to need it
+        generate_uuid(),
+        &invalid_context);
     namespace_interface.get_initial_ready_signal()->wait_lazily_unordered();
 
     order_source_t order_source;
@@ -62,8 +66,8 @@ TPTEST(ClusteringNamespaceInterface, ReadOutdated) {
 
     cluster_group.wait_until_blueprint_is_satisfied("p,s");
 
-    scoped_ptr_t<cluster_namespace_interface_t> namespace_if;
-    cluster_group.make_namespace_interface(0, &namespace_if);
+    scoped_ptr_t<cluster_namespace_interface_t> namespace_if
+        = cluster_group.make_namespace_interface(0);
 
     read_t r = mock_read("a");
     read_response_t rr;

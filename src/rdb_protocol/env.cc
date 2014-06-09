@@ -167,40 +167,28 @@ js_runner_t *env_t::get_js_runner() {
     return &js_runner;
 }
 
-// Used in constructing the env for unsharding.
-env_t::env_t(rdb_context_t *ctx, signal_t *_interruptor)
+env_t::env_t(rdb_context_t *ctx, signal_t *_interruptor,
+             std::map<std::string, wire_func_t> optargs)
     : evals_since_yield(0),
-      global_optargs(),
-      extproc_pool(ctx != NULL ? ctx->extproc_pool : NULL),
-      changefeed_client(ctx != NULL && ctx->changefeed_client.has()
-                        ? ctx->changefeed_client.get()
-                        : NULL),
-      reql_http_proxy(ctx != NULL ? ctx->reql_http_proxy : ""),
+      global_optargs(std::move(optargs)),
+      extproc_pool(ctx->extproc_pool),
+      changefeed_client(ctx->changefeed_client.get_or_null()),
+      reql_http_proxy(ctx->reql_http_proxy),
       cluster_access(
-          ctx != NULL ? ctx->ns_repo : NULL,
-          ctx != NULL
-              ? ctx->cross_thread_namespace_watchables[get_thread_id().threadnum].get()
-                  ->get_watchable()
-              : clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >(),
-          ctx != NULL
-              ? ctx->cross_thread_database_watchables[get_thread_id().threadnum].get()
-                  ->get_watchable()
-              : clone_ptr_t<watchable_t<databases_semilattice_metadata_t> >(),
-          ctx != NULL
-              ? ctx->cluster_metadata
-              : boost::shared_ptr<
-                    semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >(),
-          NULL,
-          ctx != NULL ? ctx->machine_id : uuid_u()),
+          ctx->ns_repo,
+          ctx->get_namespaces_watchable_or_null(),
+          ctx->get_databases_watchable_or_null(),
+          ctx->cluster_metadata,
+          ctx->directory_read_manager,
+          ctx->machine_id),
       interruptor(_interruptor),
       eval_callback(NULL) {
+    rassert(ctx != NULL);
     rassert(interruptor != NULL);
 }
 
 
-// Used in constructing the env for unsharding.  Used in constructing the env for
-// rdb_update_single_sindex.  Used in unittest/rdb_btree.cc.  Used in
-// rdb_backfill.cc.
+// Used in constructing the env for rdb_update_single_sindex and many unit tests.
 env_t::env_t(signal_t *_interruptor)
     : evals_since_yield(0),
       global_optargs(),
@@ -231,46 +219,9 @@ profile_bool_t profile_bool_optarg(const protob_t<Query> &query) {
     }
 }
 
-// Called by run (in term.cc, the parser's query-running method).  This time _with_ a
-// directory_read_manager.
+// Called by unittest/rdb_env.cc.
 env_t::env_t(
     extproc_pool_t *_extproc_pool,
-    changefeed::client_t *_changefeed_client,
-    const std::string &_reql_http_proxy,
-    base_namespace_repo_t *_ns_repo,
-    clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
-        _namespaces_semilattice_metadata,
-    clone_ptr_t<watchable_t<databases_semilattice_metadata_t> >
-        _databases_semilattice_metadata,
-    boost::shared_ptr<semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >
-        _semilattice_metadata,
-    directory_read_manager_t<cluster_directory_metadata_t> *_directory_read_manager,
-    signal_t *_interruptor,
-    uuid_u _this_machine,
-    std::map<std::string, wire_func_t> optargs)
-  : evals_since_yield(0),
-    global_optargs(std::move(optargs)),
-    extproc_pool(_extproc_pool),
-    changefeed_client(_changefeed_client),
-    reql_http_proxy(_reql_http_proxy),
-    cluster_access(_ns_repo,
-                   _namespaces_semilattice_metadata,
-                   _databases_semilattice_metadata,
-                   _semilattice_metadata,
-                   _directory_read_manager,
-                   _this_machine),
-    interruptor(_interruptor),
-    trace(),
-    eval_callback(NULL) {
-    rassert(interruptor != NULL);
-}
-
-// Called by rdb_write_visitor_t, with a _possibly_ NULL changefeed client (fucking
-// Christ, what the fuck is this shit).  Called by unittest/rdb_env.cc, with a NULL
-// changefeed_client.  Used to construct the env on the store_t (for reads).
-env_t::env_t(
-    extproc_pool_t *_extproc_pool,
-    changefeed::client_t *_changefeed_client,
     const std::string &_reql_http_proxy,
     base_namespace_repo_t *_ns_repo,
     clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
@@ -284,7 +235,7 @@ env_t::env_t(
   : evals_since_yield(0),
     global_optargs(),
     extproc_pool(_extproc_pool),
-    changefeed_client(_changefeed_client),
+    changefeed_client(NULL),
     reql_http_proxy(_reql_http_proxy),
     cluster_access(_ns_repo,
                    _namespaces_semilattice_metadata,
@@ -306,27 +257,5 @@ void env_t::maybe_yield() {
     }
 }
 
-// Constructs a fully-functional env_t, for use in term.cc and stream cache code.
-// (Eventually this should be a constructor.  The env_t constructor that takes an
-// rdb_context_t currently uses NULL instead of the directory_read_manager for some
-// reason, and I'm in too much of a rush to figure out why.)
-scoped_ptr_t<env_t> make_complete_env(rdb_context_t *ctx,
-                                      signal_t *interruptor,
-                                      std::map<std::string, wire_func_t> optargs) {
-    rassert(ctx != NULL);
-    const threadnum_t th = get_thread_id();
-    return make_scoped<ql::env_t>(
-            ctx->extproc_pool,
-            ctx->changefeed_client.get_or_null(),
-            ctx->reql_http_proxy,
-            ctx->ns_repo,
-            ctx->cross_thread_namespace_watchables[th.threadnum]->get_watchable(),
-            ctx->cross_thread_database_watchables[th.threadnum]->get_watchable(),
-            ctx->cluster_metadata,
-            ctx->directory_read_manager,
-            interruptor,
-            ctx->machine_id,
-            std::move(optargs));
-}
 
 } // namespace ql

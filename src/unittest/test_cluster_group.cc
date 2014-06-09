@@ -21,6 +21,7 @@
 #include "buffer_cache/alt/cache_balancer.hpp"
 #include "containers/archive/boost_types.hpp"
 #include "containers/archive/cow_ptr_type.hpp"
+#include "containers/uuid.hpp"
 #include "concurrency/watchable.hpp"
 #include "unittest/branch_history_manager.hpp"
 #include "unittest/clustering_utils.hpp"
@@ -208,12 +209,12 @@ test_cluster_group_t::test_cluster_group_t(int n_machines)
 test_cluster_group_t::~test_cluster_group_t() { }
 
 void test_cluster_group_t::construct_all_reactors(const blueprint_t &bp) {
-    for (unsigned i = 0; i < test_clusters.size(); i++) {
+    for (size_t i = 0; i < test_clusters.size(); i++) {
         test_reactors.push_back(new test_reactor_t(base_path, io_backender.get(), &test_clusters[i], bp, &svses[i]));
     }
 }
 
-peer_id_t test_cluster_group_t::get_peer_id(unsigned i) {
+peer_id_t test_cluster_group_t::get_peer_id(size_t i) {
     rassert(i < test_clusters.size());
     return test_clusters[i].get_me();
 }
@@ -227,13 +228,13 @@ blueprint_t test_cluster_group_t::compile_blueprint(const std::string &bp) {
     boost::char_separator<char> sep(",");
     tokenizer tokens(bp, sep);
 
-    unsigned peer = 0;
+    size_t peer = 0;
     for (tok_iterator it =  tokens.begin();
          it != tokens.end();
          it++) {
 
         blueprint.add_peer(get_peer_id(peer));
-        for (unsigned i = 0; i < it->size(); i++) {
+        for (size_t i = 0; i < it->size(); i++) {
             region_t region;
             generate_sample_region(i, it->size(), &region);
 
@@ -258,7 +259,7 @@ blueprint_t test_cluster_group_t::compile_blueprint(const std::string &bp) {
 }
 
 void test_cluster_group_t::set_all_blueprints(const blueprint_t &bp) {
-    for (unsigned i = 0; i < test_clusters.size(); i++) {
+    for (size_t i = 0; i < test_clusters.size(); i++) {
         test_reactors[i].blueprint_watchable.set_value(bp);
     }
 }
@@ -276,22 +277,25 @@ std::map<peer_id_t, cow_ptr_t<reactor_business_card_t> > test_cluster_group_t::e
     return out;
 }
 
-void test_cluster_group_t::make_namespace_interface(int i, scoped_ptr_t<cluster_namespace_interface_t> *out) {
-    std::map<key_range_t, machine_id_t> region_to_primary;
-    out->init(new cluster_namespace_interface_t(
-                      &test_clusters[i].mailbox_manager,
-                      &region_to_primary,
-                      (&test_clusters[i])->directory_read_manager.get_root_view()
-                      ->subview(&test_cluster_group_t::extract_reactor_business_cards_no_optional),
-                      NULL));
-    (*out)->get_initial_ready_signal()->wait_lazily_unordered();
+scoped_ptr_t<cluster_namespace_interface_t>
+test_cluster_group_t::make_namespace_interface(int i) {
+    std::map<namespace_id_t, std::map<key_range_t, machine_id_t> > region_to_primary_maps;
+    auto ret = make_scoped<cluster_namespace_interface_t>(
+            &test_clusters[i].mailbox_manager,
+            &region_to_primary_maps,
+            (&test_clusters[i])->directory_read_manager.get_root_view()
+            ->subview(&test_cluster_group_t::extract_reactor_business_cards_no_optional),
+            generate_uuid(),
+            &ctx);
+    ret->get_initial_ready_signal()->wait_lazily_unordered();
+    return ret;
 }
 
 void test_cluster_group_t::run_queries() {
     nap(200);
-    for (unsigned i = 0; i < test_clusters.size(); i++) {
-        scoped_ptr_t<cluster_namespace_interface_t> namespace_if;
-        make_namespace_interface(i, &namespace_if);
+    for (size_t i = 0; i < test_clusters.size(); i++) {
+        scoped_ptr_t<cluster_namespace_interface_t> namespace_if
+            = make_namespace_interface(i);
 
         order_source_t order_source;
 

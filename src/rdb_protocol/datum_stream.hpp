@@ -32,22 +32,21 @@ class env_t;
  */
 class rdb_namespace_interface_t {
 public:
-    rdb_namespace_interface_t(
-        namespace_interface_t *internal, env_t *env);
+    explicit rdb_namespace_interface_t(namespace_interface_t *internal);
 
-    void read(const read_t &,
+    void read(env_t *env,
+              const read_t &,
               read_response_t *response,
-              order_token_t tok,
-              signal_t *interruptor)
+              order_token_t tok)
         THROWS_ONLY(interrupted_exc_t, cannot_perform_query_exc_t);
-    void read_outdated(const read_t &,
-                       read_response_t *response,
-                       signal_t *interruptor)
+    void read_outdated(env_t *env,
+                       const read_t &,
+                       read_response_t *response)
         THROWS_ONLY(interrupted_exc_t, cannot_perform_query_exc_t);
-    void write(write_t *,
+    void write(env_t *env,
+               write_t *,
                write_response_t *response,
-               order_token_t tok,
-               signal_t *interruptor)
+               order_token_t tok)
         THROWS_ONLY(interrupted_exc_t, cannot_perform_query_exc_t);
 
     /* These calls are for the sole purpose of optimizing queries; don't rely
@@ -55,11 +54,9 @@ public:
     std::set<region_t> get_sharding_scheme()
         THROWS_ONLY(cannot_perform_query_exc_t);
     signal_t *get_initial_ready_signal();
-    /* Check if the internal value is null. */
-    bool has();
+
 private:
     namespace_interface_t *internal_;
-    env_t *env_;
 };
 
 class rdb_namespace_access_t {
@@ -68,7 +65,6 @@ public:
     rdb_namespace_interface_t get_namespace_if();
 private:
     base_namespace_repo_t::access_t internal_;
-    env_t *env_;
 };
 
 class scope_env_t;
