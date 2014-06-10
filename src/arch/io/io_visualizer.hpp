@@ -25,6 +25,7 @@ public:
     }
     explicit file_visualizer_stats_t(int64_t _file_size) {
         file_size = _file_size;
+        vis_file_size = _file_size;
         for (size_t i = 0; i < GRANULARITY; ++i) {
             read_count[i] = 0;
             write_count[i] = 0;
@@ -38,8 +39,11 @@ public:
     void count_write(int64_t offset) {
         ++write_count[to_bucket(offset)];
     }
-    void count_resize(UNUSED int64_t new_file_size) {
+    void count_resize(int64_t new_file_size) {
         ++resize_count;
+        file_size = new_file_size;
+        // We don't update vis_file_size. Operations at higher offsets
+        // will be counted towards the highest bucket.
     }
 
 private:
@@ -49,10 +53,10 @@ private:
     static const size_t GRANULARITY = 100;
 
     size_t to_bucket(int64_t offset) const {
-        if (offset >= file_size) {
+        if (offset >= vis_file_size) {
             return GRANULARITY-1;
         }
-        const int64_t bucket_size = file_size / GRANULARITY + 1;
+        const int64_t bucket_size = vis_file_size / GRANULARITY + 1;
         rassert(offset / bucket_size < GRANULARITY);
         return offset / bucket_size;
     }
@@ -60,6 +64,7 @@ private:
     int read_count[GRANULARITY];
     int write_count[GRANULARITY];
     int resize_count;
+    int64_t vis_file_size;
     int64_t file_size;
 };
 
