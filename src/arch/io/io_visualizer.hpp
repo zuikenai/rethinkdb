@@ -20,7 +20,9 @@
 
 class file_visualizer_stats_t {
 public:
-    file_visualizer_stats_t() : file_visualizer_stats_t(0) { }
+    file_visualizer_stats_t() {
+        file_visualizer_stats_t(0);
+    }
     explicit file_visualizer_stats_t(int64_t _file_size) {
         file_size = _file_size;
         vis_file_size = _file_size;
