@@ -16,6 +16,7 @@
 
 #include "arch/io/concurrency.hpp"
 #include "arch/timing.hpp"
+#include "containers/scoped.hpp"
 #include "utils.hpp"
 
 class file_visualizer_stats_t {
@@ -57,7 +58,7 @@ private:
             return GRANULARITY-1;
         }
         const int64_t bucket_size = vis_file_size / GRANULARITY + 1;
-        rassert(offset / bucket_size < GRANULARITY);
+        rassert(static_cast<size_t>(offset / bucket_size) < GRANULARITY);
         return offset / bucket_size;
     }
 
@@ -80,12 +81,18 @@ public:
     void push_stats(const std::string &filename,
                        const file_visualizer_stats_t &file_stats) {
         system_mutex_t::lock_t lock(&mutex);
+        if (stats.empty()) {
+            timer.init(new repeating_timer_t(UPDATE_INTERVAL_MS, this));
+        }
         stats[filename] = file_stats;
     }
 
     void unregister_file(const std::string &filename) {
         system_mutex_t::lock_t lock(&mutex);
         stats.erase(filename);
+        if (stats.empty()) {
+            timer.reset();
+        }
     }
 
     void on_ring() {
@@ -106,15 +113,10 @@ public:
     }
 
 private:
-    io_visualizer_t() : timer(UPDATE_INTERVAL_MS, this) { }
+    io_visualizer_t() { }
 
     void visualize_file(const std::string &filename,
                         const file_visualizer_stats_t& file_stats) const {
-        const size_t line_length = file_stats.GRANULARITY + 4;
-
-        for (size_t i = 0; i < line_length; ++i) {
-            printf("=");
-        }
         printf("\n");
 
         printf("%s (%" PRIi64 " MB)\n", filename.c_str(), file_stats.file_size / 1024 / 1024);
@@ -143,7 +145,7 @@ private:
         }
         printf("\n");
 
-        for (int bar_y = 1 << 10; bar_y > 0; bar_y /= 2) {
+        for (int bar_y = 1 << 12; bar_y > 0; bar_y /= 4) {
             printf("  |");
             for (size_t i = 0; i < file_stats.GRANULARITY; ++i) {
                 char cell = generate_bar_cell(file_stats, i, bar_y);
@@ -160,12 +162,12 @@ private:
 
     char generate_bar_cell(const file_visualizer_stats_t& file_stats,
                            const int bar_x, const int bar_y) const {
-        const bool read = file_stats.read_count[bar_x] > bar_y/2
+        const bool read = file_stats.read_count[bar_x] > bar_y/4
                           && file_stats.read_count[bar_x] <= bar_y;
-        const bool write = file_stats.write_count[bar_x] > bar_y/2
+        const bool write = file_stats.write_count[bar_x] > bar_y/4
                            && file_stats.write_count[bar_x] <= bar_y;
-        const bool read_above = file_stats.read_count[bar_x] > bar_y/2;
-        const bool write_above = file_stats.write_count[bar_x] > bar_y/2;
+        const bool read_above = file_stats.read_count[bar_x] > bar_y/4;
+        const bool write_above = file_stats.write_count[bar_x] > bar_y/4;
         if (read && write) {
             return '~';
         } else if (read && !write_above) {
@@ -183,7 +185,7 @@ private:
 
     system_mutex_t mutex;
     std::map<std::string, file_visualizer_stats_t> stats;
-    repeating_timer_t timer;
+    scoped_ptr_t<repeating_timer_t> timer;
 
     DISABLE_COPYING(io_visualizer_t);
 };
