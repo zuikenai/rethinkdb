@@ -119,10 +119,26 @@ private:
 
         printf("%s (%" PRIi64 " MB)\n", filename.c_str(), file_stats.file_size / 1024 / 1024);
 
+        bool some_read = false;
+        bool some_write = false;
+        for (size_t i = 0; i < file_stats.GRANULARITY; ++i) {
+            some_read = some_read || file_stats.read_count[i] > 0;
+            some_write = some_write || file_stats.write_count[i] > 0;
+        }
         if (file_stats.resize_count > 0) {
             printf("  [RES]\n");
         } else {
             printf("  [   ]\n");
+        }
+        if (some_read) {
+            printf(" [RD]\n");
+        } else {
+            printf(" [  ]\n");
+        }
+        if (some_write) {
+            printf(" [WR]\n");
+        } else {
+            printf(" [  ]\n");
         }
 
         for (int bar_y = 1 << 10; bar_y > 0; bar_y /= 2) {
