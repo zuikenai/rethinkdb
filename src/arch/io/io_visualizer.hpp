@@ -50,7 +50,7 @@ private:
     friend class io_visualizer_t;
     friend class file_visualizer_t;
 
-    static const size_t GRANULARITY = 80;
+    static const size_t GRANULARITY = 100;
 
     size_t to_bucket(int64_t offset) const {
         if (offset >= file_size) {
@@ -69,7 +69,7 @@ private:
 
 class io_visualizer_t : public repeating_timer_callback_t {
 public:
-    static const int64_t UPDATE_INTERVAL_MS = 200;
+    static const int64_t UPDATE_INTERVAL_MS = 500;
 
     static io_visualizer_t *get_singleton() {
         static io_visualizer_t vis;
@@ -93,6 +93,12 @@ public:
             system_mutex_t::lock_t lock(&mutex);
             stats_copy = stats;
         }
+
+        // TODO! Cheap way to clear the screen
+        for (int i = 0; i < 10; ++i) {
+            printf("\n\n\n\n\n\n\n\n\n\n\n");
+        }
+
         for (auto it = stats_copy.begin(); it != stats_copy.end(); ++it) {
             visualize_file(it->first, it->second);
         }
@@ -103,9 +109,6 @@ private:
 
     void visualize_file(const std::string &filename,
                         const file_visualizer_stats_t& file_stats) const {
-        // TODO! Clear screen, probably through curses
-        printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-
         const size_t line_length = file_stats.GRANULARITY + 4;
 
         for (size_t i = 0; i < line_length; ++i) {
@@ -113,7 +116,7 @@ private:
         }
         printf("\n");
 
-        printf("  %s (%" PRIi64 " MB)\n", filename.c_str(), file_stats.file_size / 1024 / 1024);
+        printf("%s (%" PRIi64 " MB)\n", filename.c_str(), file_stats.file_size / 1024 / 1024);
 
         if (file_stats.resize_count > 0) {
             printf("  [RES]\n");
@@ -121,7 +124,7 @@ private:
             printf("  [   ]\n");
         }
 
-        for (int bar_y = 1; bar_y < 1 << 10; bar_y *= 2) {
+        for (int bar_y = 1 << 16; bar_y > 0; bar_y /= 4) {
             printf("  |");
             for (size_t i = 0; i < file_stats.GRANULARITY; ++i) {
                 char cell = generate_bar_cell(file_stats, i, bar_y);
@@ -129,25 +132,31 @@ private:
             }
             printf("\n");
         }
-
-        for (size_t i = 0; i < line_length; ++i) {
-            printf("-");
+        printf("  |");
+        for (size_t i = 0; i < file_stats.GRANULARITY; ++i) {
+            printf("_");
         }
         printf("\n");
     }
 
     char generate_bar_cell(const file_visualizer_stats_t& file_stats,
                            const int bar_x, const int bar_y) const {
-        const bool read = file_stats.read_count[bar_x] >= bar_y/2
-                          && file_stats.read_count[bar_x] < bar_y;
-        const bool write = file_stats.write_count[bar_x] >= bar_y/2
-                           && file_stats.write_count[bar_x] < bar_y;
+        const bool read = file_stats.read_count[bar_x] > bar_y/4
+                          && file_stats.read_count[bar_x] <= bar_y;
+        const bool write = file_stats.write_count[bar_x] > bar_y/4
+                           && file_stats.write_count[bar_x] <= bar_y;
+        const bool read_above = file_stats.read_count[bar_x] > bar_y/4;
+        const bool write_above = file_stats.write_count[bar_x] > bar_y/4;
         if (read && write) {
             return '~';
-        } else if (read) {
-            return '^';
-        } else if (write) {
+        } else if (read && !write_above) {
+            return '.';
+        } else if (write && !read_above) {
             return '_';
+        } else if (write_above) {
+            return '|';
+        } else if (read_above) {
+            return ':';
         } else {
             return ' ';
         }
@@ -162,7 +171,7 @@ private:
 
 class file_visualizer_t : public repeating_timer_callback_t {
 public:
-    static const int64_t UPDATE_INTERVAL_MS = 200;
+    static const int64_t UPDATE_INTERVAL_MS = 1000;
 
     file_visualizer_t(const std::string &_filename, int64_t file_size) :
         filename(_filename),
