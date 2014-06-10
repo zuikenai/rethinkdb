@@ -1,29 +1,26 @@
 import collections, os, pytz, re, sys, types
 from datetime import datetime
 
-# -- find and import test_util - TODO: replace with methods from common
-trialPath = os.path.realpath(os.path.dirname(__file__))
-while trialPath != os.path.sep:
-    if os.path.isfile(os.path.join(trialPath, 'test_util.py')):
-        stashedPath = sys.path
-        sys.path.insert(0, trialPath)
-        import test_util
-        sys.path = stashedPath
-        break
-    trialPath = os.path.dirname(trialPath)
+# -- import test resources - NOTE: these are path dependent
 
-# -- find and import common
-trialPath = os.path.realpath(os.path.dirname(__file__))
-while trialPath != os.path.sep:
-    if os.path.isfile(os.path.join(trialPath, 'common', 'utils.py')):
-        stashedPath = sys.path
-        sys.path.insert(0, os.path.join(trialPath, 'common'))
-        import utils
-        sys.path = stashedPath
-        break
-    trialPath = os.path.dirname(trialPath)
+stashedPath = sys.path
 
+# - test_util - TODO: replace with methods from common
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import test_util
+
+# - common
+
+sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'common')))
+import utils
 r = utils.import_pyton_driver()
+
+# -
+
+sys.path = stashedPath
+
+# --
 
 # JSPORT = int(sys.argv[1])
 CPPPORT = int(sys.argv[2])
