@@ -217,8 +217,14 @@ file_direct_io_mode_t io_backender_t::get_direct_io_mode() const { return direct
 
 /* Disk file object */
 
-linux_file_t::linux_file_t(scoped_fd_t &&_fd, int64_t _file_size, linux_disk_manager_t *_diskmgr)
-    : fd(std::move(_fd)), file_size(_file_size), diskmgr(_diskmgr) {
+linux_file_t::linux_file_t(const std::string &filename, scoped_fd_t &&_fd,
+                           int64_t _file_size, linux_disk_manager_t *_diskmgr)
+    : fd(std::move(_fd)), file_size(_file_size), diskmgr(_diskmgr)
+#ifdef IO_VISUALIZER
+// TODO! Handle filename unused problem
+    , visualizer(filename, file_size)
+#endif
+    {
     // TODO: Why do we care whether we're in a thread pool?  (Maybe it's that you can't create a
     // file_account_t outside of the thread pool?  But they're associated with the diskmgr,
     // aren't they?)
@@ -236,7 +242,9 @@ int64_t linux_file_t::get_file_size() {
 void linux_file_t::set_file_size(int64_t size) {
     assert_thread();
     rassert(diskmgr, "No diskmgr has been constructed (are we running without an event queue?)");
-
+#ifdef IO_VISUALIZER
+    visualizer.count_resize(size);
+#endif
     struct rs_callback_t : public linux_iocallback_t, cond_t {
         void on_io_complete() {
             delete this;
@@ -275,6 +283,9 @@ void linux_file_t::set_file_size_at_least(int64_t size) {
 void linux_file_t::read_async(int64_t offset, size_t length, void *buf, file_account_t *account, linux_iocallback_t *callback) {
     rassert(diskmgr, "No diskmgr has been constructed (are we running without an event queue?)");
     verify_aligned_file_access(file_size, offset, length, buf);
+#ifdef IO_VISUALIZER
+    visualizer.count_read(offset);
+#endif
     diskmgr->submit_read(fd.get(), buf, length, offset,
         account == DEFAULT_DISK_ACCOUNT ? default_account->get_account() : account->get_account(),
         callback);
@@ -285,6 +296,9 @@ void linux_file_t::write_async(int64_t offset, size_t length, const void *buf,
                                wrap_in_datasyncs_t wrap_in_datasyncs) {
     rassert(diskmgr, "No diskmgr has been constructed (are we running without an event queue?)");
     verify_aligned_file_access(file_size, offset, length, buf);
+#ifdef IO_VISUALIZER
+    visualizer.count_write(offset);
+#endif
     diskmgr->submit_write(fd.get(), buf, length, offset,
                           account == DEFAULT_DISK_ACCOUNT ? default_account->get_account() : account->get_account(),
                           callback,
@@ -297,6 +311,9 @@ void linux_file_t::writev_async(int64_t offset, size_t length,
     rassert(diskmgr != NULL,
             "No diskmgr has been constructed (are we running without an event queue?)");
     verify_aligned_file_access(file_size, offset, length, bufs);
+#ifdef IO_VISUALIZER
+    visualizer.count_write(offset);
+#endif
 
 #ifndef USE_WRITEV
 #error "USE_WRITEV not defined.  Did you include pool.hpp?"
@@ -497,7 +514,8 @@ file_open_result_t open_file(const char *path, const int mode, io_backender_t *b
     // created file's directory entry is persisted to disk.
     warn_fsync_parent_directory(path);
 
-    out->init(new linux_file_t(std::move(fd), file_size, backender->get_diskmgr_ptr()));
+    out->init(new linux_file_t(std::string(path), std::move(fd), file_size,
+                               backender->get_diskmgr_ptr()));
 
     return open_res;
 }

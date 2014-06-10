@@ -3,6 +3,7 @@
 #define ARCH_IO_DISK_HPP_
 
 #include "arch/io/io_utils.hpp"
+#include "arch/io/io_visualizer.hpp"
 #include "arch/types.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "containers/scoped.hpp"
@@ -95,7 +96,8 @@ public:
     ~linux_file_t();
 
 private:
-    linux_file_t(scoped_fd_t &&fd, int64_t file_size, linux_disk_manager_t *diskmgr);
+    linux_file_t(const std::string &filename, scoped_fd_t &&fd, int64_t file_size,
+                 linux_disk_manager_t *diskmgr);
     friend file_open_result_t open_file(const char *path, int mode,
                                         io_backender_t *backender,
                                         scoped_ptr_t<file_t> *out);
@@ -106,6 +108,10 @@ private:
     linux_disk_manager_t *diskmgr;
 
     scoped_ptr_t<file_account_t> default_account;
+
+#ifdef IO_VISUALIZER
+    file_visualizer_t visualizer;
+#endif
 
     // Used to make sure we do not destruct the linux_file_t until all file size
     // operations have completed.
