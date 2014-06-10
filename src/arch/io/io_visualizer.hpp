@@ -125,21 +125,23 @@ private:
             some_read = some_read || file_stats.read_count[i] > 0;
             some_write = some_write || file_stats.write_count[i] > 0;
         }
+        printf(" ");
         if (file_stats.resize_count > 0) {
-            printf("  [RES]\n");
+            printf(" [RES]");
         } else {
-            printf("  [   ]\n");
+            printf(" [   ]");
         }
         if (some_read) {
-            printf(" [RD]\n");
+            printf(" [RD]");
         } else {
-            printf(" [  ]\n");
+            printf(" [  ]");
         }
         if (some_write) {
-            printf(" [WR]\n");
+            printf(" [WR]");
         } else {
-            printf(" [  ]\n");
+            printf(" [  ]");
         }
+        printf("\n");
 
         for (int bar_y = 1 << 10; bar_y > 0; bar_y /= 2) {
             printf("  |");
