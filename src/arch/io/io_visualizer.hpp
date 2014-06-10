@@ -124,7 +124,7 @@ private:
             printf("  [   ]\n");
         }
 
-        for (int bar_y = 1 << 16; bar_y > 0; bar_y /= 4) {
+        for (int bar_y = 1 << 10; bar_y > 0; bar_y /= 2) {
             printf("  |");
             for (size_t i = 0; i < file_stats.GRANULARITY; ++i) {
                 char cell = generate_bar_cell(file_stats, i, bar_y);
@@ -141,12 +141,12 @@ private:
 
     char generate_bar_cell(const file_visualizer_stats_t& file_stats,
                            const int bar_x, const int bar_y) const {
-        const bool read = file_stats.read_count[bar_x] > bar_y/4
+        const bool read = file_stats.read_count[bar_x] > bar_y/2
                           && file_stats.read_count[bar_x] <= bar_y;
-        const bool write = file_stats.write_count[bar_x] > bar_y/4
+        const bool write = file_stats.write_count[bar_x] > bar_y/2
                            && file_stats.write_count[bar_x] <= bar_y;
-        const bool read_above = file_stats.read_count[bar_x] > bar_y/4;
-        const bool write_above = file_stats.write_count[bar_x] > bar_y/4;
+        const bool read_above = file_stats.read_count[bar_x] > bar_y/2;
+        const bool write_above = file_stats.write_count[bar_x] > bar_y/2;
         if (read && write) {
             return '~';
         } else if (read && !write_above) {
