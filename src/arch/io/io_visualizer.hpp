@@ -38,12 +38,8 @@ public:
     void count_write(int64_t offset) {
         ++write_count[to_bucket(offset)];
     }
-    void count_resize(int64_t new_file_size) {
+    void count_resize(UNUSED int64_t new_file_size) {
         ++resize_count;
-        // We don't resize the read_count / write_count entries or anything.
-        // They will be off after this if the size change is substantial.
-        // TODO?
-        file_size = new_file_size;
     }
 
 private:
