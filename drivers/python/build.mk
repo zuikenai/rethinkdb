@@ -19,8 +19,8 @@ py-driver: $(PY_BUILD_FILES) $(PY_PROTO_DEV_FILE) | $(PY_BUILD_DIR)/.
 $(PY_BUILD_DIR)/rethinkdb/%: $(PY_SRC_DIR)/rethinkdb/% py_build_files
 	cp $< $@
 
-.INTERMEDIARY: py_build_files
-py_build_files: $(PY_BUILD_DIR)/rethinkdb/.
+.INTERMEDIATE: py_build_files
+py_build_files: | $(PY_BUILD_DIR)/rethinkdb/.
 	$P CP $(PY_BUILD_DIR)/rethinkdb/
 
 %/$(PY_PROTO_FILE_NAME): $(PROTO_FILE_SRC) %/.
@@ -31,7 +31,7 @@ $(PY_BUILD_DIR)/setup.py: $(PY_SRC_DIR)/setup.py | $(PY_BUILD_DIR)
 	$P CP
 	cp $< $@
 
-.PHONY py-clean
+.PHONY: py-clean
 py-clean:
 	$P RM $(PY_BUILD_DIR)
 	rm -rf $(PY_BUILD_DIR)
@@ -40,26 +40,22 @@ py-clean:
 	$P RM $(PY_PROTO_DEV_FILE)
 	rm -f $(PY_PROTO_DEV_FILE)
 
-.PHONY py-sdist py-publish py-install
+.PHONY: py-sdist
 py-sdist: py-driver $(PY_BUILD_DIR)/setup.py | $(PY_PKG_DIR)/.
 	$P SDIST
-	cp $? $(PY_BUILD_DIR)
-	cd $(PY_BUILD_DIR) && python setup.py sdist --dist-dir=$(abspath $(PY_PKG_DIR))
+	cd $(PY_BUILD_DIR) && $(PYTHON) setup.py sdist --dist-dir=$(abspath $(PY_PKG_DIR))
 
-.PHONY py-bdist
+.PHONY: py-bdist
 py-bdist: py-driver $(PY_BUILD_DIR)/setup.py | $(PY_PKG_DIR)/.
 	$P BDIST_EGG
-	cp $? $(PY_BUILD_DIR)
-	cd $(PY_BUILD_DIR) && python setup.py bdist_egg --dist-dir=$(abspath $(PY_PKG_DIR))
+	cd $(PY_BUILD_DIR) && $(PYTHON) setup.py bdist_egg --dist-dir=$(abspath $(PY_PKG_DIR))
 
-.PHONY py-publish
+.PHONY: py-publish
 py-publish: py-driver $(PY_BUILD_DIR)/setup.py | $(PY_PKG_DIR)/.
 	$P REGISTER SDIST
-	cp $? $(PY_BUILD_DIR)
-	cd $(PY_BUILD_DIR) && python setup.py register sdist --dist-dir=$(abspath $(PY_PKG_DIR)) upload 
+	cd $(PY_BUILD_DIR) && $(PYTHON) setup.py register sdist --dist-dir=$(abspath $(PY_PKG_DIR)) upload 
 
-.PHONY py-install
+.PHONY: py-install
 py-install: py-driver $(PY_BUILD_DIR)/setup.py | $(PY_PKG_DIR)/.
 	$P INSTALL
-	cp $? $(PY_BUILD_DIR)
-	cd $(PY_BUILD_DIR) && python setup.py install
+	cd $(PY_BUILD_DIR) && $(PYTHON) setup.py install
