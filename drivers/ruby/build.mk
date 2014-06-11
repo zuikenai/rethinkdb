@@ -5,7 +5,7 @@ RB_BUILD_DIR = $(TOP)/build/drivers/ruby
 RB_PKG_DIR = $(TOP)/build/packages/ruby
 
 RB_PROTO_FILE_NAME = ql2.pb.rb
-RB_GEMSPEC_FILE = $(RB_SRC_DIR)/rethinkdb.gemspec
+RB_GEMSPEC_FILE_NAME = rethinkdb.gemspec
 
 RB_PROTO_BUILD_FILE := $(RB_BUILD_DIR)/lib/$(RB_PROTO_FILE_NAME)
 # convenience file for driver development
@@ -20,20 +20,26 @@ rb-driver: $(RB_BUILD_FILES) $(RB_PROTO_DEV_FILE)
 $(RB_BUILD_DIR)/lib/%: $(RB_SRC_DIR)/lib/% rb_build_files
 	cp $< $@
 
-.INTERMEDIARY: rb_build_files
-rb_build_files: $(RB_BUILD_DIR)/lib/.
+.INTERMEDIATE: rb_build_files
+rb_build_files: | $(RB_BUILD_DIR)/lib/.
 	$P CP $(RB_BUILD_DIR)/lib
 
-%/$(RB_PROTO_FILE_NAME): $(PROTO_FILE_SRC) %/.
+$(RB_PROTO_BUILD_FILE) $(RB_PROTO_DEV_FILE): $(PROTO_FILE_SRC)
 	$P CONVERT_PROTOFILE
+	mkdir -p $(dir $@)
 	$(PYTHON) ../convert_protofile --language ruby --input-file $(PROTO_FILE_SRC) --output-file $@
+
+$(RB_SRC_DIR)/$(RB_GEMSPEC_FILE_NAME): $(RB_SRC_DIR)/$(RB_GEMSPEC_FILE_NAME)
+	cp $< $@
+
+.PHONY: rb-sdist
+rb-sdist: $(RB_BUILD_DIR)/$(RB_GEMSPEC_FILE_NAME) rb-driver
 
 .PHONY: rb-publish
 GEMFILES = $(wildcard $(RB_SRC_DIR)/rethinkdb-*.gem)
-rb-publish: $(RB_GEMSPEC_FILE) rb-driver
+rb-publish: rb-sdist
 	$P PUBLISH
 	$(if $(GEMFILES), $(error Can not publish: a gem file already exists: $(GEMFILES)))
-	cp $(RB_GEMSPEC_FILE) $(RB_BUILD_DIR)
 	cd $(RB_BUILD_DIR) && gem build $(GEMSPEC)
 	cd $(RB_BUILD_DIR) && gem push rethinkdb-*.gem
 
