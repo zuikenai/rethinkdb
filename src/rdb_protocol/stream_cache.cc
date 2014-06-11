@@ -18,9 +18,11 @@ void stream_cache_t::insert(int64_t key,
                             counted_t<datum_stream_t> val_stream) {
     maybe_evict();
     std::pair<boost::ptr_map<int64_t, entry_t>::iterator, bool> res = streams.insert(
-            key, new entry_t(time(0), use_json,
+            key, new entry_t(time(0),
+                             use_json,
                              std::move(global_optargs),
-                             profile_requested, val_stream));
+                             profile_requested,
+                             val_stream));
     guarantee(res.second);
 }
 
@@ -39,7 +41,9 @@ bool stream_cache_t::serve(int64_t key, Response *res, signal_t *interruptor) {
 
     std::exception_ptr exc;
     try {
-        env_t env(rdb_ctx, interruptor, entry->global_optargs);
+        // RSI: We never profile.
+        env_t env(rdb_ctx, interruptor, entry->global_optargs,
+                  entry->profile);
 
         batch_type_t batch_type = entry->has_sent_batch
                                       ? batch_type_t::NORMAL
@@ -52,8 +56,8 @@ bool stream_cache_t::serve(int64_t key, Response *res, signal_t *interruptor) {
         for (auto d = ds.begin(); d != ds.end(); ++d) {
             (*d)->write_to_protobuf(res->add_response(), entry->use_json);
         }
-        if (entry->profile == profile_bool_t::PROFILE) {
-            datum_t(profile::NOT_SUPPORTED_MESSAGE).write_to_protobuf(
+        if (env.trace.has()) {
+            env.trace->as_datum()->write_to_protobuf(
                 res->mutable_profile(), entry->use_json);
         }
     } catch (const std::exception &e) {

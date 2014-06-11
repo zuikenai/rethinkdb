@@ -3,7 +3,6 @@
 
 #include "errors.hpp"
 #include <boost/bind.hpp>
-#include <boost/function.hpp>
 
 #include "clustering/administration/database_metadata.hpp"
 #include "clustering/administration/metadata.hpp"
@@ -111,77 +110,109 @@ profile_bool_t env_t::profile() const {
     return trace.has() ? profile_bool_t::PROFILE : profile_bool_t::DONT_PROFILE;
 }
 
-cluster_access_t::cluster_access_t(
-        base_namespace_repo_t *_ns_repo,
-
-        clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
-            _namespaces_semilattice_metadata,
-
-        clone_ptr_t<watchable_t<databases_semilattice_metadata_t> >
-             _databases_semilattice_metadata,
-        boost::shared_ptr<semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >
-            _semilattice_metadata,
-        directory_read_manager_t<cluster_directory_metadata_t> *_directory_read_manager,
-        uuid_u _this_machine)
-    : ns_repo(_ns_repo),
-      namespaces_semilattice_metadata(_namespaces_semilattice_metadata),
-      databases_semilattice_metadata(_databases_semilattice_metadata),
-      semilattice_metadata(_semilattice_metadata),
-      directory_read_manager(_directory_read_manager),
-      this_machine(_this_machine) { }
-
-void cluster_access_t::join_and_wait_to_propagate(
-        const cluster_semilattice_metadata_t &metadata_to_join,
-        signal_t *interruptor)
+void env_t::join_and_wait_to_propagate(
+        const cluster_semilattice_metadata_t &metadata_to_join)
     THROWS_ONLY(interrupted_exc_t) {
-    cluster_semilattice_metadata_t sl_metadata;
-    {
-        on_thread_t switcher(semilattice_metadata->home_thread());
-        semilattice_metadata->join(metadata_to_join);
-        sl_metadata = semilattice_metadata->get();
-    }
+    r_sanity_check(rdb_ctx->cluster_metadata);
+    rdb_ctx->cluster_metadata->assert_thread();
+    rdb_ctx->cluster_metadata->join(metadata_to_join);
+    cluster_semilattice_metadata_t sl_metadata
+        = rdb_ctx->cluster_metadata->get();
 
-    boost::function<bool (const cow_ptr_t<namespaces_semilattice_metadata_t> s)> p
-        = boost::bind(&is_joined<cow_ptr_t<namespaces_semilattice_metadata_t > >,
+    {
+        on_thread_t switcher(home_thread());
+        clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
+            ns_watchable = rdb_ctx->get_namespaces_watchable();
+
+        ns_watchable->run_until_satisfied(
+                boost::bind(&is_joined<cow_ptr_t<namespaces_semilattice_metadata_t > >,
                       _1,
-                      sl_metadata.rdb_namespaces);
+                      sl_metadata.rdb_namespaces),
+                interruptor);
 
-    {
-        on_thread_t switcher(namespaces_semilattice_metadata->home_thread());
-        namespaces_semilattice_metadata->run_until_satisfied(p,
-                                                             interruptor);
-        databases_semilattice_metadata->run_until_satisfied(
-            boost::bind(&is_joined<databases_semilattice_metadata_t>,
-                        _1,
-                        sl_metadata.databases),
-            interruptor);
+        clone_ptr_t< watchable_t<databases_semilattice_metadata_t> >
+            db_watchable = rdb_ctx->get_databases_watchable();
+        db_watchable->run_until_satisfied(
+                boost::bind(&is_joined<databases_semilattice_metadata_t>,
+                            _1,
+                            sl_metadata.databases),
+                interruptor);
     }
+}
+
+base_namespace_repo_t *env_t::ns_repo() {
+    r_sanity_check(rdb_ctx != NULL);
+    return rdb_ctx->ns_repo;
+}
+
+const boost::shared_ptr< semilattice_readwrite_view_t<
+                             cluster_semilattice_metadata_t> > &
+env_t::cluster_metadata() {
+    r_sanity_check(rdb_ctx != NULL);
+    r_sanity_check(rdb_ctx->cluster_metadata);
+    return rdb_ctx->cluster_metadata;
+}
+
+directory_read_manager_t<cluster_directory_metadata_t> *
+env_t::directory_read_manager() {
+    r_sanity_check(rdb_ctx != NULL);
+    r_sanity_check(rdb_ctx->directory_read_manager != NULL);
+    return rdb_ctx->directory_read_manager;
+}
+
+uuid_u env_t::this_machine() {
+    r_sanity_check(rdb_ctx != NULL);
+    r_sanity_check(!rdb_ctx->machine_id.is_unset());
+    return rdb_ctx->machine_id;
+}
+
+changefeed::client_t *env_t::get_changefeed_client() {
+    r_sanity_check(rdb_ctx != NULL);
+    r_sanity_check(rdb_ctx->changefeed_client.has());
+    return rdb_ctx->changefeed_client.get();
+}
+
+std::string env_t::get_reql_http_proxy() {
+    r_sanity_check(rdb_ctx != NULL);
+    return rdb_ctx->reql_http_proxy;
+}
+
+extproc_pool_t *env_t::get_extproc_pool() {
+    assert_thread();
+    r_sanity_check(rdb_ctx != NULL);
+    r_sanity_check(rdb_ctx->extproc_pool != NULL);
+    return rdb_ctx->extproc_pool;
 }
 
 js_runner_t *env_t::get_js_runner() {
     assert_thread();
-    r_sanity_check(extproc_pool != NULL);
+    extproc_pool_t *extproc_pool = get_extproc_pool();
     if (!js_runner.connected()) {
         js_runner.begin(extproc_pool, interruptor);
     }
     return &js_runner;
 }
 
+cow_ptr_t<namespaces_semilattice_metadata_t>
+env_t::get_namespaces_metadata() {
+    return rdb_ctx->get_namespaces_metadata();
+}
+
+void env_t::get_databases_metadata(databases_semilattice_metadata_t *out) {
+    rdb_ctx->get_databases_metadata(out);
+}
+
+
 env_t::env_t(rdb_context_t *ctx, signal_t *_interruptor,
-             std::map<std::string, wire_func_t> optargs)
+             std::map<std::string, wire_func_t> optargs,
+             profile_bool_t profile)
     : evals_since_yield(0),
       global_optargs(std::move(optargs)),
-      extproc_pool(ctx->extproc_pool),
-      changefeed_client(ctx->changefeed_client.get_or_null()),
-      reql_http_proxy(ctx->reql_http_proxy),
-      cluster_access(
-          ctx->ns_repo,
-          ctx->get_namespaces_watchable_or_null(),
-          ctx->get_databases_watchable_or_null(),
-          ctx->cluster_metadata,
-          ctx->directory_read_manager,
-          ctx->machine_id),
       interruptor(_interruptor),
+      trace(profile == profile_bool_t::PROFILE
+            ? make_scoped<profile::trace_t>()
+            : scoped_ptr_t<profile::trace_t>()),
+      rdb_ctx(ctx),
       eval_callback(NULL) {
     rassert(ctx != NULL);
     rassert(interruptor != NULL);
@@ -192,18 +223,9 @@ env_t::env_t(rdb_context_t *ctx, signal_t *_interruptor,
 env_t::env_t(signal_t *_interruptor)
     : evals_since_yield(0),
       global_optargs(),
-      extproc_pool(NULL),
-      changefeed_client(NULL),
-      reql_http_proxy(""),
-      cluster_access(
-          NULL,
-          clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >(),
-          clone_ptr_t<watchable_t<databases_semilattice_metadata_t> >(),
-          boost::shared_ptr<
-              semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >(),
-          NULL,
-          uuid_u()),
       interruptor(_interruptor),
+      trace(),
+      rdb_ctx(NULL),
       eval_callback(NULL) {
     rassert(interruptor != NULL);
 }
@@ -217,35 +239,6 @@ profile_bool_t profile_bool_optarg(const protob_t<Query> &query) {
     } else {
         return profile_bool_t::DONT_PROFILE;
     }
-}
-
-// Called by unittest/rdb_env.cc.
-env_t::env_t(
-    extproc_pool_t *_extproc_pool,
-    const std::string &_reql_http_proxy,
-    base_namespace_repo_t *_ns_repo,
-    clone_ptr_t<watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
-        _namespaces_semilattice_metadata,
-    clone_ptr_t<watchable_t<databases_semilattice_metadata_t> >
-        _databases_semilattice_metadata,
-    boost::shared_ptr<semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >
-        _semilattice_metadata,
-    signal_t *_interruptor,
-    uuid_u _this_machine)
-  : evals_since_yield(0),
-    global_optargs(),
-    extproc_pool(_extproc_pool),
-    changefeed_client(NULL),
-    reql_http_proxy(_reql_http_proxy),
-    cluster_access(_ns_repo,
-                   _namespaces_semilattice_metadata,
-                   _databases_semilattice_metadata,
-                   _semilattice_metadata,
-                   NULL,
-                   _this_machine),
-    interruptor(_interruptor),
-    eval_callback(NULL) {
-    rassert(interruptor != NULL);
 }
 
 env_t::~env_t() { }

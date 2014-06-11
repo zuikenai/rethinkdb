@@ -195,7 +195,7 @@ void run(protob_t<Query> q,
     switch (q->type()) {
     case Query_QueryType_START: {
         const profile_bool_t profile = profile_bool_optarg(q);
-        env_t env(ctx, interruptor, global_optargs(q));
+        env_t env(ctx, interruptor, global_optargs(q), profile);
 
         counted_t<term_t> root_term;
         try {
@@ -230,8 +230,8 @@ void run(protob_t<Query> q,
                 res->set_type(Response_ResponseType_SUCCESS_ATOM);
                 counted_t<const datum_t> d = val->as_datum();
                 d->write_to_protobuf(res->add_response(), use_json);
-                if (profile == profile_bool_t::PROFILE) {
-                    datum_t(profile::NOT_SUPPORTED_MESSAGE).write_to_protobuf(
+                if (env.trace.has()) {
+                    env.trace->as_datum()->write_to_protobuf(
                         res->mutable_profile(), use_json);
                 }
             } else if (counted_t<grouped_data_t> gd
@@ -239,8 +239,8 @@ void run(protob_t<Query> q,
                 res->set_type(Response::SUCCESS_ATOM);
                 datum_t d(std::move(*gd));
                 d.write_to_protobuf(res->add_response(), use_json);
-                if (profile == profile_bool_t::PROFILE) {
-                    datum_t(profile::NOT_SUPPORTED_MESSAGE).write_to_protobuf(
+                if (env.trace.has()) {
+                    env.trace->as_datum()->write_to_protobuf(
                         res->mutable_profile(), use_json);
                 }
             } else if (val->get_type().is_convertible(val_t::type_t::SEQUENCE)) {
@@ -248,14 +248,16 @@ void run(protob_t<Query> q,
                 if (counted_t<const datum_t> arr = seq->as_array(&env)) {
                     res->set_type(Response_ResponseType_SUCCESS_ATOM);
                     arr->write_to_protobuf(res->add_response(), use_json);
-                    if (profile == profile_bool_t::PROFILE) {
-                        datum_t(profile::NOT_SUPPORTED_MESSAGE).write_to_protobuf(
+                    if (env.trace.has()) {
+                        env.trace->as_datum()->write_to_protobuf(
                             res->mutable_profile(), use_json);
                     }
                 } else {
-                    stream_cache->insert(token, use_json,
+                    stream_cache->insert(token,
+                                         use_json,
                                          env.global_optargs.get_all_optargs(),
-                                         profile, seq);
+                                         profile,
+                                         seq);
                     bool b = stream_cache->serve(token, res, interruptor);
                     r_sanity_check(b);
                 }
@@ -366,7 +368,7 @@ counted_t<val_t> term_t::eval(scope_env_t *env, eval_flags_t eval_flags) {
     env->env->maybe_yield();
     INC_DEPTH;
 
-    // try {
+    try {
         try {
             counted_t<val_t> ret = term_eval(env, eval_flags);
             DEC_DEPTH;
@@ -377,11 +379,11 @@ counted_t<val_t> term_t::eval(scope_env_t *env, eval_flags_t eval_flags) {
             DBG("%s THREW\n", name());
             rfail(e.get_type(), "%s", e.what());
         }
-    // } catch (...) {
-    //     DEC_DEPTH;
-    //     DBG("%s THREW OUTER\n", name());
-    //     throw;
-    // }
+    } catch (...) {
+        DEC_DEPTH;
+        DBG("%s THREW OUTER\n", name());
+        throw;
+    }
 }
 
 counted_t<val_t> term_t::new_val(counted_t<const datum_t> d) {

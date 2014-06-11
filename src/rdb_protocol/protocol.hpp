@@ -181,7 +181,15 @@ class mailbox_manager_t;
 
 class rdb_context_t {
 public:
+    // Used by unit tests.
     rdb_context_t();
+    // Also used by unit tests.
+    rdb_context_t(extproc_pool_t *extproc_pool,
+                  base_namespace_repo_t *ns_repo,
+                  boost::shared_ptr< semilattice_readwrite_view_t<cluster_semilattice_metadata_t> > cluster_metadata,
+                  uuid_u machine_id);
+
+    // The "real" constructor used outside of unit tests.
     rdb_context_t(extproc_pool_t *_extproc_pool,
                   mailbox_manager_t *mailbox_manager,
                   namespace_repo_t *_ns_repo,
@@ -193,14 +201,19 @@ public:
                   const std::string &_reql_http_proxy);
     ~rdb_context_t();
 
+    cow_ptr_t<namespaces_semilattice_metadata_t> get_namespaces_metadata();
+
     clone_ptr_t< watchable_t< cow_ptr_t<namespaces_semilattice_metadata_t> > >
-    get_namespaces_watchable_or_null();
+    get_namespaces_watchable();
+
+    // This could soooo be optimized if you don't want to copy the whole thing.
+    void get_databases_metadata(databases_semilattice_metadata_t *out);
 
     clone_ptr_t< watchable_t<databases_semilattice_metadata_t> >
-    get_databases_watchable_or_null();
+    get_databases_watchable();
 
     extproc_pool_t *extproc_pool;
-    namespace_repo_t *ns_repo;
+    base_namespace_repo_t *ns_repo;
 
     boost::shared_ptr< semilattice_readwrite_view_t<
                            cluster_semilattice_metadata_t> > cluster_metadata;
@@ -220,6 +233,8 @@ public:
     const std::string reql_http_proxy;
 
 private:
+    void help_construct_cross_thread_watchables();
+
     /* These arrays contain a watchable for each thread.
        i.e. cross_thread_namespace_watchables[0] is a watchable for thread 0.  (In
        the bogus unit testing default-constructed rdb_context_t, these are arrays

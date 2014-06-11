@@ -72,7 +72,7 @@ signal_t *rdb_namespace_interface_t::get_initial_ready_signal() {
 }
 
 rdb_namespace_access_t::rdb_namespace_access_t(uuid_u id, env_t *env)
-    : internal_(env->cluster_access.ns_repo, id, env->interruptor)
+    : internal_(env->ns_repo(), id, env->interruptor)
 { }
 
 rdb_namespace_interface_t rdb_namespace_access_t::get_namespace_if() {
@@ -357,6 +357,7 @@ primary_readgen_t::primary_readgen_t(
     profile_bool_t profile,
     sorting_t sorting)
     : readgen_t(global_optargs, std::move(table_name), range, profile, sorting) { }
+
 scoped_ptr_t<readgen_t> primary_readgen_t::make(
     env_t *env,
     std::string table_name,
@@ -528,7 +529,7 @@ counted_t<val_t> datum_stream_t::run_terminal(
 }
 
 counted_t<val_t> datum_stream_t::to_array(env_t *env) {
-    scoped_ptr_t<eager_acc_t> acc(make_to_array());
+    scoped_ptr_t<eager_acc_t> acc = make_to_array();
     accumulate_all(env, acc.get());
     return acc->finish_eager(backtrace(), is_grouped());
 }
@@ -606,7 +607,7 @@ bool datum_stream_t::batch_cache_exhausted() const {
 
 void eager_datum_stream_t::add_transformation(
     env_t *env, transform_variant_t &&tv, const protob_t<const Backtrace> &bt) {
-    ops.emplace_back(make_op(env, std::move(tv)));
+    ops.push_back(make_op(env, std::move(tv)));
     update_bt(bt);
 }
 

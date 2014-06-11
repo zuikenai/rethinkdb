@@ -313,26 +313,21 @@ database_id_t test_rdb_env_t::add_database(const std::string &db_name) {
     return database_id;
 }
 
-void test_rdb_env_t::make_env(scoped_ptr_t<instance_t> *instance_out) {
-    instance_out->init(new instance_t(this));
+scoped_ptr_t<test_rdb_env_t::instance_t> test_rdb_env_t::make_env() {
+    return make_scoped<instance_t>(this);
 }
 
 test_rdb_env_t::instance_t::instance_t(test_rdb_env_t *test_env) :
     dummy_semilattice_controller(test_env->metadata),
-    namespaces_metadata(new semilattice_watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> >(metadata_field(&cluster_semilattice_metadata_t::rdb_namespaces, dummy_semilattice_controller.get_view()))),
-    databases_metadata(new semilattice_watchable_t<databases_semilattice_metadata_t>(metadata_field(&cluster_semilattice_metadata_t::databases, dummy_semilattice_controller.get_view()))),
     extproc_pool(2),
     test_cluster(0),
-    rdb_ns_repo()
-{
-    env.init(new ql::env_t(&extproc_pool,
-                           std::string(),
-                           &rdb_ns_repo,
-                           namespaces_metadata,
-                           databases_metadata,
-                           dummy_semilattice_controller.get_view(),
+    rdb_ns_repo(),
+    rdb_ctx(&extproc_pool, &rdb_ns_repo, dummy_semilattice_controller.get_view(),
+            test_env->machine_id) {
+    env.init(new ql::env_t(&rdb_ctx,
                            &interruptor,
-                           test_env->machine_id));
+                           std::map<std::string, ql::wire_func_t>(),
+                           profile_bool_t::DONT_PROFILE));
     rdb_ns_repo.set_env(env.get());
 
     // Set up any initial datas
