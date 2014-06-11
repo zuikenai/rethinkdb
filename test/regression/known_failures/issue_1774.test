@@ -33,14 +33,14 @@ except r.RqlRuntimeError:
 
 # -- thread methods
 
-class fillTable(utils.performContinuousAction):
+class FillTable(utils.PerformContinuousAction):
 	def runAction(self):
 		tableName = os.path.splitext(os.path.basename(__file__))[0]
 		if 'tableName' in self.kwargs:
 			tableName = self.kwargs['tableName']
 		r.table(tableName).insert({'id':self.sucessCount + 1, 'data':self.sucessCount + 1}, durability='hard', upsert=False).run(self.connection)
 
-class waitForTable(utils.PerformContinuousAction):
+class WaitForTable(utils.PerformContinuousAction):
     def runAction(self):
         tableName = os.path.splitext(os.path.basename(__file__))[0]
         if 'tableName' in self.kwargs:
@@ -66,12 +66,12 @@ class waitForTable(utils.PerformContinuousAction):
 
 # - start filling the table
 
-fillTableProcess = fillTable(connection=r.connect(host=server.host, port=server.driver_port))
+fillTableProcess = FillTable(connection=r.connect(host=server.host, port=server.driver_port))
 time.sleep(3) # give it a moment to have something
 
 # - start reading the table
 
-readTableProcess = utils.performContinuousAction(connection=r.connect(host=server.host, port=server.driver_port), action=r.table(tableName).sample(1))
+readTableProcess = utils.PerformContinuousAction(connection=r.connect(host=server.host, port=server.driver_port), action=r.table(tableName).sample(1))
 
 # - perform the shard
 
@@ -82,7 +82,7 @@ admin.add_table_shard(tableName, '4')
 # -- wait for the table to be ready
 
 waitTableTimeout = 10
-waitTableProcess = waitForTable(connection=r.connect(host=server.host, port=server.driver_port), database=databaseName, timeout=waitTableTimeout)
+waitTableProcess = WaitForTable(connection=r.connect(host=server.host, port=server.driver_port), database=databaseName, timeout=waitTableTimeout)
 waitTableProcess.join(timeout=waitTableTimeout)
 if waitTableProcess.errorCount != 0:
     allPassed = False
