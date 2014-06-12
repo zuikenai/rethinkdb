@@ -188,5 +188,5 @@ will return `7`.
 | Query 3 | SEND | query | '[1,[43,[[15,["test"]]]],{}]' | `5b 31 2c 5b 34 33 2c 5b 5b 31 35 2c 5b 22 74 65 73 74 22 5d 5d 5d 5d 2c 7b 7d 5d` |
 | Response 1 | RECV | token | 5 | `05 00 00 00 00 00 00 00` |
 | Response 2 | RECV | response length | 15 | `0F 00 00 00` |
-| Response 3 | RECV | response | '{"t":1,"r":[7]}' | `7b 22 74 22 3a 31 2c 22 | 72 22 3a 5b 37 5d 7d` |
+| Response 3 | RECV | response | '{"t":1,"r":[7]}' | `7b 22 74 22 3a 31 2c 22 72 22 3a 5b 37 5d 7d` |
 
