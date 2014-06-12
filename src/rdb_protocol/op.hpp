@@ -98,6 +98,7 @@ private:
     bool is_deterministic() const FINAL;
 
     // Things that override op_is_deterministic should also override op_is_blocking.
+    // And vice versa.
     virtual bool op_is_deterministic() const {
         return true;
     }
