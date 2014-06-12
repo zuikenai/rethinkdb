@@ -65,7 +65,7 @@ Each query you send to the server has the following form:
 1. A unique 8-byte token.  (This is often an 8-byte
   little-endian-encoded counter.)
   - The server will respond to your query with this same token.
-2. The length of the query as a 4-byte little-endian-encoded integer.
+2. The length of the JSON-encoded query as a 4-byte little-endian-encoded integer.
 3. The JSON encoding of the query itself.
 
 The server will reply with the JSON encoding of a response.  More
@@ -94,10 +94,14 @@ the query.  The valid keys for this object are:
   query.
 * `durability` -- either `hard` or `soft` depending on the durability
   you want for writes.
+* `profile` -- true if profiling should be enabled.
 
 ##### Example 1: Send a STOP query for token 5
 
-`Query::QueryType::STOP` is `3` in
+If we send `r.table('test')` to the server with token 5, we get back a
+stream.  If we read a few rows from that stream and then want to close
+the stream on the server, we need to send a `STOP` query for that same
+token.  `Query::QueryType::STOP` is `3` in
 https://github.com/rethinkdb/rethinkdb/blob/next/src/rdb_protocol/ql2.proto
 , so we want to send `[3]` for token 5.
 
@@ -108,10 +112,10 @@ https://github.com/rethinkdb/rethinkdb/blob/next/src/rdb_protocol/ql2.proto
 
 #### The Term
 
-A `Term` is either a JSON expression, with the exception that arrays
-represent function calls.  (There is a function `MAKE_ARRAY` that can
-be used to produce an actual array.)  The function call is a 1-3
-element array of the following form:
+A `Term` is just a JSON expression, with the exception that arrays
+represent function calls rather than literal arrays.  (There is a
+function `MAKE_ARRAY` that can be used to produce an actual array.)
+The function call is a 1-3 element array of the following form:
 
 ```
 [TermType, Args, Optargs]
@@ -141,7 +145,7 @@ the `Optargs` should be an object mapping from optarg names to terms.
 The server's response to your query will take the following form:
 
 1. The 8-byte token of the query the response corresponds to.
-2. The length of the response as a 4-byte little-endian-encoded
+2. The length of the JSON-encoded response as a 4-byte little-endian-encoded
 integer.
 3. The JSON encoding of the `Response` itself.
 
