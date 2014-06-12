@@ -44,7 +44,7 @@ driver should report this error to the user.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
 | 1 | SEND | V0_3 | 0x5f75e83e | `3e e8 75 5f` |
-| 2 | SEND | no auth key | 0 | `00 00 00 00` |
+| 2 | SEND | 0 length auth key | 0 | `00 00 00 00` |
 | 3 | SEND | no auth key | | |
 | 4 | SEND | JSON | 0x7e6970c7 | `c7 70 69 7e` |
 | 5 | RECV | success | "SUCCESS" | `53 55 43 43 45 53 53` |
@@ -53,7 +53,7 @@ driver should report this error to the user.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
 | 1 | SEND | V0_3 | 0x5f75e83e | `3e e8 75 5f` |
-| 2 | SEND | 7 character auth key | 7 | `00 00 00 07` |
+| 2 | SEND | 7 character auth key | 7 | `07 00 00 00` |
 | 3 | SEND | auth key | "hunter2" | `68 75 6e 74 65 72 32` |
 | 4 | SEND | JSON | 0x7e6970c7 | `c7 70 69 7e` |
 | 5 | RECV | success | "SUCCESS" | `53 55 43 43 45 53 53` |
@@ -102,8 +102,8 @@ https://github.com/rethinkdb/rethinkdb/blob/next/src/rdb_protocol/ql2.proto
 , so we want to send `[3]` for token 5.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
-| 1 | SEND | token | 5 | `00 00 00 00 00 00 00 05` |
-| 2 | SEND | query length | 3 | `00 00 00 03` |
+| 1 | SEND | token | 5 | `05 00 00 00 00 00 00 00` |
+| 2 | SEND | query length | 3 | `03 00 00 00` |
 | 3 | SEND | query | "[3]" | `5b 33 5d` |
 
 #### The Term
@@ -158,8 +158,8 @@ A `Response` is a JSON object with the following fields:
 Assuming `r.table('test').count()` returns `7`:
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
-| 1 | RECV | token | 5 | `00 00 00 00 00 00 00 05` |
-| 2 | RECV | response length | 15 | `00 00 00 0F` |
+| 1 | RECV | token | 5 | `05 00 00 00 00 00 00 00` |
+| 2 | RECV | response length | 15 | `0F 00 00 00` |
 | 3 | RECV | response | '{"t":1,"r":[7]}' | `7b 22 74 22 3a 31 2c 22 | 72 22 3a 5b 37 5d 7d` |
 
 # A complete example
@@ -170,14 +170,14 @@ will return `7`.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
 | Handshake 1 | SEND | V0_3 | 0x5f75e83e | `3e e8 75 5f` |
-| Handshake 2 | SEND | no auth key | 0 | `00 00 00 00` |
+| Handshake 2 | SEND | 0 length auth key | 0 | `00 00 00 00` |
 | Handshake 3 | SEND | no auth key | | |
 | Handshake 4 | SEND | JSON | 0x7e6970c7 | `c7 70 69 7e` |
 | Handshake 5 | RECV | success | "SUCCESS" | `53 55 43 43 45 53 53` |
-| Query 1 | SEND | token | 5 | `00 00 00 00 00 00 00 05` |
-| Query 2 | SEND | query length | 20 | `00 00 00 1B` |
+| Query 1 | SEND | token | 5 | `05 00 00 00 00 00 00 00` |
+| Query 2 | SEND | query length | 20 | `1B 00 00 00` |
 | Query 3 | SEND | query | '[1,[43,[[15,["test"]]]],{}]' | `5b 31 2c 5b 34 33 2c 5b 5b 31 35 2c 5b 22 74 65 73 74 22 5d 5d 5d 5d 2c 7b 7d 5d` |
-| Response 1 | RECV | token | 5 | `00 00 00 00 00 00 00 05` |
-| Response 2 | RECV | response length | 15 | `00 00 00 0F` |
+| Response 1 | RECV | token | 5 | `05 00 00 00 00 00 00 00` |
+| Response 2 | RECV | response length | 15 | `0F 00 00 00` |
 | Response 3 | RECV | response | '{"t":1,"r":[7]}' | `7b 22 74 22 3a 31 2c 22 | 72 22 3a 5b 37 5d 7d` |
 
