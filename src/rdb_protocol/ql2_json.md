@@ -43,6 +43,7 @@ driver should report this error to the user.
 ### Example 1: No auth key.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
+| - | - | - | - | - |
 | 1 | SEND | V0_3 | 0x5f75e83e | `3e e8 75 5f` |
 | 2 | SEND | 0 length auth key | 0 | `00 00 00 00` |
 | 3 | SEND | no auth key | | |
