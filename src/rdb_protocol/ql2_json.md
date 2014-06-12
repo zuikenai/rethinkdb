@@ -53,6 +53,7 @@ driver should report this error to the user.
 ### Example 2: Auth key.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
+| --- | --- | --- | --- | --- |
 | 1 | SEND | V0_3 | 0x5f75e83e | `3e e8 75 5f` |
 | 2 | SEND | 7 character auth key | 7 | `07 00 00 00` |
 | 3 | SEND | auth key | "hunter2" | `68 75 6e 74 65 72 32` |
@@ -107,6 +108,7 @@ https://github.com/rethinkdb/rethinkdb/blob/next/src/rdb_protocol/ql2.proto
 , so we want to send `[3]` for token 5.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
+| --- | --- | --- | --- | --- |
 | 1 | SEND | token | 5 | `05 00 00 00 00 00 00 00` |
 | 2 | SEND | query length | 3 | `03 00 00 00` |
 | 3 | SEND | query | "[3]" | `5b 33 5d` |
@@ -163,6 +165,7 @@ A `Response` is a JSON object with the following fields:
 Assuming `r.table('test').count()` returns `7`:
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
+| --- | --- | --- | --- | --- |
 | 1 | RECV | token | 5 | `05 00 00 00 00 00 00 00` |
 | 2 | RECV | response length | 15 | `0F 00 00 00` |
 | 3 | RECV | response | '{"t":1,"r":[7]}' | `7b 22 74 22 3a 31 2c 22 | 72 22 3a 5b 37 5d 7d` |
@@ -174,6 +177,7 @@ Let's run `r.table('test').count()`.  The `Term` is
 will return `7`.
 
 | Step | Direction | Semantic Command | Value | Bytes on Wire |
+| --- | --- | --- | --- | --- |
 | Handshake 1 | SEND | V0_3 | 0x5f75e83e | `3e e8 75 5f` |
 | Handshake 2 | SEND | 0 length auth key | 0 | `00 00 00 00` |
 | Handshake 3 | SEND | no auth key | | |
