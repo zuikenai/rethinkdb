@@ -68,7 +68,7 @@ public:
     bool is_blocking() const FINAL { return false; }
     void accumulate_captures(var_captures_t *) const FINAL { }
 private:
-    counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) FINAL {
+    counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const FINAL {
         return new_val(d);
     }
     counted_t<const datum_t> d;
@@ -214,11 +214,13 @@ op_term_t::op_term_t(compile_env_t *env, protob_t<const Term> term,
 op_term_t::~op_term_t() { }
 
 size_t op_term_t::num_args() const { return args->size(); }
-counted_t<val_t> op_term_t::arg(scope_env_t *env, size_t i, eval_flags_t flags) {
+counted_t<val_t> op_term_t::arg(scope_env_t *env, size_t i,
+                                eval_flags_t flags) const {
     return args->eval_arg(env, i, flags);
 }
 
-counted_t<val_t> op_term_t::term_eval(scope_env_t *env, eval_flags_t eval_flags) {
+counted_t<val_t> op_term_t::term_eval(scope_env_t *env,
+                                      eval_flags_t eval_flags) const {
     args->start_eval(env, eval_flags);
     counted_t<val_t> ret;
     if (can_be_grouped()) {
@@ -240,8 +242,8 @@ counted_t<val_t> op_term_t::term_eval(scope_env_t *env, eval_flags_t eval_flags)
 bool op_term_t::can_be_grouped() const { return true; }
 bool op_term_t::is_grouped_seq_op() const { return false; }
 
-counted_t<val_t> op_term_t::optarg(scope_env_t *env, const std::string &key) {
-    std::map<std::string, counted_t<term_t> >::iterator it = optargs.find(key);
+counted_t<val_t> op_term_t::optarg(scope_env_t *env, const std::string &key) const {
+    std::map<std::string, counted_t<term_t> >::const_iterator it = optargs.find(key);
     if (it != optargs.end()) {
         return it->second->eval(env);
     }
@@ -315,16 +317,16 @@ bounded_op_term_t::bounded_op_term_t(compile_env_t *env, protob_t<const Term> te
     : op_term_t(env, term, argspec,
                 optargspec.with({"left_bound", "right_bound"})) { }
 
-bool bounded_op_term_t::is_left_open(scope_env_t *env) {
+bool bounded_op_term_t::is_left_open(scope_env_t *env) const {
     return open_bool(env, "left_bound", false);
 }
 
-bool bounded_op_term_t::is_right_open(scope_env_t *env) {
+bool bounded_op_term_t::is_right_open(scope_env_t *env) const {
     return open_bool(env, "right_bound", true);
 }
 
 bool bounded_op_term_t::open_bool(
-    scope_env_t *env, const std::string &key, bool def/*ault*/) {
+    scope_env_t *env, const std::string &key, bool def/*ault*/) const {
     counted_t<val_t> v = optarg(env, key);
     if (!v.has()) return def;
     const wire_string_t &s = v->as_str();

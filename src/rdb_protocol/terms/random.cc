@@ -16,7 +16,7 @@ public:
     sample_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         int64_t num_int = arg(env, 1)->as_int();
         rcheck(num_int >= 0,
                base_exc_t::GENERIC,
@@ -99,7 +99,7 @@ private:
         UPPER
     };
 
-    int64_t convert_bound(double bound, bound_type_t type) {
+    int64_t convert_bound(double bound, bound_type_t type) const {
         int64_t res;
         bool success = number_as_integer(bound, &res);
         rcheck(success, base_exc_t::GENERIC,
@@ -108,7 +108,7 @@ private:
         return res;
     }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         counted_t<val_t> use_float_arg = optarg(env, "float");
         bool use_float = use_float_arg ? use_float_arg->as_bool() : num_args() == 0;
 

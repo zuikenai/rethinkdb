@@ -137,7 +137,7 @@ public:
     coerce_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         counted_t<val_t> val = arg(env, 0);
         val_t::type_t opaque_start_type = val->get_type();
         int start_supertype = opaque_start_type.raw_type;
@@ -252,7 +252,7 @@ public:
     ungroup_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         auto groups = arg(env, 0)->as_promiscuous_grouped_data(env->env);
         std::vector<counted_t<const datum_t> > v;
         v.reserve(groups->size());
@@ -285,7 +285,7 @@ public:
     typeof_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         counted_t<val_t> v = arg(env, 0);
         if (v->get_type().raw_type == val_t::type_t::DATUM) {
             counted_t<const datum_t> d = v->as_datum();
@@ -307,11 +307,11 @@ public:
     info_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         return new_val(val_info(env, arg(env, 0)));
     }
 
-    counted_t<const datum_t> val_info(scope_env_t *env, counted_t<val_t> v) {
+    counted_t<const datum_t> val_info(scope_env_t *env, counted_t<val_t> v) const {
         datum_ptr_t info(datum_t::R_OBJECT);
         int type = val_type(v);
         bool b = info.add("type", make_counted<datum_t>(get_name(type)));

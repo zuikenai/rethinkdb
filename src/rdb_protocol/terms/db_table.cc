@@ -14,7 +14,7 @@
 namespace ql {
 
 durability_requirement_t parse_durability_optarg(counted_t<val_t> arg,
-                                                 pb_rcheckable_t *target);
+                                                 const pb_rcheckable_t *target);
 
 name_string_t get_name(counted_t<val_t> val, const term_t *caller,
         const char *type_str) {
@@ -91,8 +91,9 @@ private:
         return true;
     }
 
-    virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t flags) = 0;
-    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) FINAL {
+    virtual std::string write_eval_impl(scope_env_t *env,
+                                        eval_flags_t flags) const = 0;
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) const FINAL {
         std::string op = write_eval_impl(env, flags);
         datum_ptr_t res(datum_t::R_OBJECT);
         UNUSED bool b = res.add(op, make_counted<datum_t>(1.0));
@@ -108,7 +109,7 @@ private:
         return false;
     }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         name_string_t db_name = get_name(arg(env, 0), this, "Database");
         uuid_u uuid;
         {
@@ -131,7 +132,7 @@ public:
     db_create_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1)) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t) const {
         name_string_t db_name = get_name(arg(env, 0), this, "Database");
 
         rethreading_metadata_accessor_t meta(env);
@@ -181,7 +182,7 @@ public:
         meta_write_op_t(env, term, argspec_t(1, 2),
                         optargspec_t({"datacenter", "primary_key", "durability"})) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t) const {
         uuid_u dc_id = nil_uuid();
         if (counted_t<val_t> v = optarg(env, "datacenter")) {
             name_string_t name = get_name(v, this, "Table");
@@ -280,7 +281,7 @@ public:
     db_drop_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1)) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t) const {
         name_string_t db_name = get_name(arg(env, 0), this, "Database");
 
         rethreading_metadata_accessor_t meta(env);
@@ -327,7 +328,7 @@ public:
     table_drop_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1, 2)) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t) const {
         uuid_u db_id;
         std::string db_name;
         name_string_t tbl_name;
@@ -382,7 +383,7 @@ private:
         return false;
     }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         std::vector<std::string> dbs;
         {
             databases_semilattice_metadata_t db_metadata;
@@ -421,7 +422,7 @@ private:
         return false;
     }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         uuid_u db_id;
         if (num_args() == 0) {
             counted_t<val_t> dbv = optarg(env, "db");
@@ -463,7 +464,7 @@ public:
         : meta_write_op_t(env, term, argspec_t(1)) { }
 
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual std::string write_eval_impl(scope_env_t *env, eval_flags_t) const {
         counted_t<table_t> t = arg(env, 0)->as_table();
         bool success = t->sync(env->env, this);
         r_sanity_check(success);
@@ -477,7 +478,7 @@ public:
     table_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, 2), optargspec_t({ "use_outdated" })) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         counted_t<val_t> t = optarg(env, "use_outdated");
         bool use_outdated = t ? t->as_bool() : false;
         counted_t<const db_t> db;
@@ -509,7 +510,7 @@ class get_term_t : public op_term_t {
 public:
     get_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         counted_t<table_t> table = arg(env, 0)->as_table();
         counted_t<const datum_t> pkey = arg(env, 1)->as_datum();
         counted_t<const datum_t> row = table->get_row(env->env, pkey);
@@ -523,7 +524,7 @@ public:
     get_all_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2, -1), optargspec_t({ "index" })) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         counted_t<table_t> table = arg(env, 0)->as_table();
         counted_t<val_t> index = optarg(env, "index");
         std::string index_str = index ? index->as_str().to_std() : "";

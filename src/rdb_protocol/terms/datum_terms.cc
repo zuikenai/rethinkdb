@@ -15,7 +15,7 @@ private:
     void accumulate_captures(var_captures_t *) const FINAL { /* do nothing */ }
     bool is_deterministic() const FINAL { return true; }
     bool is_blocking() const FINAL { return false; }
-    counted_t<val_t> term_eval(scope_env_t *, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const FINAL {
         return raw_val;
     }
     const char *name() const FINAL { return "datum"; }
@@ -28,7 +28,7 @@ public:
                     double constant, const char *name)
         : op_term_t(env, t, argspec_t(0)), _constant(constant), _name(name) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *, UNUSED eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *, eval_flags_t) const {
         return new_val(make_counted<const datum_t>(_constant));
     }
     virtual const char *name() const { return _name; }
@@ -41,7 +41,7 @@ public:
     make_array_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, -1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         datum_ptr_t acc(datum_t::R_ARRAY);
         {
             profile::sampler_t sampler("Evaluating elements in make_array.", env->env->trace);
@@ -60,7 +60,7 @@ public:
     make_obj_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0), optargspec_t::make_object()) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) const {
         bool literal_ok = flags & LITERAL_OK;
         eval_flags_t new_flags = literal_ok ? LITERAL_OK : NO_FLAGS;
         datum_ptr_t acc(datum_t::R_OBJECT);

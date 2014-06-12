@@ -40,7 +40,7 @@ private:
         return real->is_blocking();
     }
 
-    counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
         return real->eval(env);
     }
 

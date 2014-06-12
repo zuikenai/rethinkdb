@@ -17,7 +17,7 @@ public:
         : op_term_t(env, term, argspec_t(1), optargspec_t({ "timeout" })) { }
 
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const FINAL {
         // Optarg seems designed to take a default value as the second argument
         // but nowhere else is this actually used.
         uint64_t timeout_ms = 5000;

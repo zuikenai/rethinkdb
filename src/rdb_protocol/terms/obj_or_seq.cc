@@ -55,9 +55,10 @@ public:
     }
 
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) = 0;
+    virtual counted_t<val_t> obj_eval(scope_env_t *env,
+                                      counted_t<val_t> v0) const = 0;
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, UNUSED eval_flags_t flags) {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t) const {
         counted_t<val_t> v0 = arg(env, 0);
         counted_t<const datum_t> d;
 
@@ -117,7 +118,7 @@ public:
     pluck_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         obj_or_seq_op_term_t(env, term, MAP, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) {
+    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) const {
         counted_t<const datum_t> obj = v0->as_datum();
         r_sanity_check(obj->get_type() == datum_t::R_OBJECT);
 
@@ -138,7 +139,7 @@ public:
     without_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         obj_or_seq_op_term_t(env, term, MAP, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) {
+    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) const {
         counted_t<const datum_t> obj = v0->as_datum();
         r_sanity_check(obj->get_type() == datum_t::R_OBJECT);
 
@@ -159,7 +160,7 @@ public:
     literal_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, 1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) FINAL {
+    counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t flags) const FINAL {
         rcheck(flags & LITERAL_OK, base_exc_t::GENERIC,
                "Stray literal keyword found, literal can only be present inside merge "
                "and cannot nest inside other literals.");
@@ -184,7 +185,7 @@ public:
     merge_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         obj_or_seq_op_term_t(env, term, MAP, argspec_t(1, -1, LITERAL_OK)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) {
+    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) const {
         counted_t<const datum_t> d = v0->as_datum();
         for (size_t i = 1; i < num_args(); ++i) {
             counted_t<val_t> v = arg(env, i, LITERAL_OK);
@@ -208,7 +209,7 @@ public:
     has_fields_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : obj_or_seq_op_term_t(env, term, FILTER, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) {
+    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) const {
         counted_t<const datum_t> obj = v0->as_datum();
         r_sanity_check(obj->get_type() == datum_t::R_OBJECT);
 
@@ -229,7 +230,7 @@ public:
     get_field_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : obj_or_seq_op_term_t(env, term, SKIP_MAP, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) {
+    virtual counted_t<val_t> obj_eval(scope_env_t *env, counted_t<val_t> v0) const {
         return new_val(v0->as_datum()->get(arg(env, 1)->as_str().to_std()));
     }
     virtual const char *name() const { return "get_field"; }

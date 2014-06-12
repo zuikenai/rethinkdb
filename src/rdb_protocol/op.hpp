@@ -67,9 +67,10 @@ protected:
 
     size_t num_args() const; // number of arguments
     // Returns argument `i`.
-    counted_t<val_t> arg(scope_env_t *env, size_t i, eval_flags_t flags = NO_FLAGS);
+    counted_t<val_t> arg(scope_env_t *env, size_t i,
+                         eval_flags_t flags = NO_FLAGS) const;
     // Tries to get an optional argument, returns `counted_t<val_t>()` if not found.
-    counted_t<val_t> optarg(scope_env_t *env, const std::string &key);
+    counted_t<val_t> optarg(scope_env_t *env, const std::string &key) const;
     // This returns an optarg which is:
     // * lazy -- it's wrapped in a function, so you don't get the value until
     //   you call that function.
@@ -90,8 +91,9 @@ private:
     // take `arg0` as one of its arguments.  (Actually, the `arg` function
     // should be passed down too so that the `arg_verifier` it shares with
     // `term_eval` doesn't have to be on this object.)
-    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t eval_flags) FINAL;
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, eval_flags_t eval_flags) = 0;
+    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t eval_flags) const FINAL;
+    virtual counted_t<val_t> eval_impl(scope_env_t *env,
+                                       eval_flags_t eval_flags) const = 0;
     virtual bool can_be_grouped() const;
     virtual bool is_grouped_seq_op() const;
 
@@ -135,11 +137,11 @@ public:
     ~bounded_op_term_t() OVERRIDE { }
 
 protected:
-    bool is_left_open(scope_env_t *env);
-    bool is_right_open(scope_env_t *env);
+    bool is_left_open(scope_env_t *env) const;
+    bool is_right_open(scope_env_t *env) const;
 
 private:
-    bool open_bool(scope_env_t *env, const std::string &key, bool def/*ault*/);
+    bool open_bool(scope_env_t *env, const std::string &key, bool def/*ault*/) const;
 };
 
 }  // namespace ql

@@ -49,7 +49,7 @@ private:
         return false;
     }
 
-    counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
         return new_val(env->scope.lookup_var(varname));
     }
     const char *name() const FINAL { return "var"; }
@@ -83,7 +83,7 @@ private:
         return false;
     }
 
-    counted_t<val_t> term_eval(scope_env_t *env, UNUSED eval_flags_t flags) FINAL {
+    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
         return new_val(env->scope.lookup_implicit());
     }
     const char *name() const FINAL { return "implicit_var"; }
