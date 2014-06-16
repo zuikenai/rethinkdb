@@ -6,6 +6,7 @@
 
 namespace ql {
 namespace pseudo {
+
 extern const char *const literal_string;
 extern const char *const value_key;
 

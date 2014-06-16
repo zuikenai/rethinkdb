@@ -15,6 +15,7 @@
 #include "containers/scoped.hpp"
 #include "rdb_protocol/env.hpp"
 #include "rdb_protocol/error.hpp"
+#include "rdb_protocol/pseudo_binary.hpp"
 #include "rdb_protocol/pseudo_literal.hpp"
 #include "rdb_protocol/pseudo_time.hpp"
 #include "rdb_protocol/shards.hpp"
@@ -373,16 +374,21 @@ int datum_t::pseudo_cmp(const datum_t &rhs) const {
 
 void datum_t::maybe_sanitize_ptype(const std::set<std::string> &allowed_pts) {
     if (is_ptype()) {
-        if (get_reql_type() == pseudo::time_string) {
+        std::string s = get_reql_type();
+        if (s == pseudo::time_string) {
             pseudo::sanitize_time(this);
             return;
         }
-        if (get_reql_type() == pseudo::literal_string) {
+        if (s == pseudo::literal_string) {
             rcheck(std_contains(allowed_pts, pseudo::literal_string),
                    base_exc_t::GENERIC,
                    "Stray literal keyword found, literal can only be present inside "
                    "merge and cannot nest inside other literals.");
             pseudo::rcheck_literal_valid(this);
+            return;
+        }
+        if (s == pseudo::binary_string) {
+            pseudo::rcheck_binary_valid(this);
             return;
         }
         rfail(base_exc_t::GENERIC,
