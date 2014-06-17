@@ -29,7 +29,7 @@ $(RB_PROTO_BUILD_FILE) $(RB_PROTO_DEV_FILE): $(PROTO_FILE_SRC)
 	mkdir -p $(dir $@)
 	$(PYTHON) $(TOP)/drivers/convert_protofile --language ruby --input-file $(PROTO_FILE_SRC) --output-file $@
 
-$(RB_SRC_DIR)/$(RB_GEMSPEC_FILE_NAME): $(RB_SRC_DIR)/$(RB_GEMSPEC_FILE_NAME)
+$(RB_BUILD_DIR)/$(RB_GEMSPEC_FILE_NAME): $(RB_SRC_DIR)/$(RB_GEMSPEC_FILE_NAME)
 	cp $< $@
 
 .PHONY: rb-sdist
