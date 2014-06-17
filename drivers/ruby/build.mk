@@ -40,7 +40,7 @@ GEMFILES = $(wildcard $(RB_SRC_DIR)/rethinkdb-*.gem)
 rb-publish: rb-sdist
 	$P PUBLISH
 	$(if $(GEMFILES), $(error Can not publish: a gem file already exists: $(GEMFILES)))
-	cd $(RB_BUILD_DIR) && gem build $(GEMSPEC)
+	cd $(RB_BUILD_DIR) && gem build $(RB_GEMSPEC_FILE_NAME)
 	cd $(RB_BUILD_DIR) && gem push rethinkdb-*.gem
 
 .PHONY: rb-clean
