@@ -139,7 +139,7 @@ class Dct:
             return False
 
         for key in self.dct:
-            if not key in other:
+            if key not in other:
                 return False
             val = other[key]
             if isinstance(val, (str, unicode)):
