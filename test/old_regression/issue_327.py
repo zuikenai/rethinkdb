@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     try:
         run_with_timeout(test_function, args=(opts, server), timeout = adjust_timeout(opts, 60), test_dir=test_dir)
-    except Exception, e:
+    except Exception as e:
         test_failure = e
     else:
         test_failure = None

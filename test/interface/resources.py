@@ -25,7 +25,7 @@ with driver.Metacluster() as metacluster:
     try:
         access.do_query_plaintext("GET", "/foobar")
         assert(False and "Invalid page raises error code")
-    except Exception, e:
+    except Exception as e:
         assert(e.status == 403)
     time.sleep(2)
     print "Trying to access its log..."
