@@ -42,7 +42,7 @@ if len(sys.argv) > 2:
     use_default_port = bool(int(sys.argv[2]))
 
 class TestCaseCompatible(unittest.TestCase):
-    '''Compatibility shim for Python 2.6'''
+    '''A compatibility shim for Python 2.6'''
     
     def __init__(self, *args, **kwargs):
         super(TestCaseCompatible, self).__init__(*args, **kwargs)
@@ -411,6 +411,7 @@ class TestBatching(TestWithConnection):
     def runTest(self):
         c = r.connect(port=self.port)
 
+        # Test the cursor API when there is exactly mod batch size elements in the result stream
         r.db('test').table_create('t1').run(c)
         t1 = r.table('t1')
 
@@ -423,9 +424,8 @@ class TestBatching(TestWithConnection):
         cursor = t1.run(c, batch_conf={'max_els': batch_size})
 
         itr = iter(cursor)
-        for i in xrange(0, count - 1):
-            row = itr.next()
-            ids.remove(row['id'])
+        for i in xrange(0, batch_size - 1):
+            next(itr)
 
         self.assertEqual(itr.next()['id'], ids.pop())
         self.assertRaises(StopIteration, lambda: itr.next())
