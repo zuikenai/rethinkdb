@@ -53,7 +53,7 @@ def cleanupMetaclusterFolder(path):
     if os.path.isdir(str(path)):
         try:
             shutil.rmtree(path)
-        except Exception, e:
+        except Exception as e:
             print('Warning: unable to cleanup Metacluster folder: %s - got error: %s' % (str(path), str(e)))
 
 def get_table_host(processes):
@@ -280,7 +280,7 @@ class _Process(object):
 
             self.read_ports_from_log()
 
-        except Exception, e:
+        except Exception:
             # `close()` won't be called because we haven't put ourself into
             #  `cluster.processes` yet, so we have to clean up manually
             for other_cluster in cluster.metacluster.clusters:
@@ -299,7 +299,7 @@ class _Process(object):
             s = socket.socket()
             try:
                 s.connect(("localhost", self.http_port))
-            except socket.error, e:
+            except socket.error:
                 time.sleep(1)
             else:
                 break
@@ -324,7 +324,7 @@ class _Process(object):
                     self.http_port = int(http_ports[-1])
                     self.driver_port = int(driver_ports[-1])
                     break
-            except IOError, e:
+            except IOError:
                 time.sleep(1)
 
         else:
