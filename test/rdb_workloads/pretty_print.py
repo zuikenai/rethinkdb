@@ -39,7 +39,7 @@ class PrettyPrintTest(unittest.TestCase):
     def test_backtraces(self):
         try:
             self.conn.run(expr({"a": 1})["floop"])
-        except ExecutionError, e:
+        except ExecutionError as e:
             self.assertIn("floop", e.location())
         else:
             raise ValueError("that was supposed to fail")
