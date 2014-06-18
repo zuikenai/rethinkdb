@@ -45,7 +45,6 @@ hasImplicit = (args) ->
     else if args is 'r.row'
         return true
     return false
-
 # AST classes
 
 class TermBase
@@ -65,15 +64,22 @@ class TermBase
         # 
         # Depreciated syntaxes are
         # optionsWithConnection, callback
-        
-        if net.isConnection(connection) is true
+
+        if net.isConnection(connection) is true or connection instanceof Promise
             # Handle run(connection, callback)
             if typeof options is "function" 
                 if callback is undefined
                     callback = options
                     options = {}
                 else
-                    throw new err.RqlDriverError "Second argument to `run` cannot be a function is a third argument is provided."
+                    throw new err.RqlDriverError "Second argument to `run` cannot be a function if a third argument is provided."
+            if connection instanceof Promise
+                ret = connection.then (connection) => @run(connection, options)
+                if callback is undefined
+                    return ret
+                else
+                    ret.then(((res) -> callback(undefined, res)), callback)
+                    return
             # else we suppose that we have run(connection[, options][, callback])
         else if connection?.constructor is Object
             if @showRunWarning is true
