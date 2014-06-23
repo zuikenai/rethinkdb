@@ -33,7 +33,7 @@ def run_cmd(*args):
     if p.poll() == 0:
         return out
     else:
-        raise RuntimeError, 'run_cmd failed with status %r' % (p.poll())
+        raise RuntimeError('run_cmd failed with status %r' % (p.poll()))
 
 def get_ids(prefix, out):
     ids = []
@@ -57,7 +57,7 @@ def mk_units(controller, mode):
     # Sanity check, really.
     ports = get_ids('p', run_cmd('/%s show' % controller))
     ports = [p[1:] for p in ports] # Get rid of the initial 'p'.
-    assert sorted(ports) == ['0','1','2','3']
+    assert sorted(ports) == ['0', '1', '2', '3']
 
     if mode == 'raid0':
         #run_cmd('/%s add type=raid0 disk=%d-%d' % (controller, min(ports), max(ports)))
