@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-import datetime, inspect, os, re, socket, SocketServer, sys, threading, time, unittest
+import datetime, inspect, os, re, socket, sys, threading, time, unittest
 # avoiding issues from the 'from rethnkdb import *' statement
 from time import sleep
 from time import time as theTime
@@ -21,6 +21,10 @@ try:
     xrange
 except NameError:
     xrange = range
+try:
+    import SocketServer
+except:
+    import socketserver as SocketServer
 
 # - import the rethinkdb driver
 
