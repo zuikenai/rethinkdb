@@ -42,7 +42,7 @@ if len(sys.argv) > 2:
     use_default_port = bool(int(sys.argv[2]))
 
 class TestCaseCompatible(unittest.TestCase):
-    '''A compatibility shim for Python 2.6'''
+    '''Compatibility shim for Python 2.6'''
     
     def __init__(self, *args, **kwargs):
         super(TestCaseCompatible, self).__init__(*args, **kwargs)
