@@ -30,7 +30,7 @@ try:
     {}.iteritems
     dict_items = lambda d: d.iteritems()
 except AttributeError:
-    dict_items = lambda d: items()
+    dict_items = lambda d: d.items()
 
 # This is both an external function and one used extensively
 # internally to convert coerce python values to RQL types
