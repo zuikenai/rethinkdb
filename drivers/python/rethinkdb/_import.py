@@ -108,10 +108,10 @@ def parse_options():
     parser.add_option("-f", "--file", dest="import_file", metavar="FILE", default=None, type="string")
     parser.add_option("--format", dest="import_format", metavar="json | csv", default=None, type="string")
     parser.add_option("--table", dest="import_table", metavar="DB.TABLE", default=None, type="string")
-    parser.add_option("--pkey", dest="primary_key", metavar="KEY", default = None, type="string")
-    parser.add_option("--delimiter", dest="delimiter", metavar="CHARACTER", default = None, type="string")
-    parser.add_option("--no-header", dest="no_header", action="store_true", default = False)
-    parser.add_option("--custom-header", dest="custom_header", metavar="FIELD,FIELD...", default = None, type="string")
+    parser.add_option("--pkey", dest="primary_key", metavar="KEY", default=None, type="string")
+    parser.add_option("--delimiter", dest="delimiter", metavar="CHARACTER", default=None, type="string")
+    parser.add_option("--no-header", dest="no_header", action="store_true", default=False)
+    parser.add_option("--custom-header", dest="custom_header", metavar="FIELD,FIELD...", default=None, type="string")
     parser.add_option("-h", "--help", dest="help", default=False, action="store_true")
     (options, args) = parser.parse_args()
 
@@ -123,7 +123,7 @@ def parse_options():
         print_import_help()
         exit(0)
 
-    res = { }
+    res = {}
 
     # Verify valid host:port --connect option
     (res["host"], res["port"]) = parse_connect_option(options.host)
@@ -524,7 +524,7 @@ def print_progress(ratio):
 
 def update_progress(progress_info):
     lowest_completion = 1.0
-    for (current, max_count) in progress_info:
+    for current, max_count in progress_info:
         curr_val = current.value
         max_val = max_count.value
         if curr_val < 0:
@@ -547,10 +547,10 @@ def spawn_import_clients(options, files_info):
     client_procs = []
 
     parent_pid = os.getpid()
-    signal.signal(signal.SIGINT, lambda a,b: abort_import(a, b, parent_pid, exit_event, task_queue, client_procs, interrupt_event))
+    signal.signal(signal.SIGINT, lambda a, b: abort_import(a, b, parent_pid, exit_event, task_queue, client_procs, interrupt_event))
 
     try:
-        progress_info = [ ]
+        progress_info = []
         rows_written = multiprocessing.Value(ctypes.c_longlong, 0)
 
         for i in xrange(options["clients"]):
@@ -627,7 +627,7 @@ def spawn_import_clients(options, files_info):
         raise RuntimeError("Errors occurred during import")
 
 def get_import_info_for_file(filename, db_table_filter):
-    file_info = { }
+    file_info = {}
     file_info["file"] = filename
     file_info["format"] = os.path.split(filename)[1].split(".")[-1]
     file_info["db"] = os.path.split(os.path.split(filename)[0])[1]
@@ -672,7 +672,7 @@ def import_directory(options):
     db_filter = set([db_table[0] for db_table in options["db_tables"]])
     files_to_import = []
     files_ignored = []
-    for (root, dirs, files) in os.walk(options["directory"]):
+    for root, dirs, files in os.walk(options["directory"]):
         if not dbs:
             files_ignored.extend([os.path.join(root, f) for f in files])
             # The first iteration through should be the top-level directory, which contains the db folders
@@ -768,7 +768,7 @@ def import_file(options):
     file_info["format"] = options["import_format"]
     file_info["db"] = db
     file_info["table"] = table
-    file_info["info"] = { "primary_key": pkey }
+    file_info["info"] = {"primary_key": pkey}
 
     spawn_import_clients(options, [file_info])
 

@@ -86,7 +86,7 @@ def parse_options():
         print_export_help()
         exit(0)
 
-    res = { }
+    res = {}
 
     # Verify valid host:port --connect option
     (res["host"], res["port"]) = parse_connect_option(options.host)
@@ -124,7 +124,7 @@ def parse_options():
 
     # Get number of clients
     if options.clients < 1:
-       raise RuntimeError("Error: invalid number of clients (%d), must be greater than zero" % options.clients)
+        raise RuntimeError("Error: invalid number of clients (%d), must be greater than zero" % options.clients)
     res["clients"] = options.clients
 
     res["auth_key"] = options.auth_key
@@ -159,7 +159,7 @@ def get_tables(progress, conn, tables):
 def prepare_directories(base_path, base_path_partial, db_table_set):
     os_call_wrapper(lambda x: os.makedirs(x), base_path_partial, "Failed to create temporary directory (%s): %s")
 
-    db_set = set([db for (db, table) in db_table_set])
+    db_set = set([db for db, table in db_table_set])
     for db in db_set:
         db_dir = base_path_partial + "/%s" % db
         os_call_wrapper(lambda x: os.makedirs(x), db_dir, "Failed to create temporary directory (%s): %s")
@@ -315,7 +315,7 @@ def abort_export(signum, frame, exit_event, interrupt_event):
 def update_progress(progress_info):
     rows_done = 0
     total_rows = 1
-    for (current, max_count) in progress_info:
+    for current, max_count in progress_info:
         curr_val = current.value
         max_val = max_count.value
         if curr_val < 0:
@@ -336,12 +336,12 @@ def run_clients(options, db_table_set):
     interrupt_event = multiprocessing.Event()
     stream_semaphore = multiprocessing.BoundedSemaphore(options["clients"])
 
-    signal.signal(signal.SIGINT, lambda a,b: abort_export(a, b, exit_event, interrupt_event))
+    signal.signal(signal.SIGINT, lambda a, b: abort_export(a, b, exit_event, interrupt_event))
 
     try:
-        progress_info = [ ]
+        progress_info = []
 
-        for (db, table) in db_table_set:
+        for db, table in db_table_set:
             progress_info.append((multiprocessing.Value(ctypes.c_longlong, -1),
                                   multiprocessing.Value(ctypes.c_longlong, 0)))
             processes.append(multiprocessing.Process(target=export_table,

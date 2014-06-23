@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 import rethinkdb as r
 r.connect(port = 42865).repl()
 r.table_drop("foo").run()
