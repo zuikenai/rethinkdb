@@ -3,8 +3,8 @@
 try:
     {}.iteritems
     dict_items = lambda d: d.iteritems()
-except NameError:
-    dict_items = lambda d: items()
+except AttributeError:
+    dict_items = lambda d: d.items()
 
 class RqlError(Exception):
     def __init__(self, message, term, frames):

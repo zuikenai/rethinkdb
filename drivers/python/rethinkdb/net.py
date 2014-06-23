@@ -20,8 +20,8 @@ from rethinkdb.ast import RqlQuery, DB, recursively_convert_pseudotypes
 try:
     {}.iteritems
     dict_items = lambda d: d.iteritems()
-except NameError:
-    dict_items = lambda d: items()
+except AttributeError:
+    dict_items = lambda d: d.items()
 
 class Query(object):
     def __init__(self, type, token, term, global_optargs):
