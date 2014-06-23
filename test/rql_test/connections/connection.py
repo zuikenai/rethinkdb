@@ -42,7 +42,7 @@ if len(sys.argv) > 2:
     use_default_port = bool(int(sys.argv[2]))
 
 class TestCaseCompatible(unittest.TestCase):
-    '''A compatibility shim for Python 2.6'''
+    '''Compatibility shim for Python 2.6'''
     
     def __init__(self, *args, **kwargs):
         super(TestCaseCompatible, self).__init__(*args, **kwargs)
@@ -402,7 +402,7 @@ class TestShutdown(TestWithConnection):
 class TestPrinting(TestCaseCompatible):
 
     # Just test that RQL queries support __str__ using the pretty printer.
-    # An exhaustive test of the pretty printer would be, well, exhausing.
+    # An exhaustive test of the pretty printer would be, well, exhausting.
     def runTest(self):
         self.assertEqual(str(r.db('db1').table('tbl1').map(lambda x: x)),
                             "r.db('db1').table('tbl1').map(lambda var_1: var_1)")
@@ -458,16 +458,16 @@ class TestGroupWithTimeKey(TestWithConnection):
         rt2 = r.epoch_time(time2).in_timezone('+00:00')
         dt2 = datetime.datetime.fromtimestamp(time2, r.ast.RqlTzinfo('+00:00'))
 
-        res = r.table('times').insert({'id':0,'time':rt1}).run(c)
+        res = r.table('times').insert({'id':0, 'time':rt1}).run(c)
         self.assertEqual(res['inserted'], 1)
-        res = r.table('times').insert({'id':1,'time':rt2}).run(c)
+        res = r.table('times').insert({'id':1, 'time':rt2}).run(c)
         self.assertEqual(res['inserted'], 1)
 
-        expected_row1 = {'id':0,'time':dt1}
-        expected_row2 = {'id':1,'time':dt2}
+        expected_row1 = {'id':0, 'time':dt1}
+        expected_row2 = {'id':1, 'time':dt2}
 
         groups = r.table('times').group('time').coerce_to('array').run(c)
-        self.assertEqual(groups, {dt1:[expected_row1],dt2:[expected_row2]})
+        self.assertEqual(groups, {dt1:[expected_row1], dt2:[expected_row2]})
 
 
 if __name__ == '__main__':

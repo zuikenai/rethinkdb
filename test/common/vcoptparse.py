@@ -28,7 +28,7 @@ class Arg(object):
 
 class OptError(StandardError):
     pass
-    
+
 class OptParser(object):
 
     def __init__(self):
@@ -48,7 +48,7 @@ class OptParser(object):
     def __delitem__(self, key):
         self.parsers_in_order.remove((key, self.parsers_by_key[key]))
         del self.parsers_by_key[key]
-        
+    
     def parse(self, args):
     
         args = args[1:]   # Cut off name of program
@@ -68,7 +68,7 @@ class OptParser(object):
         # Build flag table
         
         flags = {}
-        for (key, parser) in self.parsers_in_order:
+        for key, parser in self.parsers_in_order:
             if hasattr(parser, "flags"):
                 for flag in parser.flags:
                     assert flag.startswith("-")
@@ -93,17 +93,16 @@ class OptParser(object):
         
         # Handle positional arguments
         
-        for (key, parser) in self.parsers_in_order:
+        for key, parser in self.parsers_in_order:
             if hasattr(parser, "positional"):
                 set_value(key, parser.positional(positionals))
         
         if positionals:
-            raise OptError("Unexpected extra positional argument(s): %s" % \
-                ", ".join(repr(x) for x in positionals))
+            raise OptError("Unexpected extra positional argument(s): %s" % ", ".join(repr(x) for x in positionals))
         
         # Apply defaults
         
-        for (key, parser) in self.parsers_by_key.iteritems():
+        for key, parser in self.parsers_by_key.iteritems():
             if values[key] is NoValue:
                 if hasattr(parser, "default") and parser.default is not NoValue:
                     values[key] = parser.default
@@ -224,8 +223,7 @@ class MultiValueFlag(Arg):
         for converter in self.converters:
             try: value = args.pop(0)
             except IndexError:
-                raise OptError("Flag %r expects %d argument(s), but only got %d." % \
-                    (flag, len(self.converters), args_gotten))
+                raise OptError("Flag %r expects %d argument(s), but only got %d." % (flag, len(self.converters), args_gotten))
             try: value2 = converter(value)
             except OptError as e:
                 raise OptError("Problem in argument %d to flag %r: %s" % (args_gotten + 1, flag, e))
@@ -288,4 +286,3 @@ class ManyPositionalArgs(Arg):
                 else: raise OptError("For %r: %s" % (self.name, e))
         del args[:]   # We consume all arguments remaining
         return args2
-

@@ -8,7 +8,6 @@ from test_common import *
 
 def test_function(opts, server, test_dir):
     
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect(("localhost", server.port))
     
@@ -64,4 +63,3 @@ if __name__ == "__main__":
 
     server.shutdown()
     if test_failure: raise test_failure
-

@@ -37,7 +37,7 @@ with RethinkDBTestServers(4, server_build_dir=server_build_dir) as servers:
     print("Inserting %d rows" % num_rows)
     range500 = range(0, 500)
     documents = [{'id':i, 'nums':range500} for i in xrange(0, num_rows)]
-    chunks = (documents[i : i+100] for i in xrange(0, len(documents), 100))
+    chunks = (documents[i : i + 100] for i in xrange(0, len(documents), 100))
     for chunk in chunks:
         tbl.insert(chunk).run(c)
         print('.', end='')
@@ -48,7 +48,7 @@ with RethinkDBTestServers(4, server_build_dir=server_build_dir) as servers:
     
     if not lang or lang == 'py':
         print("Running Python")
-        res = res | call(["python", os.path.join(basedir, "cursor.py"), str(port), str(num_rows)])
+        res = res | call([os.environ.get('INTERPRETER_PATH', 'python'), os.path.join(basedir, "cursor.py"), str(port), str(num_rows)])
         print('')
     if not lang or lang == 'js':
         print("Running JS")
