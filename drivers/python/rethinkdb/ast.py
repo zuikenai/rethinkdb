@@ -29,7 +29,7 @@ except NameError:
 try:
     {}.iteritems
     dict_items = lambda d: d.iteritems()
-except NameError:
+except AttributeError:
     dict_items = lambda d: items()
 
 # This is both an external function and one used extensively
