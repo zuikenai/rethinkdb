@@ -177,7 +177,7 @@ class PyLang(SrcLang):
         
     
     def langrepr(self, val):
-        if not isinstance(val, unicode):
+        if not isinstance(val, unicode) or unicode == str:
             return repr(str(val))
         else:
             return repr(unicode(val))
@@ -613,7 +613,7 @@ def getTestList(rootPath, languages, testFilters=None):
                 elif not any([x in language.test_types for x in testLanguages]):
                     continue
                 
-                subTestName = '%s.%s' % (testName, language.test_types[-1])
+                subTestName = '%s.%s' % (testName, language.test_types[0])
             
                 # - run the filters
 
