@@ -146,7 +146,7 @@ class Connection(object):
 
         if response != b"SUCCESS":
             self.close(noreply_wait=False)
-            raise RqlDriverError("Server dropped connection with message: \"%s\"" % response.strip())
+            raise RqlDriverError("Server dropped connection with message: \"%s\"" % response.decode('utf-8').strip())
 
         # Connection is now initialized
 
