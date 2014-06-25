@@ -34,6 +34,7 @@ class SrcLang(object):
 
     interpreter_name_exe_names = None
     interpreter_path = None
+    interpreter_version = None
     interpreter_env_name = None
     
     driver_source_env_name = None
@@ -107,12 +108,12 @@ class SrcLang(object):
                 candidatePath = distutils.spawn.find_executable(name)
                 if candidatePath is not None:
                     try:
-                        self.version_check(candidatePath)
+                        self.interpreter_version = self.version_check(candidatePath)
                         executablePath = candidatePath
                         break
                     except: pass
         else:
-            self.version_check(executablePath) # execption on failure
+            self.interpreter_version = self.version_check(executablePath) # execption on failure
             
         if executablePath is None:
             raise test_exceptions.TestingFrameworkException(detail='Unable to find interperter %s' % self.display_name)
@@ -134,6 +135,8 @@ class SrcLang(object):
         
         if self.maxVersion is not None and targetVersion > self.maxVersion:
             raise test_exceptions.TestingFrameworkException(detail='Version of %s (%s) was above the maximum version %s for python2' % (executablePath, targetVersion, self.maxVersion))
+        
+        return targetVersion
 
 class PyLang(SrcLang):
     test_types = None
@@ -177,10 +180,15 @@ class PyLang(SrcLang):
         
     
     def langrepr(self, val):
+        encoded = None
         if not isinstance(val, unicode) or unicode == str:
-            return repr(str(val))
+            encoded = repr(str(val))
         else:
-            return repr(unicode(val))
+            encoded = repr(unicode(val))
+        if distutils.version.LooseVersion('3.0') <= self.interpreter_version and self.interpreter_version < distutils.version.LooseVersion('3.3'):
+            if len(encoded) > 2 and encoded[:2] in ('u"', "u'"):
+                encoded = encoded[1:]
+        return encoded
     
     def nulltranslate(self, strng):
         return re.sub("(?<!\"|')null(?!\"|')", 'None', strng)
@@ -204,7 +212,7 @@ class JsLang(SrcLang):
     
     interpreter_name_exe_names = ['node']
     interpreter_env_name = 'NODE'
-    minVersion = None
+    minVersion = None # no version requirements yet
     maxVersion = None
     
     driver_source_env_name = 'JAVASCRIPT_DRIVER_SRC_DIR'
@@ -234,8 +242,15 @@ class JsLang(SrcLang):
         else:
             return re.sub('__', '_', name)
     
-    def version_check(self, executablePath):
-        pass # no version requirements yet
+    def get_interpreter_version(self, executablePath):
+        verionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, __ = verionCheckProcess.communicate()
+        
+        if verionCheckProcess.returncode != 0:
+            raise test_exceptions.TestingFrameworkException(detail='Unable to determine the version of %s' % executablePath)
+        
+        versionNumber = str(output).lstrip('v').strip()
+        return distutils.version.LooseVersion(versionNumber)
 
 class RbLang(SrcLang):
     test_types = ['rb']
@@ -628,8 +643,11 @@ def getTestList(rootPath, languages, testFilters=None):
                 
                 # - add the test
                 
-                interpreter = language.get_interpreter_path()
-                foundTests.append(TestListing(name=subTestName, path=os.path.join(root, fileName), language=language, type=extension, interpreter=language.get_interpreter_path()))
+                interpreter = None
+                if extension == 'yaml':
+                    interpreter = language.get_interpreter_path()
+                
+                foundTests.append(TestListing(name=subTestName, path=os.path.join(root, fileName), language=language, type=extension, interpreter=interpreter))
     
     # --
     
@@ -895,7 +913,7 @@ def main():
             testExecutable = [executablePath]
             if test.interpreter is not None:
                 testExecutable = [test.interpreter] + testExecutable
-            testProcess = subprocess.Popen(testExecutable + additionalArguments, stdout=outputChannel, stderr=outputChannel, preexec_fn=os.setpgrp, env=dict(os.environ, **{'INTERPRETER_PATH':test.interpreter}))
+            testProcess = subprocess.Popen(testExecutable + additionalArguments, stdout=outputChannel, stderr=outputChannel, preexec_fn=os.setpgrp, env=dict(os.environ, **{'INTERPRETER_PATH':test.language.interpreter_path}))
             
             # - kill off the process group
             

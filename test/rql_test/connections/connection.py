@@ -429,7 +429,7 @@ class TestBatching(TestWithConnection):
             ids.remove(row['id'])
 
         self.assertEqual(next(itr)['id'], ids.pop())
-        self.assertRaises(StopIteration, lambda: itr.next())
+        self.assertRaises(StopIteration, lambda: next(itr))
         self.assertTrue(cursor.end_flag)
 
 class TestGroupWithTimeKey(TestWithConnection):
