@@ -3,8 +3,6 @@ from __future__ import print_function
 import collections, os, re, sys
 from datetime import datetime, tzinfo, timedelta
 
-import traceback
-
 try:
     unicode
 except NameError:
@@ -172,7 +170,7 @@ class Err:
 
         else:
             otherMessage = str(other)
-            if isinstance(other, r.errors.RqlError) or isinstance(other, r.errors.RqlDriverError):
+            if isinstance(other, (r.errors.RqlError, r.errors.RqlDriverError)):
                 otherMessage = other.message
                             
                 # Strip "offending object" from the error message
@@ -277,14 +275,14 @@ class PyTestDriver:
 
         # Try to build the expected result
         if expected:
-            exp_val = eval(expected, dict(globals(), **self.scope))
+            exp_val = eval(expected, dict(list(globals().items()) + list(self.scope.items())))
         else:
             # This test might not have come with an expected result, we'll just ensure it doesn't fail
             exp_val = ()
 
         # Try to build the test
         try:
-            query = eval(src, dict(globals(), **self.scope))
+            query = eval(src, dict(list(globals().items()) + list(self.scope.items())))
         except Exception as err:
             if not isinstance(exp_val, Err):
                 print_test_failure(name, src, "Error eval'ing test src:\n\t%s" % repr(err))
