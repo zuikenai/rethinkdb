@@ -13,10 +13,6 @@ from time import time as theTime
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 import test_util
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "common"))
-import utils
-sys.path.insert(0, os.path.join(utils.project_root_dir(), 'drivers', 'python'))
-
 try:
     xrange
 except NameError:
@@ -425,13 +421,14 @@ class TestBatching(TestWithConnection):
         ids = set(range(0, count))
 
         t1.insert([{'id':i} for i in ids]).run(c)
-        cursor = t1.run(c, batch_conf={'max_els': batch_size})
+        cursor = t1.run(c, batch_conf={'max_els':batch_size})
 
         itr = iter(cursor)
-        for i in xrange(0, batch_size - 1):
-            next(itr)
+        for i in xrange(0, count - 1):
+            row = next(itr)
+            ids.remove(row['id'])
 
-        self.assertEqual(itr.next()['id'], ids.pop())
+        self.assertEqual(next(itr)['id'], ids.pop())
         self.assertRaises(StopIteration, lambda: itr.next())
         self.assertTrue(cursor.end_flag)
 
