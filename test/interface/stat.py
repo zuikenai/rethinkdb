@@ -72,7 +72,6 @@ with driver.Metacluster() as metacluster:
             assert machine_stats.keys().count(other_machine) == 0
             assert other_machine_stats.keys().count(other_machine) == 1
         
-        sys.stderr.write(str(machine_stats) + "\n")
         stats_top = machine_stats
         for i in [x for x in stats_top.keys() if x != "machines"]:
             machine_top = stats_top[i]
