@@ -322,8 +322,8 @@ bool op_term_t::is_blocking() const {
     }
     const std::vector<counted_t<const term_t> > &original_args
         = arg_terms->get_original_args();
-    for (size_t i = 0; i < original_args.size(); ++i) {
-        if (original_args[i]->is_blocking()) {
+    for (auto &arg : original_args) {
+        if (arg->is_blocking()) {
             return true;
         }
     }
