@@ -37,7 +37,7 @@ def generate_html(output_file, reportData):
   file_out = open(output_file, 'w')
   mustachePath = os.path.realpath(os.path.join(os.path.dirname(__file__), 'mustache', 'mustache.js'))
   mustacheContent = open(mustachePath).read()
-  pageHTML = test_report_template % {"pagedata":json.dumps(reportData, separators=(',',':')), 'mustacheContents': mustacheContent}
+  pageHTML = test_report_template % {"pagedata": json.dumps(reportData, separators=(',', ':')), 'mustacheContents': mustacheContent}
   file_out.write(pageHTML)
 
 def gen_report(test_root, tests):

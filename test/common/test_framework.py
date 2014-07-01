@@ -26,11 +26,7 @@ import traceback
 try:
     import Queue
 except ImportError:
-    import queue
-    class Queue:
-        pass
-    Queue.Queue = queue.Queue
-    Queue.Empty = queue.Empty
+    import queue as Queue
 
 from utils import guess_is_text_file
 import test_report
@@ -647,7 +643,7 @@ class TestProcess(object):
             self.gracefull_kill = True
         if self.terminate_thread:
             return
-        self.terminate_thread = threading.Thread(target=self.terminate_thorough, name='terminate:'+self.name)
+        self.terminate_thread = threading.Thread(target=self.terminate_thorough, name='terminate:' + self.name)
         self.terminate_thread.start()
 
     def pid(self):
@@ -880,7 +876,7 @@ class TestTree(Test):
                 yield req
 
     def configure(self, conf):
-        return TestTree({test:self.tests[test].configure(conf) for test in self.tests})
+        return TestTree({test: self.tests[test].configure(conf) for test in self.tests})
 
     def __len__(self):
         count = 0
@@ -935,7 +931,7 @@ class OldTest(Test):
     def dump_file(self, name):
         with file(join(self.dir, name)) as f:
             for line in f:
-                print(line, end='')
+                print(line, end=' ')
 
     def dump_log(self):
         self.dump_file("stdout")

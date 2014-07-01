@@ -15,10 +15,6 @@ from . import ql2_pb2 as p
 pTerm = p.Term.TermType
 
 try:
-    from itertools import imap
-except ImportError:
-    imap = map
-try:
     unicode
 except NameError:
     unicode = str

@@ -40,7 +40,7 @@ with RethinkDBTestServers(4, server_build_dir=server_build_dir) as servers:
     chunks = (documents[i : i + 100] for i in xrange(0, len(documents), 100))
     for chunk in chunks:
         tbl.insert(chunk).run(c)
-        print('.', end='')
+        print('.', end=' ')
         stdout.flush()
     print("Done\n")
     
