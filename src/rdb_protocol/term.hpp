@@ -24,8 +24,9 @@ enum eval_flags_t {
     LITERAL_OK = 1,
 };
 
-// RSI: Should this be pb_rcheckable_t or just rcheckable_t?  (Probably,
-// pb_rcheckable_t, to avoid the need for virtual inheritance.)
+// A term with a term_eval function.  These lack the static checking features of
+// term_t (is_deterministic, is_blocking, accumulate_captures) because these don't
+// exist until run-time (for example, see faux_term_t, created by r.args terms).
 class runtime_term_t : public slow_atomic_countable_t<runtime_term_t>,
                        public pb_rcheckable_t {
 public:
@@ -38,7 +39,7 @@ protected:
 
     virtual const char *name() const = 0;
 
-    // These allocate a new values with this term_t's backtrace().
+    // These allocate a new values with this runtime_term_t's backtrace().
     counted_t<val_t> new_val(counted_t<const datum_t> d) const;
     counted_t<val_t> new_val(counted_t<const datum_t> d, counted_t<table_t> t) const;
     counted_t<val_t> new_val(counted_t<const datum_t> d,
