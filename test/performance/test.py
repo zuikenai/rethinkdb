@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # Copyright 2010-2012 RethinkDB, all rights reserved.
+
+from __future__ import print_function
+
 import sys
 from sys import stdout, exit, path
 import time
@@ -11,16 +14,13 @@ import subprocess
 from util import gen_doc, gen_num_docs, compare
 from queries import constant_queries, table_queries, write_queries, delete_queries
 
-path.insert(0, "../../drivers/python")
-
-from os import environ
-import rethinkdb as r
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'rql_test')))
 from test_util import RethinkDBTestServers
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
+import utils
 
-import pdb
+r = utils.import_pyton_driver()
 
 # We define 4 tables (small/normal cache with small/big documents
 servers_data = [
@@ -55,23 +55,31 @@ executions_per_query = 1000 # 1000 executions max per query
 results = {} # Save the time per query (average, min, max etc.)
 connection = None
 
-def run_tests(build="../../build/release", data_dir='./'):
+def run_tests(build=None, data_dir='./'):
     global connection, servers_data
+    
+    if build is None:
+        build = utils.latest_build_dir()
+    if os.path.basename(build).startswith('release'):
+        sys.stderr.write('Testing a non-release build: %s' % build)
+    else:
+        print('Testing: %s' % build)
+    
     for i in range(0, len(servers_data)):
         server_data = servers_data[i]
 
-        print "Starting server with cache_size " + str(server_data["cache_size"]) + " MB...",
+        print("Starting server with cache_size " + str(server_data["cache_size"]) + " MB...", end=' ')
         sys.stdout.flush()
 
-        with RethinkDBTestServers(1, server_build_dir=build, cache_size=server_data["cache_size"], data_dir=data_dir) as servers:
-            print " Done."
+        with RethinkDBTestServers(1, server_build_dir=build, cache_size=server_data["cache_size"], group_data_dir=data_dir) as servers:
+            print(" Done.")
             sys.stdout.flush()
 
-            print "Connecting...",
+            print("Connecting...", end=' ')
             sys.stdout.flush()
 
             connection = connect(servers)
-            print " Done."
+            print(" Done.")
             sys.stdout.flush()
 
             init_tables()
@@ -95,7 +103,7 @@ def init_tables():
     """
     global connection, tables
 
-    print "Creating databases/tables...",
+    print("Creating databases/tables...", end=' ')
     sys.stdout.flush()
     try:
         r.db_drop("test").run(connection)
@@ -111,7 +119,7 @@ def init_tables():
         r.db("test").table(table["name"]).index_create("field0").run(connection)
         r.db("test").table(table["name"]).index_create("field1").run(connection)
 
-    print " Done."
+    print(" Done.")
     sys.stdout.flush()
 
 
@@ -122,7 +130,7 @@ def execute_read_write_queries(suffix):
     """
     global results, connection, time_per_query, executions_per_query, constant_queries
 
-    print "Running inserts...",
+    print("Running inserts...", end=' ')
     sys.stdout.flush()
     for table in tables:
         docs = []
@@ -188,12 +196,12 @@ def execute_read_write_queries(suffix):
         
         table["ids"].sort()
     
-    print " Done."
+    print(" Done.")
     sys.stdout.flush()
 
 
     # Execute the insert queries
-    print "Running update/replace...",
+    print("Running update/replace...", end=' ')
     sys.stdout.flush()
     for table in tables:
         for p in xrange(len(write_queries)):
@@ -225,12 +233,12 @@ def execute_read_write_queries(suffix):
             # Clean the update
             eval(write_queries[p]["clean"]).run(connection)
 
-    print " Done."
+    print(" Done.")
     sys.stdout.flush()
 
 
     # Execute the read queries on every tables
-    print "Running reads...",
+    print("Running reads...", end=' ')
     sys.stdout.flush()
     for table in tables:
         for p in xrange(len(table_queries)):
@@ -256,8 +264,8 @@ def execute_read_write_queries(suffix):
                     else:
                         i += 1
                 except:
-                    print "Query failed"
-                    print constant_queries[p]
+                    print("Query failed")
+                    print(constant_queries[p])
                     sys.stdout.flush()
                     break
                 durations.append(time.time() - start_query)
@@ -273,12 +281,12 @@ def execute_read_write_queries(suffix):
             }
 
 
-    print " Done."
+    print(" Done.")
     sys.stdout.flush()
 
 
     # Execute the delete queries
-    print "Running delete...",
+    print("Running delete...", end =' ')
     sys.stdout.flush()
     for table in tables:
         for p in xrange(len(delete_queries)):
@@ -305,14 +313,14 @@ def execute_read_write_queries(suffix):
             }
 
 
-    print " Done."
+    print(" Done.")
     sys.stdout.flush()
 
 def execute_constant_queries():
     global results
 
     # Execute the queries that do not require a table
-    print "Running constant queries...",
+    print("Running constant queries...", end=' ')
     sys.stdout.flush()
     for p in xrange(len(constant_queries)):
         count = 0
@@ -327,8 +335,8 @@ def execute_constant_queries():
                         list(cursor)
                         cursor.close()
                 except:
-                    print "Query failed"
-                    print constant_queries[p]
+                    print("Query failed")
+                    print(constant_queries[p])
                     sys.stdout.flush()
             else:
                 cursor = eval(constant_queries[p]["query"]).run(connection)
@@ -357,33 +365,20 @@ def execute_constant_queries():
                 "last_centile": durations[int(math.floor(len(durations) / 100. * 99))]
             }
 
-    print " Done."
+    print(" Done.")
     sys.stdout.flush()
 
-
-
-
 def stop_cluster(cluster):
-    """
-    Stop the cluster
-    """
+    """Stop the cluster"""
     cluster.check_and_stop()
 
 def check_driver():
-    """
-    Make sure we are using the C++ backend.
-    Exit if we don't
-    """
-    if r.protobuf_implementation == 'py':
-        print "Please install the C++ backend for the tests."
-        sys.stdout.flush()
-        exit(1)
-
+    '''If this driver is protobuf based, make sure we are using the C++ backend.'''
+    if hasattr(r, 'protobuf_implementation') and r.protobuf_implementation == 'py':
+        exit("Please install the C++ backend for the tests.")
 
 def save_compare_results():
-    """
-    Save the current results, and if previous results are available, generate an HTML page with the differences
-    """
+    """Save the current results, and if previous results are available, generate an HTML page with the differences"""
     global results, str_date
 
     commit = out = subprocess.Popen(['git', 'log', '-n 1', '--pretty=format:"%H"'], stdout=subprocess.PIPE).communicate()[0]
@@ -423,9 +418,7 @@ def save_compare_results():
 
 
 def main(data_dir):
-    """
-    Main method
-    """
+    """Main method"""
     check_driver()
     run_tests(data_dir=data_dir)
 

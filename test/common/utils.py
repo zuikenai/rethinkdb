@@ -154,7 +154,7 @@ def import_pyton_driver(targetDir=None):
     keptPaths = sys.path
     try:
         sys.path.insert(0, os.path.dirname(driverDir))
-        driverModule = __import__('rethinkdb')
+        import rethinkdb as driverModule
         assert(os.path.realpath(inspect.getfile(driverModule)).startswith(driverDir)), "The wrong version or the rethinkdb Python driver got imported. It should have been in %s but was %s" % (driverDir, os.path.realpath(inspect.getfile(driverModule)))
         return driverModule
     finally:

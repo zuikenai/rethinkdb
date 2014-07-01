@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # Copyright 2010-2012 RethinkDB, all rights reserved.
+
+from __future__ import print_function
+
 import sys, os
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import multiprocessing, time, pickle
 import memcached_workload_common, serial_mix

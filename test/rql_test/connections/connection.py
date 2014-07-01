@@ -5,10 +5,7 @@
 
 from __future__ import print_function
 
-import datetime, inspect, os, re, socket, sys, threading, time, unittest
-# avoiding issues from the 'from rethnkdb import *' statement
-from time import sleep
-from time import time as theTime
+import datetime, inspect, os, re, socket, sys, threading, unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 import test_util
@@ -31,6 +28,8 @@ r = utils.import_pyton_driver()
 # - import it using the 'from rethinkdb import *' form
 sys.path.insert(0, os.path.dirname(inspect.getfile(r)))
 from rethinkdb import *
+
+import time # overrides the import of rethinkdb.time
 
 if len(sys.argv) > 1:
     server_build_dir = sys.argv[1]
@@ -73,7 +72,7 @@ class TestCaseCompatible(unittest.TestCase):
             self.fail('%s failed to raise a %s' % (repr(callable_func), repr(exception)))
         except Exception as e:
             self.assertTrue(isinstance(e, exception), '%s expected to raise %s but instead raised %s: %s' % (repr(callable_func), repr(exception), e.__class__.__name__, str(e)))
-            self.assertTrue(re.search(regexp, str(e)), '%s did not raise the expected messgae "%s", but rather: %s' % (repr(callable_func), str(regexp), str(e)))
+            self.assertTrue(re.search(regexp, str(e)), '%s did not raise the expected message "%s", but rather: %s' % (repr(callable_func), str(regexp), str(e)))
 
 class TestNoConnection(TestCaseCompatible):
     # No servers started yet so this should fail
@@ -166,7 +165,7 @@ class TestConnectionDefaultPort(TestCaseCompatible):
 
 class BlackHoleRequestHandler(SocketServer.BaseRequestHandler):
     def handle(self):
-        sleep(1)
+        time.sleep(1)
 
 class ThreadedBlackHoleServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
@@ -271,42 +270,42 @@ class TestConnection(TestWithConnection):
 
     def test_noreply_wait_waits(self):
         c = r.connect(port=self.port)
-        t = theTime()
+        t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.noreply_wait()
-        duration = theTime() - t
+        duration = time.time() - t
         self.assertGreaterEqual(duration, 0.5)
 
     def test_close_waits_by_default(self):
         c = r.connect(port=self.port)
-        t = theTime()
+        t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.close()
-        duration = theTime() - t
+        duration = time.time() - t
         self.assertGreaterEqual(duration, 0.5)
 
     def test_reconnect_waits_by_default(self):
         c = r.connect(port=self.port)
-        t = theTime()
+        t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.reconnect()
-        duration = theTime() - t
+        duration = time.time() - t
         self.assertGreaterEqual(duration, 0.5)
 
     def test_close_does_not_wait_if_requested(self):
         c = r.connect(port=self.port)
-        t = theTime()
+        t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.close(noreply_wait=False)
-        duration = theTime() - t
+        duration = time.time() - t
         self.assertLess(duration, 0.5)
 
     def test_reconnect_does_not_wait_if_requested(self):
         c = r.connect(port=self.port)
-        t = theTime()
+        t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.reconnect(noreply_wait=False)
-        duration = theTime() - t
+        duration = time.time() - t
         self.assertLess(duration, 0.5)
 
     def test_db(self):
@@ -391,7 +390,7 @@ class TestShutdown(TestWithConnection):
         c = r.connect(port=self.port)
         r.expr(1).run(c)
         self.servers.stop()
-        sleep(0.2)
+        time.sleep(0.2)
         self.assertRaisesRegexp(
             r.RqlDriverError, "Connection is closed.",
             r.expr(1).run, c)

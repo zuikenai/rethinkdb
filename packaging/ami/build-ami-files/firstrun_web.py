@@ -28,8 +28,8 @@ def application(env, reply):
             query.get('join', '')
         ])
 
-      reply('302 Redirect', [('Location', '/wait')])
-      return []
+        reply('302 Redirect', [('Location', '/wait')])
+        return []
 
-  reply('404 Not Found', [])
-  return ["404 Not Found ", env['PATH_INFO']]
+    reply('404 Not Found', [])
+    return ["404 Not Found ", env['PATH_INFO']]

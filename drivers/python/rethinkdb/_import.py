@@ -619,11 +619,11 @@ def spawn_import_clients(options, files_info):
         # multiprocessing queues don't handling tracebacks, so they've already been stringified in the queue
         while not error_queue.empty():
             error = error_queue.get()
-            print("%s" % (error[1]), file=sys.stderr)
+            print("%s" % error[1], file=sys.stderr)
             if options["debug"]:
                 print("%s traceback: %s" % (error[0].__name__, error[2]), file=sys.stderr)
             if len(error) == 4:
-                print("In file: %s" % (error[3]), file=sys.stderr)
+                print("In file: %s" % error[3], file=sys.stderr)
         raise RuntimeError("Errors occurred during import")
 
 def get_import_info_for_file(filename, db_table_filter):
