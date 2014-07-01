@@ -327,7 +327,7 @@ void run(protob_t<Query> q,
 }
 
 term_t::term_t(protob_t<const Term> _src)
-    : pb_rcheckable_t(get_backtrace(_src)), src(_src) { }
+    : runtime_term_t(get_backtrace(_src)), src(_src) { }
 term_t::~term_t() { }
 
 // Uncomment the define to enable instrumentation (you'll be able to see where
@@ -357,7 +357,10 @@ void term_t::prop_bt(Term *t) const {
     propagate_backtrace(t, &get_src()->GetExtension(ql2::extension::backtrace));
 }
 
-counted_t<val_t> term_t::eval(scope_env_t *env, eval_flags_t eval_flags) const {
+runtime_term_t::runtime_term_t(protob_t<const Backtrace> bt)
+    : pb_rcheckable_t(std::move(bt)) { }
+
+counted_t<val_t> runtime_term_t::eval(scope_env_t *env, eval_flags_t eval_flags) const {
     // This is basically a hook for unit tests to change things mid-query
     profile::starter_t starter(strprintf("Evaluating %s.", name()), env->env->trace);
     DEBUG_ONLY_CODE(env->env->do_eval_callback());
@@ -386,38 +389,38 @@ counted_t<val_t> term_t::eval(scope_env_t *env, eval_flags_t eval_flags) const {
     }
 }
 
-counted_t<val_t> term_t::new_val(counted_t<const datum_t> d) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<const datum_t> d) const {
     return make_counted<val_t>(d, backtrace());
 }
-counted_t<val_t> term_t::new_val(counted_t<const datum_t> d,
-                                 counted_t<table_t> t) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<const datum_t> d,
+                                         counted_t<table_t> t) const {
     return make_counted<val_t>(d, t, backtrace());
 }
 
-counted_t<val_t> term_t::new_val(counted_t<const datum_t> d,
-                                 counted_t<const datum_t> orig_key,
-                                 counted_t<table_t> t) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<const datum_t> d,
+                                         counted_t<const datum_t> orig_key,
+                                         counted_t<table_t> t) const {
     return make_counted<val_t>(d, orig_key, t, backtrace());
 }
 
-counted_t<val_t> term_t::new_val(env_t *env,
-                                 counted_t<datum_stream_t> s) const {
+counted_t<val_t> runtime_term_t::new_val(env_t *env,
+                                         counted_t<datum_stream_t> s) const {
     return make_counted<val_t>(env, s, backtrace());
 }
-counted_t<val_t> term_t::new_val(counted_t<datum_stream_t> s,
-                                 counted_t<table_t> d) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<datum_stream_t> s,
+                                         counted_t<table_t> d) const {
     return make_counted<val_t>(d, s, backtrace());
 }
-counted_t<val_t> term_t::new_val(counted_t<const db_t> db) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<const db_t> db) const {
     return make_counted<val_t>(db, backtrace());
 }
-counted_t<val_t> term_t::new_val(counted_t<table_t> t) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<table_t> t) const {
     return make_counted<val_t>(t, backtrace());
 }
-counted_t<val_t> term_t::new_val(counted_t<func_t> f) const {
+counted_t<val_t> runtime_term_t::new_val(counted_t<func_t> f) const {
     return make_counted<val_t>(f, backtrace());
 }
-counted_t<val_t> term_t::new_val_bool(bool b) const {
+counted_t<val_t> runtime_term_t::new_val_bool(bool b) const {
     return new_val(make_counted<const datum_t>(datum_t::R_BOOL, b));
 }
 

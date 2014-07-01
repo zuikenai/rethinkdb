@@ -53,7 +53,22 @@ public:
     protob_t(const protob_t<U> &other)
         : destructable_(other.destructable_), pointee_(other.pointee_) { }
 
+    protob_t(protob_t &&movee)
+        : destructable_(std::move(movee.destructable_)),
+          pointee_(std::move(movee.pointee_)) {
+        movee.destructable_.reset();
+        movee.pointee_ = NULL;
+    }
+
+    protob_t &operator=(protob_t &&other) {
+        protob_t tmp(std::move(other));
+        swap(tmp);
+        return *this;
+    }
+
     protob_t(const protob_t &) = default;
+    protob_t &operator=(const protob_t &) = default;
+    ~protob_t() = default;
 
     // Makes a protob_t pointer to some value that is a child of pointee_.  They
     // both share the same base Term object that will eventually get destroyed

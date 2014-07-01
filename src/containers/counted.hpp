@@ -31,6 +31,11 @@ public:
         if (p_) { counted_add_ref(p_); }
     }
 
+    template <class U>
+    counted_t(const counted_t<U> &copyee) : p_(copyee.p_) {
+        if (p_) { counted_add_ref(p_); }
+    }
+
     // TODO: Add noexcept on versions of compilers that support it.  noexcept is
     // good to have because types like std::vectors use it to see whether to
     // call the copy constructor or move constructor.

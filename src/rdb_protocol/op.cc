@@ -46,16 +46,11 @@ optargspec_t optargspec_t::with(std::initializer_list<const char *> args) const 
     return ret;
 }
 
-class faux_term_t : public term_t {
+class faux_term_t : public runtime_term_t {
 public:
-    faux_term_t(protob_t<const Term> src, counted_t<const datum_t> _d)
-        : term_t(std::move(src)), d(std::move(_d)) { }
+    faux_term_t(protob_t<const Backtrace> bt, counted_t<const datum_t> _d)
+        : runtime_term_t(std::move(bt)), d(std::move(_d)) { }
     const char *name() const FINAL { return "<EXPANDED FROM r.args>"; }
-    bool is_deterministic() const FINAL { return true; }
-    // RSI: What is this type???  Make sure that concurrent query evaluation analysis
-    // does not get confused by r.args terms.
-    bool is_blocking() const FINAL { return false; }
-    void accumulate_captures(var_captures_t *) const FINAL { }
 private:
     counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const FINAL {
         return new_val(d);
@@ -106,16 +101,16 @@ arg_terms_t::arg_terms_t(protob_t<const Term> _src,
 argvec_t arg_terms_t::start_eval(scope_env_t *env, eval_flags_t flags) const {
     eval_flags_t new_flags = static_cast<eval_flags_t>(
         flags | argspec.get_eval_flags());
-    std::vector<counted_t<const term_t> > args;
+    std::vector<counted_t<const runtime_term_t> > args;
     for (auto it = original_args.begin(); it != original_args.end(); ++it) {
         if ((*it)->get_src()->type() == Term::ARGS) {
             counted_t<val_t> v = (*it)->eval(env, new_flags);
             counted_t<const datum_t> d = v->as_datum();
             for (size_t i = 0; i < d->size(); ++i) {
-                args.push_back(make_counted<faux_term_t>(src, d->get(i)));
+                args.push_back(make_counted<faux_term_t>(get_backtrace(src), d->get(i)));
             }
         } else {
-            args.push_back(*it);
+            args.push_back(counted_t<const runtime_term_t>(*it));
         }
     }
     rcheck(argspec.contains(args.size()),
@@ -125,13 +120,13 @@ argvec_t arg_terms_t::start_eval(scope_env_t *env, eval_flags_t flags) const {
     return argvec_t(std::move(args));
 }
 
-argvec_t::argvec_t(std::vector<counted_t<const term_t> > &&v)
+argvec_t::argvec_t(std::vector<counted_t<const runtime_term_t> > &&v)
     : vec(std::move(v)) { }
 
-counted_t<const term_t> argvec_t::remove(size_t i) {
+counted_t<const runtime_term_t> argvec_t::remove(size_t i) {
     r_sanity_check(i < vec.size());
     r_sanity_check(vec[i].has());
-    counted_t<const term_t> ret;
+    counted_t<const runtime_term_t> ret;
     ret.swap(vec[i]);
     return ret;
 }
