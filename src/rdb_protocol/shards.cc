@@ -607,7 +607,7 @@ private:
         }
     }
     // RSI: What the fuck does "lst" mean?
-    virtual void lst_transform(env_t *env, datums_t *lst) = 0;
+    virtual void lst_transform(env_t *env, datums_t *lst) const = 0;
 };
 
 class group_trans_t : public op_t {
@@ -726,7 +726,7 @@ public:
     map_trans_t(const map_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    virtual void lst_transform(env_t *env, datums_t *lst) {
+    virtual void lst_transform(env_t *env, datums_t *lst) const {
         try {
             for (auto it = lst->begin(); it != lst->end(); ++it) {
                 *it = f->call(env, *it)->as_datum();
@@ -746,7 +746,7 @@ public:
                       ? _f.default_filter_val->compile_wire_func()
                       : counted_t<func_t>()) { }
 private:
-    virtual void lst_transform(env_t *env, datums_t *lst) {
+    virtual void lst_transform(env_t *env, datums_t *lst) const {
         auto it = lst->begin();
         auto loc = it;
         try {
@@ -769,7 +769,7 @@ public:
     concatmap_trans_t(const concatmap_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    virtual void lst_transform(env_t *env, datums_t *lst) {
+    virtual void lst_transform(env_t *env, datums_t *lst) const {
         datums_t new_lst;
         batchspec_t bs = batchspec_t::user(batch_type_t::TERMINAL, env);
         profile::sampler_t sampler("Evaluating CONCAT_MAP elements.", env->trace);
