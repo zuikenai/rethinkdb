@@ -71,7 +71,7 @@ with driver.Metacluster() as metacluster:
         for other_machine in other_machines:
             assert machine_stats.keys().count(other_machine) == 0
             assert other_machine_stats.keys().count(other_machine) == 1
-
+        
         stats_top = machine_stats
         for i in [x for x in stats_top.keys() if x != "machines"]:
             machine_top = stats_top[i]
