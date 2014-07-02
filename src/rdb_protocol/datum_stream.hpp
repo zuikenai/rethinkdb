@@ -168,7 +168,7 @@ protected:
     const counted_t<datum_stream_t> source;
 };
 
-class indexes_of_datum_stream_t : public wrapper_datum_stream_t {
+class indexes_of_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     indexes_of_datum_stream_t(counted_t<func_t> _f, counted_t<datum_stream_t> _source);
 
@@ -203,7 +203,7 @@ private:
     counted_t<const datum_t> arr;
 };
 
-class slice_datum_stream_t : public wrapper_datum_stream_t {
+class slice_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     slice_datum_stream_t(uint64_t left, uint64_t right, counted_t<datum_stream_t> src);
 private:
@@ -214,7 +214,7 @@ private:
     uint64_t index, left, right;
 };
 
-class zip_datum_stream_t : public wrapper_datum_stream_t {
+class zip_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     explicit zip_datum_stream_t(counted_t<datum_stream_t> src);
 private:
@@ -222,7 +222,7 @@ private:
     next_raw_batch(env_t *env, const batchspec_t &batchspec);
 };
 
-class indexed_sort_datum_stream_t : public wrapper_datum_stream_t {
+class indexed_sort_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     indexed_sort_datum_stream_t(
         counted_t<datum_stream_t> stream, // Must be a table with a sorting applied.
