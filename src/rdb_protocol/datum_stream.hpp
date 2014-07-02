@@ -242,7 +242,7 @@ private:
     std::vector<counted_t<const datum_t> > data;
 };
 
-class union_datum_stream_t : public datum_stream_t {
+class union_datum_stream_t FINAL : public datum_stream_t {
 public:
     union_datum_stream_t(std::vector<counted_t<datum_stream_t> > &&_streams,
                          const protob_t<const Backtrace> &bt_src)
@@ -419,7 +419,7 @@ private:
     size_t items_index;
 };
 
-class lazy_datum_stream_t : public datum_stream_t {
+class lazy_datum_stream_t FINAL : public datum_stream_t {
 public:
     lazy_datum_stream_t(
         rdb_namespace_access_t *_ns_access,

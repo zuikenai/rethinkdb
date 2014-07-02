@@ -271,7 +271,7 @@ private:
     uint64_t stamp;
 };
 
-class stream_t : public eager_datum_stream_t {
+class stream_t FINAL : public eager_datum_stream_t {
 public:
     template<class... Args>
     stream_t(scoped_ptr_t<subscription_t> &&_sub, Args... args)
