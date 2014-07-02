@@ -620,8 +620,8 @@ eager_datum_stream_t::done_t eager_datum_stream_t::next_grouped_batch(
             return done_t::YES;
         }
         (*out)[counted_t<const datum_t>()] = std::move(v);
-        for (auto it = ops.begin(); it != ops.end(); ++it) {
-            (**it)(env, out, counted_t<const datum_t>());
+        for (const scoped_ptr_t<op_t> &op : ops) {
+            (*op)(env, out, counted_t<const datum_t>());
         }
     }
     return done_t::NO;
