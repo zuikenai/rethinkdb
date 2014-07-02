@@ -304,7 +304,8 @@ class TestRunner(object):
         elif len(self.failed_set):
             print("%d of %d tests failed" % (len(self.failed_set), tests_count))
         else:
-            self.all_passed = True            print("All tests passed successfully")
+            self.all_passed = True
+            print("All tests passed successfully")
         print("Saved test results to %s" % self.dir)
 
     def wait_for_running_tests(self):

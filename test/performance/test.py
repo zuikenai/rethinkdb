@@ -10,7 +10,6 @@ import json
 import os
 import math
 import subprocess
-from os import environ
 
 from util import gen_doc, gen_num_docs, compare
 from queries import constant_queries, table_queries, write_queries, delete_queries
