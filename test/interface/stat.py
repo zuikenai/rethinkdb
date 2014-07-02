@@ -39,7 +39,7 @@ with driver.Metacluster() as metacluster:
     
     # -- check that invalid requests are treated as such
     
-    invalid_requests = ["foo=bar", r"filter=\|", "time0ut=1","timeout=", "timeout=0"]
+    invalid_requests = ["foo=bar", r"filter=\|", "time0ut=1", "timeout=", "timeout=0"]
     for req in invalid_requests:
         failed = False
         try:
