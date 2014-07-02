@@ -71,7 +71,10 @@ with driver.Metacluster() as metacluster:
         for other_machine in other_machines:
             assert machine_stats.keys().count(other_machine) == 0
             assert other_machine_stats.keys().count(other_machine) == 1
-        
+
+        filter_query = "filter=.*/parser/cmd_get"
+        filtered_machine_query = "%s&%s" % (machine_query, filter_query)
+        filtered_machine_stats = access.get_stat(filtered_machine_query)
         stats_top = machine_stats
         for i in [x for x in stats_top.keys() if x != "machines"]:
             machine_top = stats_top[i]
