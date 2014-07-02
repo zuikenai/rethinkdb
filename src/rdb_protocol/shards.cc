@@ -594,7 +594,9 @@ scoped_ptr_t<eager_acc_t> make_eager_terminal(const terminal_variant_t &t) {
 class ungrouped_op_t : public op_t {
 protected:
 private:
-    virtual void apply_op(env_t *env, groups_t *groups, const counted_t<const datum_t> &) {
+    // RSI: What the fuck is a groups_t?  A std::map?  Why is the datum ignored?
+    virtual void apply_op(env_t *env, groups_t *groups,
+                          const counted_t<const datum_t> &) {
         for (auto it = groups->begin(); it != groups->end();) {
             lst_transform(env, &it->second);
             if (it->second.size() == 0) {
@@ -604,6 +606,7 @@ private:
             }
         }
     }
+    // RSI: What the fuck does "lst" mean?
     virtual void lst_transform(env_t *env, datums_t *lst) = 0;
 };
 
