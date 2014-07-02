@@ -594,7 +594,7 @@ scoped_ptr_t<eager_acc_t> make_eager_terminal(const terminal_variant_t &t) {
 class ungrouped_op_t : public op_t {
 protected:
 private:
-    virtual void operator()(env_t *env, groups_t *groups, const counted_t<const datum_t> &) {
+    virtual void apply_op(env_t *env, groups_t *groups, const counted_t<const datum_t> &) {
         for (auto it = groups->begin(); it != groups->end();) {
             lst_transform(env, &it->second);
             if (it->second.size() == 0) {
@@ -617,9 +617,9 @@ public:
         r_sanity_check((funcs.size() + append_index) != 0);
     }
 private:
-    virtual void operator()(env_t *env,
-                            groups_t *groups,
-                            const counted_t<const datum_t> &sindex_val) {
+    virtual void apply_op(env_t *env,
+                          groups_t *groups,
+                          const counted_t<const datum_t> &sindex_val) {
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         datums_t *ds = &groups->begin()->second;
