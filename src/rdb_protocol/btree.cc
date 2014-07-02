@@ -869,9 +869,9 @@ THROWS_ONLY(interrupted_exc_t) {
         ql::groups_t data = {{counted_t<const ql::datum_t>(), ql::datums_t{val}}};
 
         // RSI: Parallelize here?
-        for (auto it = job.transformers.begin(); it != job.transformers.end(); ++it) {
-            (*it)->apply_op(job.env, &data, sindex_val);
-            //                              ^^^^^^^^^^ NULL if no sindex
+        for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
+            op->apply_op(job.env, &data, sindex_val);
+            //                           ^^^^^^^^^^ NULL if no sindex
         }
         // We need lots of extra data for the accumulation because we might be
         // accumulating `rget_item_t`s for a batch.
