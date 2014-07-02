@@ -231,15 +231,15 @@ public:
                            const counted_t<const datum_t> &,
                            const counted_t<const datum_t> &)> lt_cmp);
 private:
-virtual std::vector<counted_t<const datum_t> >
-next_raw_batch(env_t *env, const batchspec_t &batchspec);
+    virtual std::vector<counted_t<const datum_t> >
+        next_raw_batch(env_t *env, const batchspec_t &batchspec);
 
-std::function<bool(env_t *,  // NOLINT(readability/casting)
-                   profile::sampler_t *,
-                   const counted_t<const datum_t> &,
-                   const counted_t<const datum_t> &)> lt_cmp;
-size_t index;
-std::vector<counted_t<const datum_t> > data;
+    std::function<bool(env_t *,  // NOLINT(readability/casting)
+                       profile::sampler_t *,
+                       const counted_t<const datum_t> &,
+                       const counted_t<const datum_t> &)> lt_cmp;
+    size_t index;
+    std::vector<counted_t<const datum_t> > data;
 };
 
 class union_datum_stream_t : public datum_stream_t {
