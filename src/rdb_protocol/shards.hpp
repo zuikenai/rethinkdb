@@ -253,12 +253,12 @@ typedef boost::variant<count_wire_func_t,
 
 class op_t {
 public:
-    op_t() { }
-    virtual ~op_t() { }
+    op_t() = default;
+    virtual ~op_t() = default;
     virtual void apply_op(env_t *env,
                           groups_t *groups,
                           // sindex_val may be NULL
-                          const counted_t<const datum_t> &sindex_val) = 0;
+                          const counted_t<const datum_t> &sindex_val) const = 0;
 };
 
 class accumulator_t {

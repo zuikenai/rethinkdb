@@ -596,7 +596,7 @@ protected:
 private:
     // RSI: What the fuck is a groups_t?  A std::map?  Why is the datum ignored?
     virtual void apply_op(env_t *env, groups_t *groups,
-                          const counted_t<const datum_t> &) {
+                          const counted_t<const datum_t> &) const {
         for (auto it = groups->begin(); it != groups->end();) {
             lst_transform(env, &it->second);
             if (it->second.size() == 0) {
@@ -612,7 +612,7 @@ private:
 
 class group_trans_t : public op_t {
 public:
-    group_trans_t(const group_wire_func_t &f)
+    explicit group_trans_t(const group_wire_func_t &f)
         : funcs(f.compile_funcs()),
           append_index(f.should_append_index()),
           multi(f.is_multi()),
@@ -622,7 +622,7 @@ public:
 private:
     virtual void apply_op(env_t *env,
                           groups_t *groups,
-                          const counted_t<const datum_t> &sindex_val) {
+                          const counted_t<const datum_t> &sindex_val) const {
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         datums_t *ds = &groups->begin()->second;
@@ -683,7 +683,7 @@ private:
 
     void add(groups_t *groups,
              std::vector<counted_t<const datum_t> > &&arr,
-             const counted_t<const datum_t> &el) {
+             const counted_t<const datum_t> &el) const {
         counted_t<const datum_t> group = arr.size() == 1
             ? std::move(arr[0])
             : make_counted<const datum_t>(std::move(arr));
@@ -695,7 +695,7 @@ private:
                    std::vector<counted_t<const datum_t> > *instance,
                    std::vector<std::vector<counted_t<const datum_t> > > *arr,
                    size_t index,
-                   const counted_t<const datum_t> &el) {
+                   const counted_t<const datum_t> &el) const {
         r_sanity_check(index == instance->size());
         if (index >= arr->size()) {
             r_sanity_check(instance->size() == arr->size());
@@ -716,9 +716,10 @@ private:
         }
     }
 
-    std::vector<counted_t<func_t> > funcs;
-    bool append_index, multi;
-    protob_t<const Backtrace> bt;
+    const std::vector<counted_t<func_t> > funcs;
+    const bool append_index;
+    const bool multi;
+    const protob_t<const Backtrace> bt;
 };
 
 class map_trans_t : public ungrouped_op_t {
