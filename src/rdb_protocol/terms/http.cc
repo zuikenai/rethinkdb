@@ -136,7 +136,7 @@ void check_url_params(const counted_t<const datum_t> &params,
     }
 }
 
-class http_datum_stream_t : public eager_datum_stream_t {
+class http_datum_stream_t FINAL : public eager_datum_stream_t {
 public:
     http_datum_stream_t(http_opts_t &&_opts,
                         counted_t<func_t> &&_depaginate_fn,

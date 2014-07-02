@@ -180,7 +180,7 @@ private:
     int64_t index;
 };
 
-class array_datum_stream_t : public eager_datum_stream_t {
+class array_datum_stream_t FINAL : public eager_datum_stream_t {
 public:
     array_datum_stream_t(counted_t<const datum_t> _arr,
                          const protob_t<const Backtrace> &bt_src);
