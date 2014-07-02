@@ -47,10 +47,13 @@ void runtime_sanity_check_failed() NORETURN;
 // target for `rcheck_target`.
 class rcheckable_t {
 public:
-    virtual ~rcheckable_t() { }
+    rcheckable_t() = default;
+    virtual ~rcheckable_t() = default;
     virtual void runtime_fail(base_exc_t::type_t type,
                               const char *test, const char *file, int line,
                               std::string msg) const = 0;
+
+    DISABLE_COPYING(rcheckable_t);
 };
 
 protob_t<const Backtrace> get_backtrace(const protob_t<const Term> &t);

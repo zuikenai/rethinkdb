@@ -203,16 +203,16 @@ public:
 private:
     virtual void operator()(env_t *, groups_t *gs) {
         for (auto kv = gs->begin(); kv != gs->end(); ++kv) {
-            datums_t *lst1 = &groups[kv->first];
-            datums_t *lst2 = &kv->second;
-            size += lst2->size();
+            datums_t *list1 = &groups[kv->first];
+            datums_t *list2 = &kv->second;
+            size += list2->size();
             rcheck_toplevel(
                 size <= array_size_limit(), base_exc_t::GENERIC,
                 strprintf("Grouped data over size limit %zu.  "
                           "Try putting a reduction (like `.reduce` or `.count`) "
                           "on the end.", array_size_limit()).c_str());
-            lst1->reserve(lst1->size() + lst2->size());
-            std::move(lst2->begin(), lst2->end(), std::back_inserter(*lst1));
+            list1->reserve(list1->size() + list2->size());
+            std::move(list2->begin(), list2->end(), std::back_inserter(*list1));
         }
         gs->clear();
     }
@@ -221,7 +221,7 @@ private:
         auto streams = boost::get<grouped_t<stream_t> >(res);
         r_sanity_check(streams);
         for (auto kv = streams->begin(); kv != streams->end(); ++kv) {
-            datums_t *lst = &groups[kv->first];
+            datums_t *list = &groups[kv->first];
             stream_t *stream = &kv->second;
             size += stream->size();
             rcheck_toplevel(
@@ -229,9 +229,9 @@ private:
                 strprintf("Grouped data over size limit %zu.  "
                           "Try putting a reduction (like `.reduce` or `.count`) "
                           "on the end.", array_size_limit()).c_str());
-            lst->reserve(lst->size() + stream->size());
+            list->reserve(list->size() + stream->size());
             for (auto it = stream->begin(); it != stream->end(); ++it) {
-                lst->push_back(std::move(it->data));
+                list->push_back(std::move(it->data));
             }
         }
     }
@@ -594,9 +594,10 @@ scoped_ptr_t<eager_acc_t> make_eager_terminal(const terminal_variant_t &t) {
 class ungrouped_op_t : public op_t {
 protected:
 private:
-    virtual void operator()(env_t *env, groups_t *groups, const counted_t<const datum_t> &) {
+    virtual void apply_op(env_t *env, groups_t *groups,
+                          UNUSED const counted_t<const datum_t> &sindex_val) const {
         for (auto it = groups->begin(); it != groups->end();) {
-            lst_transform(env, &it->second);
+            transform_list(env, &it->second);
             if (it->second.size() == 0) {
                 groups->erase(it++); // This is important for batching with filter.
             } else {
@@ -604,12 +605,12 @@ private:
             }
         }
     }
-    virtual void lst_transform(env_t *env, datums_t *lst) = 0;
+    virtual void transform_list(env_t *env, datums_t *list) const = 0;
 };
 
 class group_trans_t : public op_t {
 public:
-    group_trans_t(const group_wire_func_t &f)
+    explicit group_trans_t(const group_wire_func_t &f)
         : funcs(f.compile_funcs()),
           append_index(f.should_append_index()),
           multi(f.is_multi()),
@@ -617,9 +618,9 @@ public:
         r_sanity_check((funcs.size() + append_index) != 0);
     }
 private:
-    virtual void operator()(env_t *env,
-                            groups_t *groups,
-                            const counted_t<const datum_t> &sindex_val) {
+    virtual void apply_op(env_t *env,
+                          groups_t *groups,
+                          const counted_t<const datum_t> &sindex_val) const {
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         datums_t *ds = &groups->begin()->second;
@@ -680,7 +681,7 @@ private:
 
     void add(groups_t *groups,
              std::vector<counted_t<const datum_t> > &&arr,
-             const counted_t<const datum_t> &el) {
+             const counted_t<const datum_t> &el) const {
         counted_t<const datum_t> group = arr.size() == 1
             ? std::move(arr[0])
             : make_counted<const datum_t>(std::move(arr));
@@ -692,7 +693,7 @@ private:
                    std::vector<counted_t<const datum_t> > *instance,
                    std::vector<std::vector<counted_t<const datum_t> > > *arr,
                    size_t index,
-                   const counted_t<const datum_t> &el) {
+                   const counted_t<const datum_t> &el) const {
         r_sanity_check(index == instance->size());
         if (index >= arr->size()) {
             r_sanity_check(instance->size() == arr->size());
@@ -713,9 +714,10 @@ private:
         }
     }
 
-    std::vector<counted_t<func_t> > funcs;
-    bool append_index, multi;
-    protob_t<const Backtrace> bt;
+    const std::vector<counted_t<func_t> > funcs;
+    const bool append_index;
+    const bool multi;
+    const protob_t<const Backtrace> bt;
 };
 
 class map_trans_t : public ungrouped_op_t {
@@ -723,9 +725,9 @@ public:
     map_trans_t(const map_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    virtual void lst_transform(env_t *env, datums_t *lst) {
+    virtual void transform_list(env_t *env, datums_t *list) const {
         try {
-            for (auto it = lst->begin(); it != lst->end(); ++it) {
+            for (auto it = list->begin(); it != list->end(); ++it) {
                 *it = f->call(env, *it)->as_datum();
             }
         } catch (const datum_exc_t &e) {
@@ -743,11 +745,11 @@ public:
                       ? _f.default_filter_val->compile_wire_func()
                       : counted_t<func_t>()) { }
 private:
-    virtual void lst_transform(env_t *env, datums_t *lst) {
-        auto it = lst->begin();
+    virtual void transform_list(env_t *env, datums_t *list) const {
+        auto it = list->begin();
         auto loc = it;
         try {
-            for (it = lst->begin(); it != lst->end(); ++it) {
+            for (it = list->begin(); it != list->end(); ++it) {
                 if (f->filter_call(env, *it, default_val)) {
                     loc->swap(*it);
                     ++loc;
@@ -756,7 +758,7 @@ private:
         } catch (const datum_exc_t &e) {
             throw exc_t(e, f->backtrace().get(), 1);
         }
-        lst->erase(loc, lst->end());
+        list->erase(loc, list->end());
     }
     counted_t<func_t> f, default_val;
 };
@@ -766,25 +768,25 @@ public:
     concatmap_trans_t(const concatmap_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    virtual void lst_transform(env_t *env, datums_t *lst) {
-        datums_t new_lst;
+    virtual void transform_list(env_t *env, datums_t *list) const {
+        datums_t new_list;
         batchspec_t bs = batchspec_t::user(batch_type_t::TERMINAL, env);
         profile::sampler_t sampler("Evaluating CONCAT_MAP elements.", env->trace);
         try {
-            for (auto it = lst->begin(); it != lst->end(); ++it) {
+            for (auto it = list->begin(); it != list->end(); ++it) {
                 auto ds = f->call(env, *it)->as_seq(env);
                 for (;;) {
                     auto v = ds->next_batch(env, bs);
                     if (v.size() == 0) break;
-                    new_lst.reserve(new_lst.size() + v.size());
-                    new_lst.insert(new_lst.end(), v.begin(), v.end());
+                    new_list.reserve(new_list.size() + v.size());
+                    new_list.insert(new_list.end(), v.begin(), v.end());
                     sampler.new_sample();
                 }
             }
         } catch (const datum_exc_t &e) {
             throw exc_t(e, f->backtrace().get(), 1);
         }
-        lst->swap(new_lst);
+        list->swap(new_list);
     }
     counted_t<func_t> f;
 };
