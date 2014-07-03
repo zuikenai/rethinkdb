@@ -746,7 +746,7 @@ array_datum_stream_t::next_raw_batch(env_t *env, const batchspec_t &batchspec) {
     return v;
 }
 
-bool array_datum_stream_t::is_array() {
+bool array_datum_stream_t::is_array() const {
     return !is_grouped();
 }
 
@@ -915,7 +915,7 @@ void union_datum_stream_t::accumulate_all(env_t *env, eager_acc_t *acc) {
     }
 }
 
-bool union_datum_stream_t::is_array() {
+bool union_datum_stream_t::is_array() const {
     for (auto it = streams.begin(); it != streams.end(); ++it) {
         if (!(*it)->is_array()) {
             return false;

@@ -87,10 +87,10 @@ public:
     counted_t<datum_stream_t> indexes_of(counted_t<func_t> f);
 
     // Returns false or NULL respectively if stream is lazy.
-    virtual bool is_array() = 0;
+    virtual bool is_array() const = 0;
     virtual counted_t<const datum_t> as_array(env_t *env) = 0;
 
-    bool is_grouped() { return grouped; }
+    bool is_grouped() const { return grouped; }
 
     // Gets the next elements from the stream.  (Returns zero elements only when
     // the end of the stream has been reached.  Otherwise, returns at least one
@@ -130,8 +130,6 @@ protected:
 private:
     enum class done_t { YES, NO };
 
-    virtual bool is_array() = 0;
-
     virtual void add_transformation(transform_variant_t &&tv,
                                     const protob_t<const Backtrace> &bt);
     virtual void accumulate(env_t *env, eager_acc_t *acc, const terminal_variant_t &tv);
@@ -151,7 +149,7 @@ protected:
     explicit wrapper_datum_stream_t(counted_t<datum_stream_t> _source)
         : eager_datum_stream_t(_source->backtrace()), source(_source) { }
 private:
-    virtual bool is_array() { return source->is_array(); }
+    virtual bool is_array() const { return source->is_array(); }
     virtual counted_t<const datum_t> as_array(env_t *env) {
         return source->is_array() && !source->is_grouped()
             ? eager_datum_stream_t::as_array(env)
@@ -188,7 +186,7 @@ public:
     virtual bool is_cfeed() const;
 
 private:
-    virtual bool is_array();
+    virtual bool is_array() const;
     virtual counted_t<const datum_t> as_array(env_t *env) {
         return is_array()
             ? (ops_to_do() ? eager_datum_stream_t::as_array(env) : arr)
@@ -261,7 +259,7 @@ public:
     virtual void accumulate(env_t *env, eager_acc_t *acc, const terminal_variant_t &tv);
     virtual void accumulate_all(env_t *env, eager_acc_t *acc);
 
-    virtual bool is_array();
+    virtual bool is_array() const;
     virtual counted_t<const datum_t> as_array(env_t *env);
     virtual bool is_exhausted() const;
     virtual bool is_cfeed() const;
@@ -427,7 +425,7 @@ public:
         scoped_ptr_t<readgen_t> &&_readgen,
         const protob_t<const Backtrace> &bt_src);
 
-    virtual bool is_array() { return false; }
+    virtual bool is_array() const { return false; }
     virtual counted_t<const datum_t> as_array(UNUSED env_t *env) {
         return counted_t<const datum_t>();  // Cannot be converted implicitly.
     }
