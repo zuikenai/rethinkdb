@@ -779,6 +779,7 @@ indexed_sort_datum_stream_t::next_raw_batch(env_t *env, const batchspec_t &batch
             if (index >= data.size()) {
                 return ret;
             }
+            // RSI: Ask @mlucy what this stable_sort accomplishes.
             std::stable_sort(data.begin(), data.end(),
                              std::bind(lt_cmp, env, &sampler, ph::_1, ph::_2));
         }
