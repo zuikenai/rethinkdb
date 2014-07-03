@@ -202,7 +202,7 @@ void dispatch_http(env_t *env,
                    const pb_rcheckable_t *parent) {
     try {
         runner->http(opts, res_out, env->interruptor);
-    } catch (const http_worker_exc_t &ex) {
+    } catch (const extproc_worker_exc_t &ex) {
         res_out->error.assign("crash in a worker process");
     } catch (const interrupted_exc_t &ex) {
         res_out->error.assign("interrupted");
