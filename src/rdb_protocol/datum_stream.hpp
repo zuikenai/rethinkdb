@@ -241,6 +241,7 @@ private:
     std::vector<counted_t<const datum_t> > data;
 };
 
+// RSI: Yes, we could do some parallelization with union_datum_stream_t.
 class union_datum_stream_t FINAL : public datum_stream_t {
 public:
     union_datum_stream_t(std::vector<counted_t<datum_stream_t> > &&_streams,
