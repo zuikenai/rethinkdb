@@ -97,7 +97,7 @@ def compare(new_results, previous_results):
             if key in previous_results:
                 if new_results[key]["average"] > 0:
                     reportValues['diff'] = 1.0 * (1 / previous_results[key]["average"] - 1 / new_results[key]["average"]) / (1 / new_results[key]["average"])
-                    print(reportValues['diff'], type(reportValues['diff']))
+                    
                     if type(reportValues['diff']) == type(0.):
                         if(reportValues['diff'] < 0.2):
                             reportValues['status'] = "Success"
