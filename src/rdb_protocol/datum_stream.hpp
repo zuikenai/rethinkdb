@@ -248,8 +248,8 @@ public:
                          const protob_t<const Backtrace> &bt_src)
         : datum_stream_t(bt_src), streams(_streams), streams_index(0),
           is_cfeed_union(false) {
-        for (auto it = streams.begin(); it != streams.end(); ++it) {
-            if ((*it)->is_cfeed()) {
+        for (auto const &stream : streams) {
+            if (stream->is_cfeed()) {
                 is_cfeed_union = true;
                 break;
             }
