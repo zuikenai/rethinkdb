@@ -195,7 +195,7 @@ private:
             : counted_t<const datum_t>();
     }
     virtual std::vector<counted_t<const datum_t> >
-    next_raw_batch(env_t *env, UNUSED const batchspec_t &batchspec);
+    next_raw_batch(env_t *env, const batchspec_t &batchspec);
     counted_t<const datum_t> next(env_t *env, const batchspec_t &batchspec);
     counted_t<const datum_t> next_arr_el();
 
