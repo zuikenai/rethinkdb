@@ -254,7 +254,7 @@ typedef boost::variant<count_wire_func_t,
 class op_t {
 public:
     op_t() = default;
-    virtual ~op_t() = default;
+    virtual ~op_t() { }
     virtual void apply_op(env_t *env,
                           groups_t *groups,
                           // sindex_val may be NULL

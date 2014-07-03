@@ -48,7 +48,7 @@ void runtime_sanity_check_failed() NORETURN;
 class rcheckable_t {
 public:
     rcheckable_t() = default;
-    virtual ~rcheckable_t() = default;
+    virtual ~rcheckable_t() { }
     virtual void runtime_fail(base_exc_t::type_t type,
                               const char *test, const char *file, int line,
                               std::string msg) const = 0;
