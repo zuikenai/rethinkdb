@@ -731,9 +731,6 @@ array_datum_stream_t::next_raw_batch(env_t *env, const batchspec_t &batchspec) {
     std::vector<counted_t<const datum_t> > v;
     batcher_t batcher = batchspec.to_batcher();
 
-    // RSI: Ask mlucy about this batched array datum stream stuff.  Is this what
-    // happens when a group() operation is attached to a datum stream?
-
     profile::sampler_t sampler("Fetching array elements.", env->trace);
     while (counted_t<const datum_t> d = next_arr_el()) {
         batcher.note_el(d);
@@ -779,7 +776,6 @@ indexed_sort_datum_stream_t::next_raw_batch(env_t *env, const batchspec_t &batch
             if (index >= data.size()) {
                 return ret;
             }
-            // RSI: Ask @mlucy what this stable_sort accomplishes.
             std::stable_sort(data.begin(), data.end(),
                              std::bind(lt_cmp, env, &sampler, ph::_1, ph::_2));
         }

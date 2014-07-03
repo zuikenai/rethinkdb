@@ -212,7 +212,7 @@ private:
     uint64_t index, left, right;
 };
 
-// RSI: Ask @mlucy why zip_datum_stream_t exists, why we don't just add a transform?
+// This could _not_ exist, we could just use a map transform.
 class zip_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     explicit zip_datum_stream_t(counted_t<datum_stream_t> src);
