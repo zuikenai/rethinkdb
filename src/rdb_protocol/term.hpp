@@ -62,9 +62,29 @@ public:
     virtual ~term_t();
 
     virtual bool is_deterministic() const = 0;
-    // Returns true if the term is a candidate for being evaluated alongside other
-    // terms.
+
+    // RSI: Probably, is_blocking() should be removed.  parallelization_level is
+    // where it's at.
+    // Returns true if the term is a candidate for being evaluated
+    // alongside other terms.
     virtual bool is_blocking() const = 0;
+
+    // Computes the "parallelization level" of a value.
+    //
+    //  - Non-blocking primitives (like r.add, r.random, etc) have a level of 0, or
+    //    the maximum of what their arguments have.
+    //
+    //  - Operations that go to another table and apply transformations/terminal
+    //    operations have a parallelization level of 1 plus the maximum
+    //    parallelization level of its transformation/terminal operations.
+    //
+    //  - The idea here is that we want to evaluate level-1 operations simultaneously
+    //    with other level-1 operations.  We don't want to evaluate any other levels
+    //    of operation simultaneously with others.  That way, we don't get
+    //    exponential growth of parallelization, and the memory usage is also
+    //    _relatively close_ to what sequential memory use would be (as opposed to
+    //    _extremely far_ from what sequential memory use would be).
+    virtual int parallelization_level() const = 0;
 
     protob_t<const Term> get_src() const;
     void prop_bt(Term *t) const;

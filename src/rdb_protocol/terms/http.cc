@@ -41,6 +41,13 @@ private:
         return true;
     }
 
+    int parallelization_level() const FINAL {
+        // This is a blocking operation.  So it could be parallelized.
+        // RSI: Are all HTTP terms parallelizable?  I mean, maybe some don't actually do a request?
+        // RSI: This overrides the op_term_t implementation, discarding parallellization level info about its args.  This is important!  Make an op_parallelization_level or something?
+        return 1;
+    }
+
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL;
 
     // Functions to get optargs into the http_opts_t

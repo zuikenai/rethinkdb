@@ -102,6 +102,9 @@ bool all_are_deterministic(
 bool any_are_blocking(
         const std::map<std::string, counted_t<const term_t> > &optargs);
 
+// Returns the max of the optargs' parallelization levels.
+int max_parallelization_level(
+        const std::map<std::string, counted_t<const term_t> > &optargs);
 
 // Calls accumulate_captures on the map entries.
 void accumulate_all_captures(
@@ -162,10 +165,11 @@ private:
 
     bool is_blocking() const FINAL;
     virtual bool op_is_blocking() const {
-        // The value 'false' is a safe default.  ('true' would also be safe, but
-        // worse.)
+        // The value 'false' is a safe default.
         return false;
     }
+
+    int parallelization_level() const;
 
     scoped_ptr_t<const arg_terms_t> arg_terms;
 

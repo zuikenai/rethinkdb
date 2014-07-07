@@ -223,6 +223,10 @@ bool func_term_t::is_blocking() const {
     return body->is_blocking();
 }
 
+int func_term_t::parallelization_level() const {
+    return body->parallelization_level();
+}
+
 /* The predicate here is the datum which defines the predicate and the value is
  * the object which we check to make sure matches the predicate. */
 bool filter_match(counted_t<const datum_t> predicate, counted_t<const datum_t> value,

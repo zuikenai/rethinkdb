@@ -49,6 +49,10 @@ private:
         return false;
     }
 
+    int parallelization_level() const FINAL {
+        return 0;
+    }
+
     counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
         return new_val(env->scope.lookup_var(varname));
     }
@@ -81,6 +85,10 @@ private:
 
     bool is_blocking() const FINAL {
         return false;
+    }
+
+    int parallelization_level() const FINAL {
+        return 0;
     }
 
     counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {

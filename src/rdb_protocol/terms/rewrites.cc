@@ -39,6 +39,9 @@ private:
     bool is_blocking() const FINAL {
         return real->is_blocking();
     }
+    int parallelization_level() const FINAL {
+        return real->parallelization_level();
+    }
 
     counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
         return real->eval(env);

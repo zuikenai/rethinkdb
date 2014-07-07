@@ -61,6 +61,7 @@ private:
     bool op_is_blocking() const FINAL {
         // Evaluating a Javascript query blocks (and is parallelizable) because it's
         // done in an external process.
+        // RSI: But should it be parallelized?  We already have multiple hash-shards.
         return true;
     }
 };

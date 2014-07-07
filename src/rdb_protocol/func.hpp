@@ -195,6 +195,7 @@ private:
     // body->is_blocking().
     bool is_deterministic() const FINAL;
     bool is_blocking() const FINAL;
+    int parallelization_level() const FINAL;
 
 
     counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t flags) const FINAL;
