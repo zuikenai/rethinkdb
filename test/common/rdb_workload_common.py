@@ -49,7 +49,7 @@ def wait_for_table(table, host="localhost", port=28015, attempts=20, delay=1):
                 r.table(table).limit(1).run(conn)
                 return
             except r.errors.RqlRuntimeError as e:
-                if "No master available" in str(e) or 'Master for shard' in str(e):
+                if 'Master for shard' in str(e):
                     poll = poll - 1
                     time.sleep(delay)
                 else:
