@@ -39,7 +39,8 @@ public:
 
 private:
     bool op_is_deterministic() const FINAL { return false; }
-    // op_term_t's op_is_blocking is overridden in all the subclasses.
+    // RSI: is_blocking was overridden in the subclasses.  What about
+    // parallelization_level, should that be?  Check _all_ the subclasses again.
 };
 
 // If you don't have to modify any of the data, use
@@ -85,12 +86,6 @@ protected:
     }
 
 private:
-    bool op_is_blocking() const FINAL {
-        // Metadata write operations usually involve thread-switching (unless we
-        // happen to be on the same thread).
-        return true;
-    }
-
     virtual std::string write_eval_impl(scope_env_t *env,
                                         args_t *args,
                                         eval_flags_t flags) const = 0;
@@ -106,10 +101,6 @@ class db_term_t : public meta_op_term_t {
 public:
     db_term_t(compile_env_t *env, const protob_t<const Term> &term) : meta_op_term_t(env, term, argspec_t(1)) { }
 private:
-    bool op_is_blocking() const FINAL {
-        return false;
-    }
-
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         name_string_t db_name = get_name(args->arg(env, 0), this, "Database");
         uuid_u uuid;
@@ -380,10 +371,6 @@ public:
     db_list_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_op_term_t(env, term, argspec_t(0)) { }
 private:
-    bool op_is_blocking() const FINAL {
-        return false;
-    }
-
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *, eval_flags_t) const FINAL {
         std::vector<std::string> dbs;
         {
@@ -419,10 +406,6 @@ public:
     table_list_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_op_term_t(env, term, argspec_t(0, 1)) { }
 private:
-    bool op_is_blocking() const FINAL {
-        return false;
-    }
-
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         uuid_u db_id;
         if (args->num_args() == 0) {
@@ -498,12 +481,7 @@ private:
                            env->env, db, name, use_outdated, backtrace()));
     }
     bool op_is_deterministic() const FINAL { return false; }
-    bool op_is_blocking() const FINAL {
-        // We construct a datum stream that, when iterated, loads a table.  That
-        // means this is a blocking operation (even if we don't block when
-        // constructing the datum stream itself).
-        return true;
-    }
+    // RSI: parallelization_level, yeah, or something.
     const char *name() const FINAL { return "table"; }
 };
 

@@ -192,9 +192,8 @@ private:
     // A lambda expression is, generally speaking, deterministic, and non-blocking.
     // It's because all lambda expressions are evaluated immediately that we can
     // blithely implement thes methods by calling body->is_deterministic() and
-    // body->is_blocking().
+    // body->parallelization_level().
     bool is_deterministic() const FINAL;
-    bool is_blocking() const FINAL;
     int parallelization_level() const FINAL;
 
 

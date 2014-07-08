@@ -37,10 +37,6 @@ private:
         return false;
     }
 
-    bool op_is_blocking() const FINAL {
-        return true;
-    }
-
     int parallelization_level() const FINAL {
         // This is a blocking operation.  So it could be parallelized.
         // RSI: Are all HTTP terms parallelizable?  I mean, maybe some don't actually do a request?

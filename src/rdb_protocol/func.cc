@@ -219,10 +219,6 @@ bool func_term_t::is_deterministic() const {
     return body->is_deterministic();
 }
 
-bool func_term_t::is_blocking() const {
-    return body->is_blocking();
-}
-
 int func_term_t::parallelization_level() const {
     return body->parallelization_level();
 }

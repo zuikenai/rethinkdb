@@ -71,11 +71,7 @@ public:
         return false;
     }
 
-    bool op_is_blocking() const FINAL {
-        // This is not deterministic, but it also does not introduce any blocking (it
-        // inherits the blocking aspect from the sequence it traverses).
-        return false;
-    }
+    // RSI: Implement parallelization_level here, because we implemented op_is_deterministic?
 
     const char *name() const FINAL { return "sample"; }
 };
@@ -90,9 +86,7 @@ private:
         return false;
     }
 
-    bool op_is_blocking() const FINAL {
-        return false;
-    }
+    // RSI: Implement parallelization_level here, because we implemented op_is_deterministic?
 
     enum class bound_type_t {
         LOWER,

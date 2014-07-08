@@ -302,15 +302,6 @@ void op_term_t::maybe_grouped_data(scope_env_t *env,
     }
 }
 
-bool any_are_blocking(const std::map<std::string, counted_t<const term_t> > &optargs) {
-    for (auto const &pair : optargs) {
-        if (pair.second->is_blocking()) {
-            return true;
-        }
-    }
-    return false;
-}
-
 int max_parallelization_level(
         const std::map<std::string, counted_t<const term_t> > &optargs) {
     int max_level = 0;
@@ -320,29 +311,20 @@ int max_parallelization_level(
     return max_level;
 }
 
-bool op_term_t::is_blocking() const {
-    if (op_is_blocking()) {
-        return true;
-    }
-    for (const counted_t<const term_t> &arg : arg_terms->get_original_args()) {
-        if (arg->is_blocking()) {
-            return true;
-        }
-    }
-    return any_are_blocking(optargs);
-}
-
-int op_term_t::parallelization_level() const {
-    // RSI: Is this use of op_is_blocking() even correct?
-    // RSI: Are the subclass implementations all correct?
-    // RSI: Some operations surely _add_ 1 to the args' parallelization level.
-    int max_level = (op_is_blocking() ? 1 : 0);
+int op_term_t::params_parallelization_level() const {
+    int max_level = 0;
     for (const counted_t<const term_t> &arg : arg_terms->get_original_args()) {
         max_level = std::max(max_level, arg->parallelization_level());
     }
 
     max_level = std::max(max_level, max_parallelization_level(optargs));
     return max_level;
+}
+
+int op_term_t::parallelization_level() const {
+    // RSI: Get rid of this, or something.
+    // RSI: Take into account whether op is blocking?
+    return params_parallelization_level();
 }
 
 bounded_op_term_t::bounded_op_term_t(compile_env_t *env, protob_t<const Term> term,

@@ -14,7 +14,6 @@ public:
 private:
     void accumulate_captures(var_captures_t *) const FINAL { /* do nothing */ }
     bool is_deterministic() const FINAL { return true; }
-    bool is_blocking() const FINAL { return false; }
     int parallelization_level() const FINAL { return 0; }
     counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const FINAL {
         return raw_val;
@@ -90,10 +89,6 @@ public:
             }
         }
         return new_val(acc.to_counted());
-    }
-
-    bool is_blocking() const FINAL {
-        return any_are_blocking(optargs);
     }
 
     int parallelization_level() const FINAL {

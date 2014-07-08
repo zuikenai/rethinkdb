@@ -25,8 +25,9 @@ enum eval_flags_t {
 };
 
 // A term with a term_eval function.  These lack the static checking features of
-// term_t (is_deterministic, is_blocking, accumulate_captures) because these don't
-// exist until run-time (for example, see faux_term_t, created by r.args terms).
+// term_t (is_deterministic, parallelization_level, accumulate_captures) because
+// these don't exist until run-time (for example, see faux_term_t, created by r.args
+// terms).
 class runtime_term_t : public slow_atomic_countable_t<runtime_term_t>,
                        public pb_rcheckable_t {
 public:
@@ -62,12 +63,6 @@ public:
     virtual ~term_t();
 
     virtual bool is_deterministic() const = 0;
-
-    // RSI: Probably, is_blocking() should be removed.  parallelization_level is
-    // where it's at.
-    // Returns true if the term is a candidate for being evaluated
-    // alongside other terms.
-    virtual bool is_blocking() const = 0;
 
     // Computes the "parallelization level" of a value.
     //

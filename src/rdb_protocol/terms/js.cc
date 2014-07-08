@@ -58,12 +58,8 @@ private:
         return false;
     }
 
-    bool op_is_blocking() const FINAL {
-        // Evaluating a Javascript query blocks (and is parallelizable) because it's
-        // done in an external process.
-        // RSI: But should it be parallelized?  We already have multiple hash-shards.
-        return true;
-    }
+    // RSI: Can js terms be parallelized?  Implement parallelization_level?  We
+    // already have multiple hash-shards though.
 };
 
 counted_t<term_t> make_javascript_term(compile_env_t *env, const protob_t<const Term> &term) {

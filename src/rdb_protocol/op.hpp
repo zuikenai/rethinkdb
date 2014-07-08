@@ -98,10 +98,6 @@ private:
 bool all_are_deterministic(
         const std::map<std::string, counted_t<const term_t> > &optargs);
 
-// Calls is_blocking on the map entries.
-bool any_are_blocking(
-        const std::map<std::string, counted_t<const term_t> > &optargs);
-
 // Returns the max of the optargs' parallelization levels.
 int max_parallelization_level(
         const std::map<std::string, counted_t<const term_t> > &optargs);
@@ -133,6 +129,10 @@ protected:
     // a subclass).
     virtual void accumulate_captures(var_captures_t *captures) const;
 
+    // Computes the (maximum) parallelization level of the operation's arg terms and
+    // optarg terms.
+    int params_parallelization_level() const;
+
 private:
     friend class args_t;
     // Tries to get an optional argument, returns `counted_t<val_t>()` if not found.
@@ -157,19 +157,12 @@ private:
 
     bool is_deterministic() const FINAL;
 
-    // Things that override op_is_deterministic should also override op_is_blocking.
-    // And vice versa.
+    // Is the operation deterministic?
     virtual bool op_is_deterministic() const {
         return true;
     }
 
-    bool is_blocking() const FINAL;
-    virtual bool op_is_blocking() const {
-        // The value 'false' is a safe default.
-        return false;
-    }
-
-    int parallelization_level() const;
+    int parallelization_level() const OVERRIDE;
 
     scoped_ptr_t<const arg_terms_t> arg_terms;
 

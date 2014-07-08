@@ -45,10 +45,6 @@ private:
         return true;
     }
 
-    bool is_blocking() const FINAL {
-        return false;
-    }
-
     int parallelization_level() const FINAL {
         return 0;
     }
@@ -81,10 +77,6 @@ private:
 
     bool is_deterministic() const FINAL {
         return true;
-    }
-
-    bool is_blocking() const FINAL {
-        return false;
     }
 
     int parallelization_level() const FINAL {

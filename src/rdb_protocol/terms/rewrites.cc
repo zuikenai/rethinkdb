@@ -36,9 +36,6 @@ private:
     bool is_deterministic() const FINAL {
         return real->is_deterministic();
     }
-    bool is_blocking() const FINAL {
-        return real->is_blocking();
-    }
     int parallelization_level() const FINAL {
         return real->parallelization_level();
     }
