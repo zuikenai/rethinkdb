@@ -117,6 +117,10 @@ private:
         return new_val(make_counted<const db_t>(uuid, db_name.str()));
     }
     const char *name() const FINAL { return "db"; }
+
+    // An r.db('aaa') term doesn't do any blocking... but the subsequent table term
+    // might.
+    RDB_OP_NON_BLOCKING;
 };
 
 class db_create_term_t : public meta_write_op_t {
@@ -124,7 +128,7 @@ public:
     db_create_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1)) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         name_string_t db_name = get_name(args->arg(env, 0), this, "Database");
 
         rethreading_metadata_accessor_t meta(env);
@@ -153,7 +157,12 @@ private:
 
         return "created";
     }
-    virtual const char *name() const { return "db_create"; }
+    const char *name() const FINAL { return "db_create"; }
+
+    int parallelization_level() const FINAL {
+        // Creating a db blocks, so it has (at least) a parallelization level of 1.
+        return std::max(1, params_parallelization_level());
+    }
 };
 
 bool is_hard(durability_requirement_t requirement) {
@@ -174,7 +183,7 @@ public:
         meta_write_op_t(env, term, argspec_t(1, 2),
                         optargspec_t({"datacenter", "primary_key", "durability"})) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         uuid_u dc_id = nil_uuid();
         if (counted_t<val_t> v = args->optarg(env, "datacenter")) {
             name_string_t name = get_name(v, this, "Table");
@@ -265,7 +274,12 @@ private:
 
         return "created";
     }
-    virtual const char *name() const { return "table_create"; }
+    const char *name() const FINAL { return "table_create"; }
+
+    // Creating a table blocks.
+    int parallelization_level() const {
+        return std::max(1, params_parallelization_level());
+    }
 };
 
 class db_drop_term_t : public meta_write_op_t {
@@ -273,7 +287,7 @@ public:
     db_drop_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1)) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         name_string_t db_name = get_name(args->arg(env, 0), this, "Database");
 
         rethreading_metadata_accessor_t meta(env);
@@ -312,7 +326,12 @@ private:
 
         return "dropped";
     }
-    virtual const char *name() const { return "db_drop"; }
+    const char *name() const FINAL { return "db_drop"; }
+
+    // Dropping a db blocks.
+    int parallelization_level() const FINAL {
+        return std::max(1, params_parallelization_level());
+    }
 };
 
 class table_drop_term_t : public meta_write_op_t {
@@ -320,7 +339,7 @@ public:
     table_drop_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1, 2)) { }
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         uuid_u db_id;
         std::string db_name;
         name_string_t tbl_name;
@@ -363,7 +382,11 @@ private:
 
         return "dropped";
     }
-    virtual const char *name() const { return "table_drop"; }
+    const char *name() const FINAL { return "table_drop"; }
+
+    int parallelization_level() const FINAL {
+        return std::max(1, params_parallelization_level());
+    }
 };
 
 class db_list_term_t : public meta_op_term_t {
@@ -399,6 +422,8 @@ private:
         return new_val(make_counted<const datum_t>(std::move(arr)));
     }
     const char *name() const FINAL { return "db_list"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class table_list_term_t : public meta_op_term_t {
@@ -440,6 +465,8 @@ private:
         return new_val(make_counted<const datum_t>(std::move(arr)));
     }
     const char *name() const FINAL { return "table_list"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class sync_term_t : public meta_write_op_t {
@@ -448,13 +475,18 @@ public:
         : meta_write_op_t(env, term, argspec_t(1)) { }
 
 private:
-    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<table_t> t = args->arg(env, 0)->as_table();
         bool success = t->sync(env->env, this);
         r_sanity_check(success);
         return "synced";
     }
-    virtual const char *name() const { return "sync"; }
+    const char *name() const FINAL { return "sync"; }
+
+    int parallelization_level() const FINAL {
+        // This inherits the parallelization level from its left-hand table argument.
+        return params_parallelization_level();
+    }
 };
 
 class table_term_t : public op_term_t {
@@ -481,21 +513,42 @@ private:
                            env->env, db, name, use_outdated, backtrace()));
     }
     bool op_is_deterministic() const FINAL { return false; }
-    // RSI: parallelization_level, yeah, or something.
     const char *name() const FINAL { return "table"; }
+
+    // RSI: This is a bit icky, because the exact sort of parallelization depends on
+    // the operation that's attached to the table.  An operation which treats the
+    // table like a selection will be more expensive (if we start taking that into
+    // account) than a .get operation (that retrieves one row), and a .info operation
+    // isn't actually parallelizable.  (But maybe that can be handled by an
+    // info_term_t or a get_term_t if those can only operate on tables.)
+
+    // Getting a result set or a row from a table can block.
+    int parallelization_level() const FINAL {
+        return std::max(1, params_parallelization_level());
+    }
 };
 
 class get_term_t : public op_term_t {
 public:
     get_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         counted_t<const datum_t> pkey = args->arg(env, 1)->as_datum();
         counted_t<const datum_t> row = table->get_row(env->env, pkey);
         return new_val(row, pkey, table);
     }
-    virtual const char *name() const { return "get"; }
+    const char *name() const FINAL { return "get"; }
+
+    int parallelization_level() const FINAL {
+        // Right now, a .get operation always happens on a table.  It has the same
+        // parallelization level, too, because we don't take into account the
+        // expected expense of the operation.  params_parallelization_level()
+        // includes the parallelization level of its left hand argument, the table
+        // expression.
+
+        return params_parallelization_level();
+    }
 };
 
 class get_all_term_t : public op_term_t {
@@ -503,7 +556,7 @@ public:
     get_all_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2, -1), optargspec_t({ "index" })) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         counted_t<val_t> index = args->optarg(env, "index");
         std::string index_str = index ? index->as_str().to_std() : "";
@@ -532,7 +585,14 @@ private:
             return new_val(stream, table);
         }
     }
-    virtual const char *name() const { return "get_all"; }
+    const char *name() const FINAL { return "get_all"; }
+
+    int parallelization_level() const FINAL {
+        // This inherits the parallelization level from the left-hand table
+        // expression (or from its argument expression, if one of those is crazily
+        // parallelizable).
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_db_term(compile_env_t *env, const protob_t<const Term> &term) {

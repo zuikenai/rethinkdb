@@ -168,11 +168,6 @@ private:
         return true;
     }
 
-    // RSI: Remove this default implementation.
-    int parallelization_level() const OVERRIDE {
-        return params_parallelization_level();
-    }
-
     scoped_ptr_t<const arg_terms_t> arg_terms;
 
     std::map<std::string, counted_t<const term_t> > optargs;

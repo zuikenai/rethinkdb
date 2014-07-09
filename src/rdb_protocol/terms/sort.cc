@@ -32,6 +32,8 @@ private:
         return args->arg(env, 0);
     }
     virtual const char *name() const { return "asc"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class desc_term_t : public op_term_t {
@@ -43,6 +45,8 @@ private:
         return args->arg(env, 0);
     }
     virtual const char *name() const { return "desc"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class orderby_term_t : public op_term_t {
