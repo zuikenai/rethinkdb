@@ -173,13 +173,6 @@ private:
     std::map<std::string, counted_t<const term_t> > optargs;
 };
 
-// RSI: Honestly remove this macro.
-#define RDB_OP_NON_BLOCKING \
-    int parallelization_level() const FINAL {   \
-        return params_parallelization_level();  \
-    }                                           \
-    friend class rdb_missing_semicolon_t
-
 class grouped_seq_op_term_t : public op_term_t {
 public:
     template<class... Args>

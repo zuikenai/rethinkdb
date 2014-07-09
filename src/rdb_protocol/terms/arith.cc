@@ -108,7 +108,9 @@ private:
         return make_counted<datum_t>(lhs->as_num() / rhs->as_num());
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     const char *namestr;
     counted_t<const datum_t> (arith_term_t::*op)(counted_t<const datum_t> lhs, counted_t<const datum_t> rhs) const;
@@ -129,7 +131,9 @@ private:
     }
     virtual const char *name() const { return "mod"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 

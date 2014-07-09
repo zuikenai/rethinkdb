@@ -33,7 +33,9 @@ private:
     }
     virtual const char *name() const { return "asc"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class desc_term_t : public op_term_t {
@@ -46,7 +48,9 @@ private:
     }
     virtual const char *name() const { return "desc"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class orderby_term_t : public op_term_t {
@@ -205,7 +209,9 @@ private:
     // RSI: A sorting or whatnot operation doesn't result in the possibility for
     // parallel evalution, does it?  The function you're sorting on -- could it be
     // parallelizable?  Does the code currently do the "Shwartzian" transform?
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
 private:
     protob_t<const Term> src_term;
@@ -249,7 +255,9 @@ private:
 
     // We don't do any sort of fancy function call (and neither will indexed
     // distinct).
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_orderby_term(compile_env_t *env, const protob_t<const Term> &term) {

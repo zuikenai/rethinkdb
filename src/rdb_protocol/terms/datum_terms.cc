@@ -35,7 +35,9 @@ private:
     }
     virtual const char *name() const { return name_; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     const double constant_;
     const char *const name_;
@@ -60,7 +62,9 @@ private:
     }
     virtual const char *name() const { return "make_array"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class make_obj_term_t : public term_t {

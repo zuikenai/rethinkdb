@@ -58,7 +58,9 @@ private:
     bool invert;
     bool (datum_t::*pred)(const datum_t &rhs) const;
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class not_term_t : public op_term_t {
@@ -70,7 +72,9 @@ private:
     }
     virtual const char *name() const { return "not"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_predicate_term(compile_env_t *env, const protob_t<const Term> &term) {

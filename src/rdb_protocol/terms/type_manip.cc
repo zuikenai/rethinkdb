@@ -247,7 +247,9 @@ private:
 
     const char *name() const FINAL { return "coerce_to"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class ungroup_term_t FINAL : public op_term_t {
@@ -271,7 +273,9 @@ private:
     bool can_be_grouped() const FINAL { return false; }
 
     // RSI: Well... I have no clue if this is the right thing.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 int val_type(counted_t<val_t> v) {
@@ -307,7 +311,9 @@ private:
     const char *name() const FINAL { return "typeof"; }
     bool can_be_grouped() const FINAL { return false; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class info_term_t : public op_term_t {
@@ -381,7 +387,9 @@ private:
     const char *name() const FINAL { return "info"; }
     bool can_be_grouped() const FINAL { return false; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_coerce_term(

@@ -158,7 +158,9 @@ private:
     virtual const char *name() const { return "insert"; }
 
     // RSI: Not really sure what to do here.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class replace_term_t : public op_term_t {
@@ -239,7 +241,9 @@ private:
     virtual const char *name() const { return "replace"; }
 
     // RSI: Not really sure what to do here.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 // DELETE and UPDATE are in rewrites.hpp
@@ -285,7 +289,9 @@ private:
     virtual const char *name() const { return "foreach"; }
 
     // RSI: Not really sure what to do here.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_insert_term(compile_env_t *env, const protob_t<const Term> &term) {

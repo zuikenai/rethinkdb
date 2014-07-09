@@ -60,7 +60,9 @@ private:
 
     // RSI: Can js terms be parallelized?  Implement parallelization_level?  We
     // already have multiple hash-shards though.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_javascript_term(compile_env_t *env, const protob_t<const Term> &term) {

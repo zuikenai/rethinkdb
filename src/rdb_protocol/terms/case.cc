@@ -19,7 +19,9 @@ private:
     }
     virtual const char *name() const { return name_; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     const char *const name_;
     int (*const f_)(int);

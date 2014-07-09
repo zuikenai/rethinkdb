@@ -110,7 +110,9 @@ private:
     }
 
     // All the operations (that we apply to streams) are primitives that don't block.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     poly_type_t poly_type;
     protob_t<Term> func;
@@ -182,7 +184,9 @@ private:
     const char *name() const FINAL { return "literal"; }
     bool can_be_grouped() const FINAL { return false; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class merge_term_t : public obj_or_seq_op_term_t {

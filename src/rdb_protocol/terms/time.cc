@@ -24,7 +24,9 @@ private:
     }
     const char *name() const FINAL { return "iso8601"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class to_iso8601_term_t : public op_term_t {
@@ -39,7 +41,9 @@ private:
     }
     const char *name() const FINAL { return "to_iso8601"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class epoch_time_term_t : public op_term_t {
@@ -53,7 +57,9 @@ private:
     }
     const char *name() const FINAL { return "epoch_time"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class to_epoch_time_term_t : public op_term_t {
@@ -68,7 +74,9 @@ private:
     }
     const char *name() const FINAL { return "to_epoch_time"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class in_timezone_term_t : public op_term_t {
@@ -82,7 +90,9 @@ private:
     }
     const char *name() const FINAL { return "in_timezone"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class during_term_t : public bounded_op_term_t {
@@ -101,7 +111,9 @@ private:
     }
     const char *name() const FINAL { return "during"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class date_term_t : public op_term_t {
@@ -114,7 +126,9 @@ private:
     }
     const char *name() const FINAL { return "date"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class time_of_day_term_t : public op_term_t {
@@ -126,7 +140,9 @@ private:
         return new_val(pseudo::time_of_day(args->arg(env, 0)->as_ptype(pseudo::time_string)));
     }
     const char *name() const FINAL { return "time_of_day"; }
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class timezone_term_t : public op_term_t {
@@ -138,7 +154,9 @@ private:
         return new_val(pseudo::time_tz(args->arg(env, 0)->as_ptype(pseudo::time_string)));
     }
     const char *name() const FINAL { return "timezone"; }
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class portion_term_t : public op_term_t {
@@ -164,7 +182,9 @@ private:
         default: unreachable();
         }
     }
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
     pseudo::time_component_t component;
 };
 
@@ -201,7 +221,9 @@ private:
         return d->as_str().to_std();
     }
     const char *name() const FINAL { return "time"; }
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_iso8601_term(compile_env_t *env, const protob_t<const Term> &term) {

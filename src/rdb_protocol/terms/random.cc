@@ -71,7 +71,9 @@ public:
         return false;
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     const char *name() const FINAL { return "sample"; }
 };
@@ -86,7 +88,9 @@ private:
         return false;
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     enum class bound_type_t {
         LOWER,

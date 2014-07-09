@@ -24,7 +24,9 @@ private:
         return new_val(make_counted<const datum_t>(std::move(arr)));
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     virtual const char *name() const { return "keys"; }
 };
@@ -54,7 +56,9 @@ private:
         return new_val(obj.to_counted());
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     virtual const char *name() const { return "object"; }
 };

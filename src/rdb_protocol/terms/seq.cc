@@ -28,7 +28,9 @@ private:
 
     // RSI: Yeah, this'll need to change, once we parallelize terminals.  The
     // function (arg 1, if it exists) could have a non-zero parallelization level.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class sum_term_t : public map_acc_term_t<sum_wire_func_t> {
@@ -94,7 +96,9 @@ private:
 
     // A count of a stream has the same parallelizability as returning its
     // rows... though it might be cheaper, someday.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class map_term_t : public grouped_seq_op_term_t {
@@ -111,7 +115,9 @@ private:
     virtual const char *name() const { return "map"; }
 
     // RSI: This'll need to change once we parallelize transformations.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class concatmap_term_t : public grouped_seq_op_term_t {
@@ -128,7 +134,9 @@ private:
     virtual const char *name() const { return "concatmap"; }
 
     // RSI: This'll need to change once we parallelize transformations.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class group_term_t : public grouped_seq_op_term_t {
@@ -179,7 +187,9 @@ private:
 
     // RSI: This'll need to change once we parallelize transformations?  How exactly
     // does grouping affect life?
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class filter_term_t : public grouped_seq_op_term_t {
@@ -215,7 +225,9 @@ private:
     virtual const char *name() const { return "filter"; }
 
     // RSI: This'll need to change once we parallelize transformations.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     counted_t<func_term_t> default_filter_term;
 };
@@ -232,7 +244,9 @@ private:
     virtual const char *name() const { return "reduce"; }
 
     // RSI: This'll need to change once we parallelize transformations/terminals.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class changes_term_t : public op_term_t {
@@ -249,7 +263,9 @@ private:
 
     // RSI: Um.  Maybe the API should be changed because with some expressions,
     // parallelizing them is a bit nonsensical.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 // TODO: this sucks.  Change to use the same macros as rewrites.hpp?
@@ -297,7 +313,9 @@ private:
 
     // A .between on a stream or anything doesn't change the parallelizability of the
     // operation.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class union_term_t : public op_term_t {
@@ -317,7 +335,9 @@ private:
     virtual const char *name() const { return "union"; }
 
     // RSI: Once we parallelize union_datum_stream_t, this'll need to change.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class zip_term_t : public op_term_t {
@@ -332,7 +352,9 @@ private:
 
     // This maps a non-blocking operation on a stream, so its parallelizability is
     // the same as that of its parameter.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 counted_t<term_t> make_between_term(

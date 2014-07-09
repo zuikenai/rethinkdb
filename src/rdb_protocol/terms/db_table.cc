@@ -120,7 +120,9 @@ private:
 
     // An r.db('aaa') term doesn't do any blocking... but the subsequent table term
     // might.
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class db_create_term_t : public meta_write_op_t {
@@ -423,7 +425,9 @@ private:
     }
     const char *name() const FINAL { return "db_list"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class table_list_term_t : public meta_op_term_t {
@@ -466,7 +470,9 @@ private:
     }
     const char *name() const FINAL { return "table_list"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class sync_term_t : public meta_write_op_t {

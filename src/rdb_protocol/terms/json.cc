@@ -22,7 +22,9 @@ public:
         return new_val(make_counted<const datum_t>(cjson.get()));
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     const char *name() const FINAL { return "json"; }
 };

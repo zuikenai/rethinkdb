@@ -28,7 +28,9 @@ private:
         unreachable();
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     virtual const char *name() const { return "all"; }
 };
@@ -48,7 +50,9 @@ private:
         return new_val_bool(false);
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     virtual const char *name() const { return "any"; }
 };
@@ -62,7 +66,9 @@ private:
         return b ? args->arg(env, 1) : args->arg(env, 2);
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     virtual const char *name() const { return "branch"; }
 };
@@ -131,7 +137,9 @@ private:
     }
     virtual const char *name() const { return "funcall"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 

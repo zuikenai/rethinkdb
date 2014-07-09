@@ -36,7 +36,9 @@ protected:
         return new_val(out.to_counted());
     }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class append_term_t : public pend_term_t {
@@ -130,7 +132,9 @@ private:
 
     virtual const char *name() const { return "nth"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class is_empty_term_t : public op_term_t {
@@ -146,7 +150,9 @@ private:
 
     virtual const char *name() const { return "is_empty"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 // TODO: this kinda sucks.
@@ -225,7 +231,9 @@ private:
     }
     virtual const char *name() const { return "slice"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class limit_term_t : public op_term_t {
@@ -248,7 +256,9 @@ private:
     }
     virtual const char *name() const { return "limit"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class set_insert_term_t : public op_term_t {
@@ -275,7 +285,9 @@ private:
 
     virtual const char *name() const { return "set_insert"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class set_union_term_t : public op_term_t {
@@ -304,7 +316,9 @@ private:
 
     virtual const char *name() const { return "set_union"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class set_intersection_term_t : public op_term_t {
@@ -332,7 +346,9 @@ private:
 
     virtual const char *name() const { return "set_intersection"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class set_difference_term_t : public op_term_t {
@@ -360,7 +376,9 @@ private:
 
     virtual const char *name() const { return "set_difference"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class at_term_t : public op_term_t {
@@ -409,7 +427,9 @@ private:
 
     const char *name() const { return "insert_at"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 
@@ -425,7 +445,9 @@ private:
 
     const char *name() const { return "splice_at"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class delete_at_term_t : public at_term_t {
@@ -445,7 +467,9 @@ private:
 
     const char *name() const { return "delete_at"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class change_at_term_t : public at_term_t {
@@ -459,7 +483,9 @@ private:
     }
     const char *name() const { return "change_at"; }
 
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class indexes_of_term_t : public op_term_t {
@@ -556,7 +582,9 @@ public:
         return v0;
     }
 private:
-    RDB_OP_NON_BLOCKING;
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 
     virtual const char *name() const { return "args"; }
 };
