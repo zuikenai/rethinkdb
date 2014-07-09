@@ -343,12 +343,12 @@ class TextView(object):
         self.use_color = sys.stdout.isatty()
         if self.use_color:
             curses.setupterm()
-            setf = curses.tigetstr('setaf')
-            bold = curses.tigetstr('bold')
-            self.red = curses.tparm(setf, 1) + bold
-            self.green = curses.tparm(setf, 2) + bold
-            self.yellow = curses.tparm(setf, 3) + bold
-            self.nocolor = curses.tigetstr('sgr0')
+            setf = curses.tigetstr('setaf') or ''
+            bold = curses.tigetstr('bold') or ''
+            self.red = (curses.tparm(setf, 1) if setf != '' else '') + bold 
+            self.green = (curses.tparm(setf, 2) if setf != '' else '') + bold
+            self.yellow = (curses.tparm(setf, 3) if setf != '' else '') + bold
+            self.nocolor = curses.tigetstr('sgr0') or ''
         else:
             self.red = ''
             self.green = ''
