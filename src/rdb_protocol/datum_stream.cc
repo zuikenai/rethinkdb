@@ -804,7 +804,7 @@ indexes_of_datum_stream_t::next_raw_batch(env_t *env, const batchspec_t &bs) {
             break;
         }
         for (auto it = v.begin(); it != v.end(); ++it, ++index) {
-            // RSI: Parallelize this?
+            // RSI: Parallelize this?  indexes_of_term_t assumes such.
             if (f->filter_call(env, *it, counted_t<func_t>())) {
                 ret.push_back(make_counted<datum_t>(static_cast<double>(index)));
             }

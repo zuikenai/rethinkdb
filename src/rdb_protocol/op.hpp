@@ -129,6 +129,11 @@ protected:
     // a subclass).
     virtual void accumulate_captures(var_captures_t *captures) const;
 
+    // Computes the parallelization level of the operation's arg(i) arg term.
+    // Returns false if the analysis cannot be done (because of an r.args term, or if
+    // the index is out of range).
+    bool arg_parallelization_level(size_t i, int *level_out) const;
+
     // Computes the (maximum) parallelization level of the operation's arg terms and
     // optarg terms.
     int params_parallelization_level() const;
@@ -158,16 +163,27 @@ private:
     bool is_deterministic() const FINAL;
 
     // Is the operation deterministic?
+    // RSI: Remove this default implementation.
     virtual bool op_is_deterministic() const {
         return true;
     }
 
-    int parallelization_level() const OVERRIDE;
+    // RSI: Remove this default implementation.
+    int parallelization_level() const OVERRIDE {
+        return params_parallelization_level();
+    }
 
     scoped_ptr_t<const arg_terms_t> arg_terms;
 
     std::map<std::string, counted_t<const term_t> > optargs;
 };
+
+// RSI: Honestly remove this macro.
+#define RDB_OP_NON_BLOCKING \
+    int parallelization_level() const FINAL {   \
+        return params_parallelization_level();  \
+    }                                           \
+    friend class rdb_missing_semicolon_t
 
 class grouped_seq_op_term_t : public op_term_t {
 public:

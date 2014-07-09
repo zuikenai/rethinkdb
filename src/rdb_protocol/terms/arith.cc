@@ -108,6 +108,8 @@ private:
         return make_counted<datum_t>(lhs->as_num() / rhs->as_num());
     }
 
+    RDB_OP_NON_BLOCKING;
+
     const char *namestr;
     counted_t<const datum_t> (arith_term_t::*op)(counted_t<const datum_t> lhs, counted_t<const datum_t> rhs) const;
 };
@@ -126,6 +128,8 @@ private:
         return new_val(make_counted<const datum_t>(static_cast<double>(i0 % i1)));
     }
     virtual const char *name() const { return "mod"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 

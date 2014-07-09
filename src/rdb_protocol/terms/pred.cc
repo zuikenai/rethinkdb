@@ -5,12 +5,13 @@
 
 namespace ql {
 
+// RSI: What the fuck is this name, a "predicate" term???  This does comparisons!
 class predicate_term_t : public op_term_t {
 public:
     predicate_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2, -1)), namestr(0), invert(false), pred(0) {
         int predtype = term->type();
-        switch(predtype) {
+        switch (predtype) {
         case Term_TermType_EQ: {
             namestr = "EQ";
             pred = &datum_t::operator==; // NOLINT
@@ -56,6 +57,8 @@ private:
     virtual const char *name() const { return namestr; }
     bool invert;
     bool (datum_t::*pred)(const datum_t &rhs) const;
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class not_term_t : public op_term_t {
@@ -66,6 +69,8 @@ private:
         return new_val_bool(!args->arg(env, 0)->as_bool());
     }
     virtual const char *name() const { return "not"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 counted_t<term_t> make_predicate_term(compile_env_t *env, const protob_t<const Term> &term) {

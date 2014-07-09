@@ -63,6 +63,9 @@ private:
             return new_val(make_counted<const datum_t>(datum_t::R_NULL));
         }
     }
+
+    RDB_OP_NON_BLOCKING;
+
     virtual const char *name() const { return "match"; }
 };
 
@@ -120,6 +123,9 @@ private:
 
         return new_val(make_counted<const datum_t>(std::move(res)));
     }
+
+    RDB_OP_NON_BLOCKING;
+
     virtual const char *name() const { return "split"; }
 };
 

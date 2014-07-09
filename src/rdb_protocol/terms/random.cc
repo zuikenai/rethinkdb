@@ -71,7 +71,7 @@ public:
         return false;
     }
 
-    // RSI: Implement parallelization_level here, because we implemented op_is_deterministic?
+    RDB_OP_NON_BLOCKING;
 
     const char *name() const FINAL { return "sample"; }
 };
@@ -86,7 +86,7 @@ private:
         return false;
     }
 
-    // RSI: Implement parallelization_level here, because we implemented op_is_deterministic?
+    RDB_OP_NON_BLOCKING;
 
     enum class bound_type_t {
         LOWER,

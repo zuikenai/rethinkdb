@@ -63,6 +63,9 @@ public:
     }
 
     virtual const char *name() const { return "sindex_create"; }
+
+    // RSI: Not really sure what to do here.
+    RDB_OP_NON_BLOCKING;
 };
 
 class sindex_drop_term_t : public op_term_t {
@@ -85,6 +88,9 @@ public:
     }
 
     virtual const char *name() const { return "sindex_drop"; }
+
+    // RSI: Not really sure what to do here.
+    RDB_OP_NON_BLOCKING;
 };
 
 class sindex_list_term_t : public op_term_t {
@@ -99,6 +105,9 @@ public:
     }
 
     virtual const char *name() const { return "sindex_list"; }
+
+    // RSI: Not really sure what to do here.
+    RDB_OP_NON_BLOCKING;
 };
 
 class sindex_status_term_t : public op_term_t {
@@ -116,6 +125,9 @@ public:
     }
 
     virtual const char *name() const { return "sindex_status"; }
+
+    // RSI: Not really sure what to do here.
+    RDB_OP_NON_BLOCKING;
 };
 
 /* We wait for no more than 10 seconds between polls to the indexes. */
@@ -158,6 +170,9 @@ public:
     }
 
     virtual const char *name() const { return "sindex_wait"; }
+
+    // RSI: Not really sure what to do here.
+    RDB_OP_NON_BLOCKING;
 };
 
 counted_t<term_t> make_sindex_create_term(compile_env_t *env, const protob_t<const Term> &term) {

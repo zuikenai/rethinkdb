@@ -311,6 +311,29 @@ int max_parallelization_level(
     return max_level;
 }
 
+bool op_term_t::arg_parallelization_level(size_t index, int *level_out) const {
+    const std::vector<counted_t<const term_t> > &orig = arg_terms->get_original_args();
+    if (index >= orig.size()) {
+        *level_out = 0;
+        return false;
+    }
+    // RSI: There really should be a pre-computed field "first-r.args-index".
+    for (size_t i = 0; i < index; ++i) {
+        // RSI: So much dupe logic with this ARGS check.
+        if (orig[i]->get_src()->type() == Term::ARGS) {
+            // RSI: valgrind_undefined for these outputs.
+            *level_out = 0;
+            return false;
+        }
+    }
+    if (orig[index]->get_src()->type() == Term::ARGS) {
+        *level_out = 0;
+        return false;
+    }
+    *level_out = orig[index]->parallelization_level();
+    return true;
+}
+
 int op_term_t::params_parallelization_level() const {
     int max_level = 0;
     for (const counted_t<const term_t> &arg : arg_terms->get_original_args()) {
@@ -319,12 +342,6 @@ int op_term_t::params_parallelization_level() const {
 
     max_level = std::max(max_level, max_parallelization_level(optargs));
     return max_level;
-}
-
-int op_term_t::parallelization_level() const {
-    // RSI: Get rid of this, or something.
-    // RSI: Take into account whether op is blocking?
-    return params_parallelization_level();
 }
 
 bounded_op_term_t::bounded_op_term_t(compile_env_t *env, protob_t<const Term> term,

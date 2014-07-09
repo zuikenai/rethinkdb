@@ -19,23 +19,29 @@ private:
         return raw_val;
     }
     const char *name() const FINAL { return "datum"; }
+    // RSI: This would better be a counted_t<const datum_t>?
     counted_t<val_t> raw_val;
 };
 
+// RSI: How is this an op_term_t at all?
 class constant_term_t : public op_term_t {
 public:
     constant_term_t(compile_env_t *env, protob_t<const Term> t,
                     double constant, const char *name)
-        : op_term_t(env, t, argspec_t(0)), _constant(constant), _name(name) { }
+        : op_term_t(env, t, argspec_t(0)), constant_(constant), name_(name) { }
 private:
     virtual counted_t<val_t> eval_impl(scope_env_t *, args_t *, eval_flags_t) const {
-        return new_val(make_counted<const datum_t>(_constant));
+        return new_val(make_counted<const datum_t>(constant_));
     }
-    virtual const char *name() const { return _name; }
-    const double _constant;
-    const char *const _name;
+    virtual const char *name() const { return name_; }
+
+    RDB_OP_NON_BLOCKING;
+
+    const double constant_;
+    const char *const name_;
 };
 
+// RSI: How is this an op_term_t at all?
 class make_array_term_t : public op_term_t {
 public:
     make_array_term_t(compile_env_t *env, const protob_t<const Term> &term)
@@ -53,6 +59,8 @@ private:
         return new_val(acc.to_counted());
     }
     virtual const char *name() const { return "make_array"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class make_obj_term_t : public term_t {

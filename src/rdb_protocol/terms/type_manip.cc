@@ -132,12 +132,12 @@ static int merge_types(int supertype, int subtype) {
     return supertype * MAX_TYPE + subtype;
 }
 
-class coerce_term_t : public op_term_t {
+class coerce_term_t FINAL : public op_term_t {
 public:
     coerce_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> val = args->arg(env, 0);
         val_t::type_t opaque_start_type = val->get_type();
         int start_supertype = opaque_start_type.raw_type;
@@ -244,15 +244,18 @@ private:
         rfail_typed_target(val, "Cannot coerce %s to %s.",
                            get_name(start_type).c_str(), get_name(end_type).c_str());
     }
-    virtual const char *name() const { return "coerce_to"; }
+
+    const char *name() const FINAL { return "coerce_to"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
-class ungroup_term_t : public op_term_t {
+class ungroup_term_t FINAL : public op_term_t {
 public:
     ungroup_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         auto groups = args->arg(env, 0)->as_promiscuous_grouped_data(env->env);
         std::vector<counted_t<const datum_t> > v;
         v.reserve(groups->size());
@@ -266,6 +269,9 @@ private:
     }
     const char *name() const FINAL { return "ungroup"; }
     bool can_be_grouped() const FINAL { return false; }
+
+    // RSI: Well... I have no clue if this is the right thing.
+    RDB_OP_NON_BLOCKING;
 };
 
 int val_type(counted_t<val_t> v) {
@@ -300,6 +306,8 @@ private:
     }
     const char *name() const FINAL { return "typeof"; }
     bool can_be_grouped() const FINAL { return false; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class info_term_t : public op_term_t {
@@ -372,6 +380,8 @@ private:
 
     const char *name() const FINAL { return "info"; }
     bool can_be_grouped() const FINAL { return false; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 counted_t<term_t> make_coerce_term(

@@ -27,6 +27,9 @@ private:
         }
         unreachable();
     }
+
+    RDB_OP_NON_BLOCKING;
+
     virtual const char *name() const { return "all"; }
 };
 
@@ -44,6 +47,9 @@ private:
         }
         return new_val_bool(false);
     }
+
+    RDB_OP_NON_BLOCKING;
+
     virtual const char *name() const { return "any"; }
 };
 
@@ -55,6 +61,9 @@ private:
         bool b = args->arg(env, 0)->as_bool();
         return b ? args->arg(env, 1) : args->arg(env, 2);
     }
+
+    RDB_OP_NON_BLOCKING;
+
     virtual const char *name() const { return "branch"; }
 };
 
@@ -121,6 +130,8 @@ private:
         }
     }
     virtual const char *name() const { return "funcall"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 

@@ -23,14 +23,20 @@ protected:
         if (which_pend == PRE) {
             // TODO: this is horrendously inefficient.
             out.add(new_el);
-            for (size_t i = 0; i < arr->size(); ++i) out.add(arr->get(i));
+            for (size_t i = 0; i < arr->size(); ++i) {
+                out.add(arr->get(i));
+            }
         } else {
             // TODO: this is horrendously inefficient.
-            for (size_t i = 0; i < arr->size(); ++i) out.add(arr->get(i));
+            for (size_t i = 0; i < arr->size(); ++i) {
+                out.add(arr->get(i));
+            }
             out.add(new_el);
         }
         return new_val(out.to_counted());
     }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class append_term_t : public pend_term_t {
@@ -121,7 +127,10 @@ private:
             }
         }
     }
+
     virtual const char *name() const { return "nth"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class is_empty_term_t : public op_term_t {
@@ -134,7 +143,10 @@ private:
         bool is_empty = !args->arg(env, 0)->as_seq(env->env)->next(env->env, batchspec).has();
         return new_val(make_counted<const datum_t>(datum_t::type_t::R_BOOL, is_empty));
     }
+
     virtual const char *name() const { return "is_empty"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 // TODO: this kinda sucks.
@@ -212,6 +224,8 @@ private:
         unreachable();
     }
     virtual const char *name() const { return "slice"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class limit_term_t : public op_term_t {
@@ -233,6 +247,8 @@ private:
         return t.has() ? new_val(new_ds, t) : new_val(env->env, new_ds);
     }
     virtual const char *name() const { return "limit"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class set_insert_term_t : public op_term_t {
@@ -258,6 +274,8 @@ private:
     }
 
     virtual const char *name() const { return "set_insert"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class set_union_term_t : public op_term_t {
@@ -285,6 +303,8 @@ private:
     }
 
     virtual const char *name() const { return "set_union"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class set_intersection_term_t : public op_term_t {
@@ -311,6 +331,8 @@ private:
     }
 
     virtual const char *name() const { return "set_intersection"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class set_difference_term_t : public op_term_t {
@@ -337,6 +359,8 @@ private:
     }
 
     virtual const char *name() const { return "set_difference"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class at_term_t : public op_term_t {
@@ -368,6 +392,7 @@ public:
         modify(env, args, index, &arr);
         return new_val(arr.to_counted());
     }
+
 private:
     index_method_t index_method_;
 };
@@ -381,7 +406,10 @@ private:
         counted_t<const datum_t> new_el = args->arg(env, 2)->as_datum();
         array->insert(index, new_el);
     }
+
     const char *name() const { return "insert_at"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 
@@ -394,7 +422,10 @@ private:
         counted_t<const datum_t> new_els = args->arg(env, 2)->as_datum();
         array->splice(index, new_els);
     }
+
     const char *name() const { return "splice_at"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class delete_at_term_t : public at_term_t {
@@ -411,7 +442,10 @@ private:
             array->erase_range(index, end_index);
         }
     }
+
     const char *name() const { return "delete_at"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class change_at_term_t : public at_term_t {
@@ -424,13 +458,15 @@ private:
         array->change(index, new_el);
     }
     const char *name() const { return "change_at"; }
+
+    RDB_OP_NON_BLOCKING;
 };
 
 class indexes_of_term_t : public op_term_t {
 public:
     indexes_of_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v = args->arg(env, 1);
         counted_t<func_t> fun;
         if (v->get_type().is_convertible(val_t::type_t::FUNC)) {
@@ -440,7 +476,12 @@ private:
         }
         return new_val(env->env, args->arg(env, 0)->as_seq(env->env)->indexes_of(fun));
     }
-    virtual const char *name() const { return "indexes_of"; }
+    const char *name() const FINAL { return "indexes_of"; }
+
+    // RSI: Once we parallelize indexes_of_datum_stream_t, this needs to be changed.
+    int parallelization_level() const FINAL {
+        return params_parallelization_level();
+    }
 };
 
 class contains_term_t : public op_term_t {
@@ -466,6 +507,7 @@ private:
         {
             profile::sampler_t sampler("Evaluating elements in contains.",
                                        env->env->trace);
+            // RSI: Parallelization opportunities here.
             while (counted_t<const datum_t> el = seq->next(env->env, batchspec)) {
                 for (auto it = required_els.begin(); it != required_els.end(); ++it) {
                     if (**it == *el) {
@@ -492,6 +534,12 @@ private:
         return new_val_bool(false);
     }
     virtual const char *name() const { return "contains"; }
+
+    // RSI: We could parallelize this, and also change the implementation of this
+    // function.
+    int parallelization_level() const {
+        return params_parallelization_level();
+    }
 };
 
 class args_term_t : public op_term_t {
@@ -508,6 +556,8 @@ public:
         return v0;
     }
 private:
+    RDB_OP_NON_BLOCKING;
+
     virtual const char *name() const { return "args"; }
 };
 

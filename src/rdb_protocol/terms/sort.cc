@@ -198,6 +198,11 @@ private:
 
     virtual const char *name() const { return "orderby"; }
 
+    // RSI: A sorting or whatnot operation doesn't result in the possibility for
+    // parallel evalution, does it?  The function you're sorting on -- could it be
+    // parallelizable?  Does the code currently do the "Shwartzian" transform?
+    RDB_OP_NON_BLOCKING;
+
 private:
     protob_t<const Term> src_term;
 };
@@ -237,6 +242,10 @@ private:
         return new_val(make_counted<const datum_t>(std::move(toret)));
     }
     virtual const char *name() const { return "distinct"; }
+
+    // We don't do any sort of fancy function call (and neither will indexed
+    // distinct).
+    RDB_OP_NON_BLOCKING;
 };
 
 counted_t<term_t> make_orderby_term(compile_env_t *env, const protob_t<const Term> &term) {
