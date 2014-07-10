@@ -19,7 +19,6 @@ private:
         return raw_val;
     }
     const char *name() const FINAL { return "datum"; }
-    // RSI: This would better be a counted_t<const datum_t>?
     counted_t<val_t> raw_val;
 };
 
