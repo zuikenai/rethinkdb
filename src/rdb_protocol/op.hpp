@@ -157,6 +157,7 @@ private:
     virtual counted_t<val_t> eval_impl(scope_env_t *env,
                                        args_t *args,
                                        eval_flags_t eval_flags) const = 0;
+    // RSI: Remove these default implementations?
     virtual bool can_be_grouped() const;
     virtual bool is_grouped_seq_op() const;
 
