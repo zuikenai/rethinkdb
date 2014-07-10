@@ -259,7 +259,7 @@ public:
     virtual void apply_op(env_t *env,
                           groups_t *groups,
                           // sindex_val may be NULL
-                          const counted_t<const datum_t> &sindex_val) const = 0;
+                          const counted_t<const datum_t> &sindex_val) = 0;
 };
 
 class accumulator_t {

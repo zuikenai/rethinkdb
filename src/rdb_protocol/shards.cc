@@ -591,7 +591,7 @@ class ungrouped_op_t : public op_t {
 protected:
 private:
     virtual void apply_op(env_t *env, groups_t *groups,
-                          const counted_t<const datum_t> &sindex_val) const {
+                          const counted_t<const datum_t> &sindex_val) {
         for (auto it = groups->begin(); it != groups->end();) {
             transform_list(env, &it->second, sindex_val);
             if (it->second.size() == 0) {
@@ -603,7 +603,7 @@ private:
     }
     // sindex_val may be NULL.
     virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &sindex_val) const = 0;
+                                const counted_t<const datum_t> &sindex_val) = 0;
 };
 
 class group_trans_t : public op_t {
@@ -618,7 +618,7 @@ public:
 private:
     virtual void apply_op(env_t *env,
                           groups_t *groups,
-                          const counted_t<const datum_t> &sindex_val) const {
+                          const counted_t<const datum_t> &sindex_val) {
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         datums_t *ds = &groups->begin()->second;
@@ -724,7 +724,7 @@ public:
         : f(_f.compile_wire_func()) { }
 private:
     virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &) const {
+                                const counted_t<const datum_t> &) {
         try {
             for (auto it = list->begin(); it != list->end(); ++it) {
                 *it = f->call(env, *it)->as_datum();
@@ -747,7 +747,7 @@ public:
 private:
     // sindex_val may be NULL
     virtual void transform_list(env_t *, datums_t *list,
-                                const counted_t<const datum_t> &sindex_val) const {
+                                const counted_t<const datum_t> &sindex_val) {
         auto it = list->begin();
         auto loc = it;
         for (; it != list->end(); ++it) {
@@ -777,7 +777,7 @@ public:
                       : counted_t<func_t>()) { }
 private:
     virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &) const {
+                                const counted_t<const datum_t> &) {
         auto it = list->begin();
         auto loc = it;
         try {
@@ -801,7 +801,7 @@ public:
         : f(_f.compile_wire_func()) { }
 private:
     virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &) const {
+                                const counted_t<const datum_t> &) {
         datums_t new_list;
         batchspec_t bs = batchspec_t::user(batch_type_t::TERMINAL, env);
         profile::sampler_t sampler("Evaluating CONCAT_MAP elements.", env->trace);
