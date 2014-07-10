@@ -1,10 +1,10 @@
 // Copyright 2010-2013 RethinkDB, all rights reserved.
 #include "rdb_protocol/op.hpp"
 
+#include "debug.hpp"
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/minidriver.hpp"
-
-#include "debug.hpp"
+#include "valgrind.hpp"
 
 namespace ql {
 argspec_t::argspec_t(int n) : min(n), max(n), eval_flags(NO_FLAGS) { }
@@ -314,20 +314,19 @@ int max_parallelization_level(
 bool op_term_t::arg_parallelization_level(size_t index, int *level_out) const {
     const std::vector<counted_t<const term_t> > &orig = arg_terms->get_original_args();
     if (index >= orig.size()) {
-        *level_out = 0;
+        *level_out = valgrind_undefined(0);
         return false;
     }
     // RSI: There really should be a pre-computed field "first-r.args-index".
     for (size_t i = 0; i < index; ++i) {
         // RSI: So much dupe logic with this ARGS check.
         if (orig[i]->get_src()->type() == Term::ARGS) {
-            // RSI: valgrind_undefined for these outputs.
-            *level_out = 0;
+            *level_out = valgrind_undefined(0);
             return false;
         }
     }
     if (orig[index]->get_src()->type() == Term::ARGS) {
-        *level_out = 0;
+        *level_out = valgrind_undefined(0);
         return false;
     }
     *level_out = orig[index]->parallelization_level();
