@@ -12,18 +12,20 @@ public:
     error_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, 1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         if (args->num_args() == 0) {
             rfail(base_exc_t::EMPTY_USER, "Empty ERROR term outside a default block.");
         } else {
             rfail(base_exc_t::GENERIC, "%s", args->arg(env, 0)->as_str().c_str());
         }
     }
-    virtual const char *name() const { return "error"; }
+    const char *name() const FINAL { return "error"; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
+
+    bool op_is_deterministic() const FINAL { return true; }
 };
 
 class default_term_t : public op_term_t {
@@ -90,6 +92,7 @@ private:
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
+    bool op_is_deterministic() const FINAL { return true; }
 };
 
 counted_t<term_t> make_error_term(compile_env_t *env, const protob_t<const Term> &term) {

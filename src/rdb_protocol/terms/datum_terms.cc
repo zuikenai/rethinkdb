@@ -30,14 +30,16 @@ public:
                     double constant, const char *name)
         : op_term_t(env, t, argspec_t(0)), constant_(constant), name_(name) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *, args_t *, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *, args_t *, eval_flags_t) const FINAL {
         return new_val(make_counted<const datum_t>(constant_));
     }
-    virtual const char *name() const { return name_; }
+    const char *name() const FINAL { return name_; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     const double constant_;
     const char *const name_;
@@ -49,7 +51,7 @@ public:
     make_array_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, -1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         datum_ptr_t acc(datum_t::R_ARRAY);
         {
             profile::sampler_t sampler("Evaluating elements in make_array.", env->env->trace);
@@ -60,7 +62,9 @@ private:
         }
         return new_val(acc.to_counted());
     }
-    virtual const char *name() const { return "make_array"; }
+    const char *name() const FINAL { return "make_array"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();

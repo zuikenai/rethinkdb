@@ -36,6 +36,8 @@ protected:
         return new_val(out.to_counted());
     }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -45,22 +47,22 @@ class append_term_t : public pend_term_t {
 public:
     append_term_t(compile_env_t *env, const protob_t<const Term> &term) : pend_term_t(env, term) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env,
-                                       args_t *args,
-                                       UNUSED eval_flags_t flags) const {
+    counted_t<val_t> eval_impl(scope_env_t *env,
+                               args_t *args,
+                               UNUSED eval_flags_t flags) const FINAL {
         return pend(env, args, AP);
     }
-    virtual const char *name() const { return "append"; }
+    const char *name() const FINAL { return "append"; }
 };
 
 class prepend_term_t : public pend_term_t {
 public:
     prepend_term_t(compile_env_t *env, const protob_t<const Term> &term) : pend_term_t(env, term) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         return pend(env, args, PRE);
     }
-    virtual const char *name() const { return "prepend"; }
+    const char *name() const FINAL { return "prepend"; }
 };
 
 // This gets the literal index of a (possibly negative) index relative to a
@@ -85,7 +87,7 @@ public:
     nth_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v = args->arg(env, 0);
         int32_t n = args->arg(env, 1)->as_int<int32_t>();
         if (v->get_type().is_convertible(val_t::type_t::DATUM)) {
@@ -132,7 +134,9 @@ private:
         }
     }
 
-    virtual const char *name() const { return "nth"; }
+    bool op_is_deterministic() const { return true; }
+
+    const char *name() const FINAL { return "nth"; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -144,14 +148,15 @@ public:
     is_empty_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         batchspec_t batchspec = batchspec_t::user(batch_type_t::NORMAL, env->env);
         bool is_empty = !args->arg(env, 0)->as_seq(env->env)->next(env->env, batchspec).has();
         return new_val(make_counted<const datum_t>(datum_t::type_t::R_BOOL, is_empty));
     }
 
-    virtual const char *name() const { return "is_empty"; }
+    const char *name() const FINAL { return "is_empty"; }
 
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -163,7 +168,7 @@ public:
     slice_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : bounded_op_term_t(env, term, argspec_t(2, 3)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v = args->arg(env, 0);
         bool left_open = is_left_open(env, args);
         int64_t fake_l = args->arg(env, 1)->as_int<int64_t>();
@@ -232,7 +237,10 @@ private:
         }
         unreachable();
     }
-    virtual const char *name() const { return "slice"; }
+
+    const char *name() const FINAL { return "slice"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -244,7 +252,7 @@ public:
     limit_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v = args->arg(env, 0);
         counted_t<table_t> t;
         if (v->get_type().is_convertible(val_t::type_t::SELECTION)) {
@@ -257,7 +265,9 @@ private:
         counted_t<datum_stream_t> new_ds = ds->slice(0, r);
         return t.has() ? new_val(new_ds, t) : new_val(env->env, new_ds);
     }
-    virtual const char *name() const { return "limit"; }
+    const char *name() const FINAL { return "limit"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -269,7 +279,7 @@ public:
     set_insert_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<const datum_t> arr = args->arg(env, 0)->as_datum();
         counted_t<const datum_t> new_el = args->arg(env, 1)->as_datum();
         std::set<counted_t<const datum_t> > el_set;
@@ -286,7 +296,9 @@ private:
         return new_val(out.to_counted());
     }
 
-    virtual const char *name() const { return "set_insert"; }
+    const char *name() const FINAL { return "set_insert"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -298,7 +310,7 @@ public:
     set_union_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<const datum_t> arr1 = args->arg(env, 0)->as_datum();
         counted_t<const datum_t> arr2 = args->arg(env, 1)->as_datum();
         std::set<counted_t<const datum_t> > el_set;
@@ -317,7 +329,9 @@ private:
         return new_val(out.to_counted());
     }
 
-    virtual const char *name() const { return "set_union"; }
+    const char *name() const FINAL { return "set_union"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -329,7 +343,7 @@ public:
     set_intersection_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<const datum_t> arr1 = args->arg(env, 0)->as_datum();
         counted_t<const datum_t> arr2 = args->arg(env, 1)->as_datum();
         std::set<counted_t<const datum_t> > el_set;
@@ -347,7 +361,9 @@ private:
         return new_val(out.to_counted());
     }
 
-    virtual const char *name() const { return "set_intersection"; }
+    const char *name() const FINAL { return "set_intersection"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -359,7 +375,7 @@ public:
     set_difference_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<const datum_t> arr1 = args->arg(env, 0)->as_datum();
         counted_t<const datum_t> arr2 = args->arg(env, 1)->as_datum();
         std::set<counted_t<const datum_t> > el_set;
@@ -377,7 +393,9 @@ private:
         return new_val(out.to_counted());
     }
 
-    virtual const char *name() const { return "set_difference"; }
+    const char *name() const FINAL { return "set_difference"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -399,7 +417,7 @@ public:
 
     virtual void modify(scope_env_t *env, args_t *args, size_t index, datum_ptr_t *array) const = 0;
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         datum_ptr_t arr(args->arg(env, 0)->as_datum()->as_array());
         size_t index;
         if (index_method_ == ELEMENTS) {
@@ -430,6 +448,8 @@ private:
 
     const char *name() const { return "insert_at"; }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -447,6 +467,8 @@ private:
     }
 
     const char *name() const { return "splice_at"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -470,6 +492,8 @@ private:
 
     const char *name() const { return "delete_at"; }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -485,6 +509,8 @@ private:
         array->change(index, new_el);
     }
     const char *name() const { return "change_at"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -507,6 +533,8 @@ private:
     }
     const char *name() const FINAL { return "indexes_of"; }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     // RSI: Once we parallelize indexes_of_datum_stream_t, this needs to be changed.
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -518,7 +546,7 @@ public:
     contains_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<datum_stream_t> seq = args->arg(env, 0)->as_seq(env->env);
         std::vector<counted_t<const datum_t> > required_els;
         std::vector<counted_t<func_t> > required_funcs;
@@ -562,7 +590,9 @@ private:
         }
         return new_val_bool(false);
     }
-    virtual const char *name() const { return "contains"; }
+    const char *name() const FINAL { return "contains"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: We could parallelize this, and also change the implementation of this
     // function.
@@ -577,9 +607,9 @@ public:
         : op_term_t(env, term, argspec_t(1)) { }
     // This just evaluates its argument and returns it as an array.  The actual
     // logic to make `args` splice arguments is in op.cc.
-    virtual counted_t<val_t> eval_impl(scope_env_t *env,
-                                       args_t *args,
-                                       eval_flags_t eval_flags) const {
+    counted_t<val_t> eval_impl(scope_env_t *env,
+                               args_t *args,
+                               eval_flags_t eval_flags) const FINAL {
         counted_t<val_t> v0 = args->arg(env, 0, eval_flags);
         v0->as_datum()->as_array(); // If v0 is not an array, force a type error.
         return v0;
@@ -589,7 +619,9 @@ private:
         return params_parallelization_level();
     }
 
-    virtual const char *name() const { return "args"; }
+    bool op_is_deterministic() const FINAL { return true; }
+
+    const char *name() const FINAL { return "args"; }
 };
 
 counted_t<term_t> make_args_term(

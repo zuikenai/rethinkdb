@@ -81,7 +81,7 @@ private:
         }
     }
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<table_t> t = args->arg(env, 0)->as_table();
         counted_t<val_t> return_vals_val = args->optarg(env, "return_vals");
         bool return_vals = return_vals_val.has() ? return_vals_val->as_bool() : false;
@@ -169,7 +169,12 @@ private:
 
         return new_val(stats);
     }
-    virtual const char *name() const { return "insert"; }
+    const char *name() const FINAL { return "insert"; }
+
+    // We should never be asking if this write operation is deterministic anyway
+    // (because term_walker wouldn't allow it in places where we do ask if an
+    // operation is deterministic).
+    bool op_is_deterministic() const FINAL { return false; }
 
     // RSI: Not really sure what to do here.
     int parallelization_level() const FINAL {
@@ -184,7 +189,7 @@ public:
                     optargspec_t({"non_atomic", "durability", "return_vals"})) { }
 
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         bool nondet_ok = false;
         if (counted_t<val_t> v = args->optarg(env, "non_atomic")) {
             nondet_ok = v->as_bool();
@@ -252,7 +257,12 @@ private:
         return new_val(stats);
     }
 
-    virtual const char *name() const { return "replace"; }
+    const char *name() const FINAL { return "replace"; }
+
+    // We should never be asking if this write operation is deterministic anyway
+    // (because term_walker wouldn't allow it in places where we do ask if an
+    // operation is deterministic).
+    bool op_is_deterministic() const FINAL { return false; }
 
     // RSI: Not really sure what to do here.
     int parallelization_level() const FINAL {
@@ -268,7 +278,7 @@ public:
         : op_term_t(env, term, argspec_t(2)) { }
 
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         const char *fail_msg = "FOREACH expects one or more basic write queries.";
 
         counted_t<datum_stream_t> ds = args->arg(env, 0)->as_seq(env->env);
@@ -300,7 +310,10 @@ private:
         return new_val(stats);
     }
 
-    virtual const char *name() const { return "foreach"; }
+    const char *name() const FINAL { return "foreach"; }
+
+    // This is a write operation and we shouldn't be calling this.
+    bool op_is_deterministic() const FINAL { return false; }
 
     // RSI: Not really sure what to do here.
     int parallelization_level() const FINAL {

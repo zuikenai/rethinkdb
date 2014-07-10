@@ -14,16 +14,28 @@ public:
         : op_term_t(env, term, argspec_t(1, -1)), namestr(0), op(0) {
         int arithtype = term->type();
         switch (arithtype) {
-        case Term_TermType_ADD: namestr = "ADD"; op = &arith_term_t::add; break;
-        case Term_TermType_SUB: namestr = "SUB"; op = &arith_term_t::sub; break;
-        case Term_TermType_MUL: namestr = "MUL"; op = &arith_term_t::mul; break;
-        case Term_TermType_DIV: namestr = "DIV"; op = &arith_term_t::div; break;
+        case Term_TermType_ADD:
+            namestr = "ADD";
+            op = &arith_term_t::add;
+            break;
+        case Term_TermType_SUB:
+            namestr = "SUB";
+            op = &arith_term_t::sub;
+            break;
+        case Term_TermType_MUL:
+            namestr = "MUL";
+            op = &arith_term_t::mul;
+            break;
+        case Term_TermType_DIV:
+            namestr = "DIV";
+            op = &arith_term_t::div;
+            break;
         default: unreachable();
         }
-        guarantee(namestr && op);
+        guarantee(namestr != nullptr && op != nullptr);
     }
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<const datum_t> acc = args->arg(env, 0)->as_datum();
         for (size_t i = 1; i < args->num_args(); ++i) {
             acc = (this->*op)(acc, args->arg(env, i)->as_datum());
@@ -31,7 +43,7 @@ public:
         return new_val(acc);
     }
 
-    virtual const char *name() const { return namestr; }
+    const char *name() const FINAL { return namestr; }
 
 private:
     counted_t<const datum_t> add(counted_t<const datum_t> lhs,
@@ -112,6 +124,8 @@ private:
         return params_parallelization_level();
     }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     const char *namestr;
     counted_t<const datum_t> (arith_term_t::*op)(counted_t<const datum_t> lhs, counted_t<const datum_t> rhs) const;
 };
@@ -120,7 +134,7 @@ class mod_term_t : public op_term_t {
 public:
     mod_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         int64_t i0 = args->arg(env, 0)->as_int();
         int64_t i1 = args->arg(env, 1)->as_int();
         rcheck(i1, base_exc_t::GENERIC, "Cannot take a number modulo 0.");
@@ -129,7 +143,9 @@ private:
                strprintf("Cannot take %" PRIi64 " mod %" PRIi64, i0, i1));
         return new_val(make_counted<const datum_t>(static_cast<double>(i0 % i1)));
     }
-    virtual const char *name() const { return "mod"; }
+    const char *name() const FINAL { return "mod"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();

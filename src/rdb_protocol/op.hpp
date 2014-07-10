@@ -160,13 +160,13 @@ private:
     virtual bool can_be_grouped() const;
     virtual bool is_grouped_seq_op() const;
 
+    // Uses op_is_deterministic, arg_terms, and optargs to determine whether this
+    // term is deterministic.
     bool is_deterministic() const FINAL;
 
-    // Is the operation deterministic?
-    // RSI: Remove this default implementation.
-    virtual bool op_is_deterministic() const {
-        return true;
-    }
+    // Is the operation deterministic (its args and optargs notwithstanding)?
+    // Returns false for r.random, r.table, etc.
+    virtual bool op_is_deterministic() const = 0;
 
     scoped_ptr_t<const arg_terms_t> arg_terms;
 

@@ -546,6 +546,8 @@ private:
     }
     const char *name() const FINAL { return "get"; }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     int parallelization_level() const FINAL {
         // Right now, a .get operation always happens on a table.  It has the same
         // parallelization level, too, because we don't take into account the
@@ -592,6 +594,17 @@ private:
         }
     }
     const char *name() const FINAL { return "get_all"; }
+
+    // Right now, because the left-hand argument is a table,
+    // op_term_t::is_deterministic will return false anyway.  However, if it becomse
+    // possible for a "deterministic table" to exist, we'll still be
+    // non-deterministic unless you can prove otherwise, because the relative order
+    // of elements having equal secondary index keys is not rock-solidly well-defined.
+    bool op_is_deterministic() const FINAL {
+        // RSI: This should check if the "index" optarg exists, and return true if it
+        // doesn't, because getting a bunch of rows should be o.k.
+        return false;
+    }
 
     int parallelization_level() const FINAL {
         // This inherits the parallelization level from the left-hand table

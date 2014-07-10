@@ -12,14 +12,16 @@
 
 namespace ql {
 
+// RSI: Double-check op_is_deterministic impls in this file.
+
 template<class T>
 class map_acc_term_t : public grouped_seq_op_term_t {
 protected:
     map_acc_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : grouped_seq_op_term_t(env, term, argspec_t(1, 2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args,
-                                       eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args,
+                               eval_flags_t) const FINAL {
         return args->num_args() == 1
             ? args->arg(env, 0)->as_seq(env->env)->run_terminal(env->env, T(backtrace()))
             : args->arg(env, 0)->as_seq(env->env)->run_terminal(
@@ -38,28 +40,36 @@ public:
     template<class... Args> sum_term_t(Args... args)
         : map_acc_term_t<sum_wire_func_t>(args...) { }
 private:
-    virtual const char *name() const { return "sum"; }
+    const char *name() const FINAL { return "sum"; }
+
+    bool op_is_deterministic() const { return true; }
 };
 class avg_term_t : public map_acc_term_t<avg_wire_func_t> {
 public:
     template<class... Args> avg_term_t(Args... args)
         : map_acc_term_t<avg_wire_func_t>(args...) { }
 private:
-    virtual const char *name() const { return "avg"; }
+    const char *name() const FINAL { return "avg"; }
+
+    bool op_is_deterministic() const { return true; }
 };
 class min_term_t : public map_acc_term_t<min_wire_func_t> {
 public:
     template<class... Args> min_term_t(Args... args)
         : map_acc_term_t<min_wire_func_t>(args...) { }
 private:
-    virtual const char *name() const { return "min"; }
+    const char *name() const FINAL { return "min"; }
+
+    bool op_is_deterministic() const { return true; }
 };
 class max_term_t : public map_acc_term_t<max_wire_func_t> {
 public:
     template<class... Args> max_term_t(Args... args)
         : map_acc_term_t<max_wire_func_t>(args...) { }
 private:
-    virtual const char *name() const { return "max"; }
+    const char *name() const FINAL { return "max"; }
+
+    bool op_is_deterministic() const { return true; }
 };
 
 class count_term_t : public grouped_seq_op_term_t {
@@ -67,8 +77,8 @@ public:
     count_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : grouped_seq_op_term_t(env, term, argspec_t(1, 2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args,
-                                       eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args,
+                               eval_flags_t) const FINAL {
         counted_t<val_t> v0 = args->arg(env, 0);
         if (args->num_args() == 1) {
             return v0->as_seq(env->env)
@@ -92,13 +102,15 @@ private:
             }
         }
     }
-    virtual const char *name() const { return "count"; }
+    const char *name() const FINAL { return "count"; }
 
     // A count of a stream has the same parallelizability as returning its
     // rows... though it might be cheaper, someday.
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
+
+    bool op_is_deterministic() const FINAL { return true; }
 };
 
 class map_term_t : public grouped_seq_op_term_t {
@@ -106,13 +118,15 @@ public:
     map_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : grouped_seq_op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<datum_stream_t> stream = args->arg(env, 0)->as_seq(env->env);
         stream->add_transformation(
                 map_wire_func_t(args->arg(env, 1)->as_func()), backtrace());
         return new_val(env->env, stream);
     }
-    virtual const char *name() const { return "map"; }
+    const char *name() const FINAL { return "map"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: This'll need to change once we parallelize transformations.
     int parallelization_level() const FINAL {
@@ -125,13 +139,15 @@ public:
     concatmap_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : grouped_seq_op_term_t(env, term, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<datum_stream_t> stream = args->arg(env, 0)->as_seq(env->env);
         stream->add_transformation(
                 concatmap_wire_func_t(args->arg(env, 1)->as_func()), backtrace());
         return new_val(env->env, stream);
     }
-    virtual const char *name() const { return "concatmap"; }
+    const char *name() const FINAL { return "concatmap"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: This'll need to change once we parallelize transformations.
     int parallelization_level() const FINAL {
@@ -144,7 +160,7 @@ public:
     group_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : grouped_seq_op_term_t(env, term, argspec_t(1, -1), optargspec_t({"index", "multi"})) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         std::vector<counted_t<func_t> > funcs;
         funcs.reserve(args->num_args() - 1);
         for (size_t i = 1; i < args->num_args(); ++i) {
@@ -183,7 +199,10 @@ private:
 
         return new_val(env->env, seq);
     }
-    virtual const char *name() const { return "group"; }
+    const char *name() const FINAL { return "group"; }
+
+    // RSI: On arrays, will a group operation preserve ordering?
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: This'll need to change once we parallelize transformations?  How exactly
     // does grouping affect life?
@@ -199,7 +218,7 @@ public:
           default_filter_term(lazy_literal_optarg(env, "default")) { }
 
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v0 = args->arg(env, 0);
         counted_t<val_t> v1 = args->arg(env, 1, LITERAL_OK);
         counted_t<func_t> f = v1->as_func(CONSTANT_SHORTCUT);
@@ -222,7 +241,9 @@ private:
         }
     }
 
-    virtual const char *name() const { return "filter"; }
+    const char *name() const FINAL { return "filter"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: This'll need to change once we parallelize transformations.
     int parallelization_level() const FINAL {
@@ -237,11 +258,13 @@ public:
     reduce_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         grouped_seq_op_term_t(env, term, argspec_t(2), optargspec_t({ "base" })) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         return args->arg(env, 0)->as_seq(env->env)->run_terminal(
             env->env, reduce_wire_func_t(args->arg(env, 1)->as_func()));
     }
-    virtual const char *name() const { return "reduce"; }
+    const char *name() const FINAL { return "reduce"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: This'll need to change once we parallelize transformations/terminals.
     int parallelization_level() const FINAL {
@@ -254,12 +277,16 @@ public:
     changes_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<table_t> tbl = args->arg(env, 0)->as_table();
         changefeed::client_t *client = env->env->get_changefeed_client();
         return new_val(env->env, client->new_feed(tbl, env->env));
     }
-    virtual const char *name() const { return "changes"; }
+    const char *name() const FINAL { return "changes"; }
+
+    // We should never be asking if the operation is deterministic... but I think we
+    // might.  Anyway, it isn't.
+    bool op_is_deterministic() const { return false; }
 
     // RSI: Um.  Maybe the API should be changed because with some expressions,
     // parallelizing them is a bit nonsensical.
@@ -274,7 +301,7 @@ public:
     between_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : bounded_op_term_t(env, term, argspec_t(3), optargspec_t({"index"})) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<table_t> tbl = args->arg(env, 0)->as_table();
         bool left_open = is_left_open(env, args);
         counted_t<const datum_t> lb = args->arg(env, 1)->as_datum();
@@ -306,10 +333,14 @@ private:
             sid, this);
         return new_val(tbl);
     }
-    virtual const char *name() const { return "between"; }
+    const char *name() const FINAL { return "between"; }
 
     // RSI: filter_func is unused?
     protob_t<Term> filter_func;
+
+    // Apparently this can only be called on a table.  Welp, we're deterministic if
+    // the table is.
+    bool op_is_deterministic() const { return true; }
 
     // A .between on a stream or anything doesn't change the parallelizability of the
     // operation.
@@ -323,7 +354,7 @@ public:
     union_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, -1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         std::vector<counted_t<datum_stream_t> > streams;
         for (size_t i = 0; i < args->num_args(); ++i) {
             streams.push_back(args->arg(env, i)->as_seq(env->env));
@@ -332,7 +363,10 @@ private:
             = make_counted<union_datum_stream_t>(std::move(streams), backtrace());
         return new_val(env->env, union_stream);
     }
-    virtual const char *name() const { return "union"; }
+    const char *name() const FINAL { return "union"; }
+
+    // We don't promise a particular ordering when combining two other streams.
+    bool op_is_deterministic() const FINAL { return false; }
 
     // RSI: Once we parallelize union_datum_stream_t, this'll need to change.
     int parallelization_level() const FINAL {
@@ -345,10 +379,14 @@ public:
     zip_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         return new_val(env->env, args->arg(env, 0)->as_seq(env->env)->zip());
     }
-    virtual const char *name() const { return "zip"; }
+    const char *name() const FINAL { return "zip"; }
+
+    // This just maps a deterministic function (merging left and right fields), so
+    // it's deterministic if the stream it's called on is.
+    bool op_is_deterministic() const FINAL { return true; }
 
     // This maps a non-blocking operation on a stream, so its parallelizability is
     // the same as that of its parameter.

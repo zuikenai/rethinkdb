@@ -247,6 +247,8 @@ private:
 
     const char *name() const FINAL { return "coerce_to"; }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -271,6 +273,8 @@ private:
     }
     const char *name() const FINAL { return "ungroup"; }
     bool can_be_grouped() const FINAL { return false; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: Well... I have no clue if this is the right thing.
     int parallelization_level() const FINAL {
@@ -311,6 +315,7 @@ private:
     const char *name() const FINAL { return "typeof"; }
     bool can_be_grouped() const FINAL { return false; }
 
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -386,6 +391,8 @@ private:
 
     const char *name() const FINAL { return "info"; }
     bool can_be_grouped() const FINAL { return false; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();

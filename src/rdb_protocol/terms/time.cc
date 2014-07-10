@@ -23,7 +23,7 @@ private:
         return new_val(pseudo::iso8601_to_time(v->as_str().to_std(), tz, v.get()));
     }
     const char *name() const FINAL { return "iso8601"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -40,7 +40,7 @@ private:
                 pseudo::time_to_iso8601(args->arg(env, 0)->as_ptype(pseudo::time_string))));
     }
     const char *name() const FINAL { return "to_iso8601"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -56,7 +56,7 @@ private:
         return new_val(pseudo::make_time(v->as_num(), "+00:00"));
     }
     const char *name() const FINAL { return "epoch_time"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -73,7 +73,7 @@ private:
                 pseudo::time_to_epoch_time(args->arg(env, 0)->as_ptype(pseudo::time_string))));
     }
     const char *name() const FINAL { return "to_epoch_time"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -89,7 +89,7 @@ private:
                                           args->arg(env, 1)->as_datum()));
     }
     const char *name() const FINAL { return "in_timezone"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -110,7 +110,7 @@ private:
                               || rcmp > 0 || (rcmp == 0 && is_right_open(env, args))));
     }
     const char *name() const FINAL { return "during"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -125,7 +125,7 @@ private:
         return new_val(pseudo::time_date(args->arg(env, 0)->as_ptype(pseudo::time_string), this));
     }
     const char *name() const FINAL { return "date"; }
-
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -140,6 +140,7 @@ private:
         return new_val(pseudo::time_of_day(args->arg(env, 0)->as_ptype(pseudo::time_string)));
     }
     const char *name() const FINAL { return "time_of_day"; }
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -154,6 +155,7 @@ private:
         return new_val(pseudo::time_tz(args->arg(env, 0)->as_ptype(pseudo::time_string)));
     }
     const char *name() const FINAL { return "timezone"; }
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -185,7 +187,9 @@ private:
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
-    pseudo::time_component_t component;
+    bool op_is_deterministic() const FINAL { return true; }
+
+    const pseudo::time_component_t component;
 };
 
 class time_term_t : public op_term_t {
@@ -221,6 +225,7 @@ private:
         return d->as_str().to_std();
     }
     const char *name() const FINAL { return "time"; }
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }

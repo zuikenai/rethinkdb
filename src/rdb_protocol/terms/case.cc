@@ -12,12 +12,14 @@ public:
                 const char *name, int (*f)(int))
         : op_term_t(env, term, argspec_t(1)), name_(name), f_(f) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         std::string s = args->arg(env, 0)->as_str().to_std();
         std::transform(s.begin(), s.end(), s.begin(), f_);
         return new_val(make_counted<const datum_t>(std::move(s)));
     }
-    virtual const char *name() const { return name_; }
+    const char *name() const FINAL { return name_; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();

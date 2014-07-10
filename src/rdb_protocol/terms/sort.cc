@@ -30,10 +30,12 @@ public:
     asc_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         return args->arg(env, 0);
     }
-    virtual const char *name() const { return "asc"; }
+    const char *name() const FINAL { return "asc"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -45,10 +47,12 @@ public:
     desc_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         return args->arg(env, 0);
     }
-    virtual const char *name() const { return "desc"; }
+    const char *name() const FINAL { return "desc"; }
+
+    bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
         return params_parallelization_level();
@@ -117,7 +121,7 @@ private:
             comparisons;
     };
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         std::vector<std::pair<order_direction_t, counted_t<func_t> > > comparisons;
         scoped_ptr_t<datum_t> arr(new datum_t(datum_t::R_ARRAY));
         for (size_t i = 1; i < args->num_args(); ++i) {
@@ -206,7 +210,11 @@ private:
         return tbl.has() ? new_val(seq, tbl) : new_val(env->env, seq);
     }
 
-    virtual const char *name() const { return "orderby"; }
+    const char *name() const FINAL { return "orderby"; }
+
+    // Queries that are deterministic produce things like arrays, which we treat
+    // deterministically (with stable_sort).
+    bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: A sorting or whatnot operation doesn't result in the possibility for
     // parallel evalution, does it?  The function you're sorting on -- could it be
@@ -224,8 +232,8 @@ public:
     distinct_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1), optargspec_t({"index"})) { }
 private:
-    virtual counted_t<val_t> eval_impl(
-        scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(
+        scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v = args->arg(env, 0);
         counted_t<val_t> idx = args->optarg(env, "index");
         if (v->get_type().is_convertible(val_t::type_t::TABLE)) {
@@ -267,15 +275,19 @@ private:
                     sampler.new_sample();
                 }
             }
+            // We put the elements on a std::set, and then we return them in a sorted
+            // array.  Thus the behavior is deterministic (if s was deterministically
+            // generated).
             std::vector<counted_t<const datum_t> > toret;
             std::move(results.begin(), results.end(), std::back_inserter(toret));
             return new_val(make_counted<const datum_t>(std::move(toret)));
         }
     }
-    virtual const char *name() const { return "distinct"; }
+    const char *name() const FINAL { return "distinct"; }
 
-    // We don't do any sort of fancy function call (and neither will indexed
-    // distinct).
+    bool op_is_deterministic() const FINAL { return true; }
+
+    // We don't do any sort of fancy function call.
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }

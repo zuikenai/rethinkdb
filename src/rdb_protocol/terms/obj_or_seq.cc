@@ -59,7 +59,7 @@ private:
                                       args_t *args,
                                       counted_t<val_t> v0) const = 0;
 
-    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
         counted_t<val_t> v0 = args->arg(env, 0);
         counted_t<const datum_t> d;
 
@@ -123,7 +123,7 @@ public:
     pluck_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         obj_or_seq_op_term_t(env, term, MAP, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const {
+    counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const FINAL {
         counted_t<const datum_t> obj = v0->as_datum();
         r_sanity_check(obj->get_type() == datum_t::R_OBJECT);
 
@@ -136,7 +136,8 @@ private:
         pathspec_t pathspec(make_counted<const datum_t>(std::move(paths)), this);
         return new_val(project(obj, pathspec, DONT_RECURSE));
     }
-    virtual const char *name() const { return "pluck"; }
+    bool op_is_deterministic() const FINAL { return true; }
+    const char *name() const FINAL { return "pluck"; }
 };
 
 class without_term_t : public obj_or_seq_op_term_t {
@@ -144,7 +145,7 @@ public:
     without_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         obj_or_seq_op_term_t(env, term, MAP, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const {
+    counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const FINAL {
         counted_t<const datum_t> obj = v0->as_datum();
         r_sanity_check(obj->get_type() == datum_t::R_OBJECT);
 
@@ -157,7 +158,8 @@ private:
         pathspec_t pathspec(make_counted<const datum_t>(std::move(paths)), this);
         return new_val(unproject(obj, pathspec, DONT_RECURSE));
     }
-    virtual const char *name() const { return "without"; }
+    bool op_is_deterministic() const FINAL { return true; }
+    const char *name() const FINAL { return "without"; }
 };
 
 class literal_term_t : public op_term_t {
@@ -184,6 +186,7 @@ private:
     const char *name() const FINAL { return "literal"; }
     bool can_be_grouped() const FINAL { return false; }
 
+    bool op_is_deterministic() const FINAL { return true; }
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
@@ -194,7 +197,7 @@ public:
     merge_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         obj_or_seq_op_term_t(env, term, MAP, argspec_t(1, -1, LITERAL_OK)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const {
+    counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const FINAL {
         counted_t<const datum_t> d = v0->as_datum();
         for (size_t i = 1; i < args->num_args(); ++i) {
             counted_t<val_t> v = args->arg(env, i, LITERAL_OK);
@@ -210,7 +213,8 @@ private:
         }
         return new_val(d);
     }
-    virtual const char *name() const { return "merge"; }
+    bool op_is_deterministic() const FINAL { return true; }
+    const char *name() const FINAL { return "merge"; }
 };
 
 class has_fields_term_t : public obj_or_seq_op_term_t {
@@ -218,7 +222,7 @@ public:
     has_fields_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : obj_or_seq_op_term_t(env, term, FILTER, argspec_t(1, -1)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const {
+    counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const FINAL {
         counted_t<const datum_t> obj = v0->as_datum();
         r_sanity_check(obj->get_type() == datum_t::R_OBJECT);
 
@@ -231,7 +235,8 @@ private:
         pathspec_t pathspec(make_counted<const datum_t>(std::move(paths)), this);
         return new_val_bool(contains(obj, pathspec));
     }
-    virtual const char *name() const { return "has_fields"; }
+    bool op_is_deterministic() const FINAL { return true; }
+    const char *name() const FINAL { return "has_fields"; }
 };
 
 class get_field_term_t : public obj_or_seq_op_term_t {
@@ -239,10 +244,11 @@ public:
     get_field_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : obj_or_seq_op_term_t(env, term, SKIP_MAP, argspec_t(2)) { }
 private:
-    virtual counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const {
+    counted_t<val_t> obj_eval(scope_env_t *env, args_t *args, counted_t<val_t> v0) const FINAL {
         return new_val(v0->as_datum()->get(args->arg(env, 1)->as_str().to_std()));
     }
-    virtual const char *name() const { return "get_field"; }
+    bool op_is_deterministic() const FINAL { return true; }
+    const char *name() const FINAL { return "get_field"; }
 };
 
 counted_t<term_t> make_get_field_term(compile_env_t *env, const protob_t<const Term> &term) {

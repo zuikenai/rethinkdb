@@ -79,7 +79,7 @@ public:
         return term;
     }
 
-    virtual const char *name() const { return "inner_join"; }
+    const char *name() const FINAL { return "inner_join"; }
 };
 
 class outer_join_term_t : public rewrite_term_t {
@@ -118,7 +118,7 @@ public:
         return term;
     }
 
-    virtual const char *name() const { return "outer_join"; }
+    const char *name() const FINAL { return "outer_join"; }
 };
 
 class eq_join_term_t : public rewrite_term_t {
@@ -151,7 +151,7 @@ private:
                                                r::optarg("right", v)))))));
 
     }
-    virtual const char *name() const { return "inner_join"; }
+    const char *name() const FINAL { return "inner_join"; }
 };
 
 class delete_term_t : public rewrite_term_t {
@@ -170,7 +170,7 @@ private:
         term.copy_optargs_from_term(*optargs_in);
         return term;
      }
-     virtual const char *name() const { return "delete"; }
+     const char *name() const FINAL { return "delete"; }
 };
 
 class update_term_t : public rewrite_term_t {
@@ -202,7 +202,7 @@ private:
         term.copy_optargs_from_term(*optargs_in);
         return term;
     }
-    virtual const char *name() const { return "update"; }
+    const char *name() const FINAL { return "update"; }
 };
 
 class skip_term_t : public rewrite_term_t {
@@ -220,7 +220,7 @@ private:
         term.copy_optargs_from_term(*optargs_in);
         return term;
      }
-     virtual const char *name() const { return "skip"; }
+     const char *name() const FINAL { return "skip"; }
 };
 
 class difference_term_t : public rewrite_term_t {
@@ -242,7 +242,7 @@ private:
         return term;
     }
 
-     virtual const char *name() const { return "difference"; }
+     const char *name() const FINAL { return "difference"; }
 };
 
 class with_fields_term_t : public rewrite_term_t {
@@ -262,7 +262,7 @@ private:
 
         return pluck;
     }
-     virtual const char *name() const { return "with_fields"; }
+    const char *name() const FINAL { return "with_fields"; }
 };
 
 counted_t<term_t> make_skip_term(

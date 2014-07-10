@@ -26,6 +26,8 @@ public:
         return params_parallelization_level();
     }
 
+    bool op_is_deterministic() const FINAL { return true; }
+
     const char *name() const FINAL { return "json"; }
 };
 
