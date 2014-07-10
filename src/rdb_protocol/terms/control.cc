@@ -143,7 +143,6 @@ private:
     }
     const char *name() const FINAL { return "funcall"; }
 
-    // RSI: I don't really know what a funcall term is.
     bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
