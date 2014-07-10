@@ -171,9 +171,6 @@ class indexes_of_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     indexes_of_datum_stream_t(counted_t<func_t> _f, counted_t<datum_stream_t> _source);
 
-    // RSI: Apparently this datum stream does not get pushed down to the shards.
-    // Make a github issue about it?
-
 private:
     std::vector<counted_t<const datum_t> >
     next_raw_batch(env_t *env, const batchspec_t &batchspec);
