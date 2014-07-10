@@ -22,7 +22,7 @@ private:
     counted_t<val_t> raw_val;
 };
 
-// RSI: How is this an op_term_t at all?
+// This very well be _not_ an op_term_t.
 class constant_term_t : public op_term_t {
 public:
     constant_term_t(compile_env_t *env, protob_t<const Term> t,
@@ -44,7 +44,6 @@ private:
     const char *const name_;
 };
 
-// RSI: How is this an op_term_t at all?
 class make_array_term_t : public op_term_t {
 public:
     make_array_term_t(compile_env_t *env, const protob_t<const Term> &term)
