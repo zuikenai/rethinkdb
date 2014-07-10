@@ -366,6 +366,7 @@ private:
     const char *name() const FINAL { return "union"; }
 
     // We don't promise a particular ordering when combining two other streams.
+    // RSI: Maybe with arrays... we do and should return true for this?
     bool op_is_deterministic() const FINAL { return false; }
 
     // RSI: Once we parallelize union_datum_stream_t, this'll need to change.
