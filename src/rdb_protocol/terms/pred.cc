@@ -5,7 +5,6 @@
 
 namespace ql {
 
-// RSI: What the fuck is this name, a "predicate" term???  This does comparisons!
 class predicate_term_t : public op_term_t {
 public:
     predicate_term_t(compile_env_t *env, const protob_t<const Term> &term)
