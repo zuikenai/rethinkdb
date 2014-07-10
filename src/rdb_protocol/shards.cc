@@ -590,8 +590,8 @@ scoped_ptr_t<eager_acc_t> make_eager_terminal(const terminal_variant_t &t) {
 class ungrouped_op_t : public op_t {
 protected:
 private:
-    virtual void apply_op(env_t *env, groups_t *groups,
-                          const counted_t<const datum_t> &sindex_val) {
+    void apply_op(env_t *env, groups_t *groups,
+                  const counted_t<const datum_t> &sindex_val) FINAL {
         for (auto it = groups->begin(); it != groups->end();) {
             transform_list(env, &it->second, sindex_val);
             if (it->second.size() == 0) {
@@ -616,9 +616,8 @@ public:
         r_sanity_check((funcs.size() + append_index) != 0);
     }
 private:
-    virtual void apply_op(env_t *env,
-                          groups_t *groups,
-                          const counted_t<const datum_t> &sindex_val) {
+    void apply_op(env_t *env, groups_t *groups,
+                  const counted_t<const datum_t> &sindex_val) FINAL {
         if (groups->size() == 0) return;
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         datums_t *ds = &groups->begin()->second;
@@ -723,8 +722,8 @@ public:
     explicit map_trans_t(const map_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &) {
+    void transform_list(env_t *env, datums_t *list,
+                        const counted_t<const datum_t> &) FINAL {
         try {
             for (auto it = list->begin(); it != list->end(); ++it) {
                 *it = f->call(env, *it)->as_datum();
@@ -746,8 +745,8 @@ public:
     distinct_trans_t(const distinct_wire_func_t &f) : use_index(f.use_index) { }
 private:
     // sindex_val may be NULL
-    virtual void transform_list(env_t *, datums_t *list,
-                                const counted_t<const datum_t> &sindex_val) {
+    void transform_list(env_t *, datums_t *list,
+                        const counted_t<const datum_t> &sindex_val) FINAL {
         auto it = list->begin();
         auto loc = it;
         for (; it != list->end(); ++it) {
@@ -776,8 +775,8 @@ public:
                       ? _f.default_filter_val->compile_wire_func()
                       : counted_t<func_t>()) { }
 private:
-    virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &) {
+    void transform_list(env_t *env, datums_t *list,
+                        const counted_t<const datum_t> &) FINAL {
         auto it = list->begin();
         auto loc = it;
         try {
@@ -800,8 +799,8 @@ public:
     explicit concatmap_trans_t(const concatmap_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    virtual void transform_list(env_t *env, datums_t *list,
-                                const counted_t<const datum_t> &) {
+    void transform_list(env_t *env, datums_t *list,
+                        const counted_t<const datum_t> &) FINAL {
         datums_t new_list;
         batchspec_t bs = batchspec_t::user(batch_type_t::TERMINAL, env);
         profile::sampler_t sampler("Evaluating CONCAT_MAP elements.", env->trace);
