@@ -39,8 +39,6 @@ public:
 
 private:
     bool op_is_deterministic() const FINAL { return false; }
-    // RSI: is_blocking was overridden in the subclasses.  What about
-    // parallelization_level, should that be?  Check _all_ the subclasses again.
 };
 
 // If you don't have to modify any of the data, use
@@ -386,6 +384,7 @@ private:
     }
     const char *name() const FINAL { return "table_drop"; }
 
+    // Dropping a table blocks.
     int parallelization_level() const FINAL {
         return std::max(1, params_parallelization_level());
     }
@@ -521,12 +520,14 @@ private:
     bool op_is_deterministic() const FINAL { return false; }
     const char *name() const FINAL { return "table"; }
 
-    // RSI: This is a bit icky, because the exact sort of parallelization depends on
+    // This is a bit icky, because the exact sort of parallelization depends on
     // the operation that's attached to the table.  An operation which treats the
     // table like a selection will be more expensive (if we start taking that into
-    // account) than a .get operation (that retrieves one row), and a .info operation
-    // isn't actually parallelizable.  (But maybe that can be handled by an
-    // info_term_t or a get_term_t if those can only operate on tables.)
+    // account) than a .get operation (that retrieves one row).  Maybe we don't
+    // really want to parallelize expensive rget operations.  On the other hand,
+    // maybe we'd benefit an extreme amount from that (especially if they're
+    // traversing the same table at the same time).  (But maybe that can be handled
+    // by an info_term_t or a get_term_t if those can only operate on tables.)
 
     // Getting a result set or a row from a table can block.
     int parallelization_level() const FINAL {
@@ -549,12 +550,7 @@ private:
     bool op_is_deterministic() const FINAL { return true; }
 
     int parallelization_level() const FINAL {
-        // Right now, a .get operation always happens on a table.  It has the same
-        // parallelization level, too, because we don't take into account the
-        // expected expense of the operation.  params_parallelization_level()
-        // includes the parallelization level of its left hand argument, the table
-        // expression.
-
+        // We inherit the parallelization level from the left-hand table expression.
         return params_parallelization_level();
     }
 };
