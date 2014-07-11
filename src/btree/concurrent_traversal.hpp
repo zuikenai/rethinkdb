@@ -27,11 +27,15 @@ class concurrent_traversal_callback_t {
 public:
     concurrent_traversal_callback_t() { }
 
-    // Passes a keyvalue and a callback.  waiter.wait_interruptible() must be called to
-    // begin the region of "exclusive access", which only handle_pair implementation
-    // can enters at a time.  (This should happen after loading the value from disk
-    // (which should be done concurrently) and before using ql::env_t to evaluate
-    // transforms and terminals, or whatever non-reentrant behavior you have in mind.)
+    // RSI: It seems like pretty soon we don't need blocks of non-reentrant behavior
+    // any more.
+
+    // Passes a keyvalue and a callback.  waiter.wait_interruptible() must be called
+    // to begin the region of "exclusive access", which only one handle_pair
+    // implementation can enters at a time.  (This should happen after loading the
+    // value from disk (which should be done concurrently) and before using ql::env_t
+    // to evaluate transforms and terminals, or whatever non-reentrant behavior you
+    // have in mind.)
     virtual done_traversing_t handle_pair(scoped_key_value_t &&keyvalue,
                                concurrent_traversal_fifo_enforcer_signal_t waiter)
         THROWS_ONLY(interrupted_exc_t) = 0;
