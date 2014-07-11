@@ -179,7 +179,6 @@ private:
     int64_t index;
 };
 
-// RSI: Learn about this datum stream and parallelization opportunities.
 class ordered_distinct_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
     ordered_distinct_datum_stream_t(counted_t<datum_stream_t> _source);
