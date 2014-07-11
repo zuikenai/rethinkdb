@@ -524,7 +524,7 @@ std::string sindex_readgen_t::sindex_name() const {
 }
 
 counted_t<val_t> datum_stream_t::run_terminal(
-    env_t *env, const terminal_variant_t &tv) {
+        env_t *env, const terminal_variant_t &tv) {
     scoped_ptr_t<eager_acc_t> acc(make_eager_terminal(tv));
     accumulate(env, acc.get(), tv);
     return acc->finish_eager(backtrace(), is_grouped());
