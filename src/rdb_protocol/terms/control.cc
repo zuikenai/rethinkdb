@@ -126,7 +126,7 @@ private:
                 arg_datums.push_back(args->arg(env, i, flags)->as_datum());
             }
             r_sanity_check(!arg_datums[0].has());
-            counted_t<grouped_data_t> gd
+            const counted_t<grouped_data_t> gd
                 = arg1->maybe_as_promiscuous_grouped_data(env->env);
             if (gd.has()) {
                 counted_t<grouped_data_t> out(new grouped_data_t());

@@ -286,9 +286,9 @@ void op_term_t::maybe_grouped_data(scope_env_t *env,
         grouped_data_out->reset();
         arg0_out->reset();
     } else {
-        counted_t<val_t> arg0 = argv->remove(0)->eval(env, flags);
+        const counted_t<val_t> arg0 = argv->remove(0)->eval(env, flags);
 
-        counted_t<grouped_data_t> gd = is_grouped_seq_op()
+        const counted_t<grouped_data_t> gd = is_grouped_seq_op()
             ? arg0->maybe_as_grouped_data()
             : arg0->maybe_as_promiscuous_grouped_data(env->env);
 

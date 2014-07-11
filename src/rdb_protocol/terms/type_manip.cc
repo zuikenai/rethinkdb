@@ -260,7 +260,8 @@ public:
         : op_term_t(env, term, argspec_t(1)) { }
 private:
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
-        auto groups = args->arg(env, 0)->as_promiscuous_grouped_data(env->env);
+        const counted_t<grouped_data_t> groups
+            = args->arg(env, 0)->as_promiscuous_grouped_data(env->env);
         std::vector<counted_t<const datum_t> > v;
         v.reserve(groups->size());
         for (auto it = groups->begin(); it != groups->end(); ++it) {
