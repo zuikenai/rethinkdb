@@ -538,10 +538,10 @@ counted_t<val_t> datum_stream_t::to_array(env_t *env) {
 
 // DATUM_STREAM_T
 counted_t<datum_stream_t> datum_stream_t::slice(size_t l, size_t r) {
-    return make_counted<slice_datum_stream_t>(l, r, this->counted_from_this());
+    return make_counted<slice_datum_stream_t>(l, r, counted_from_this());
 }
 counted_t<datum_stream_t> datum_stream_t::zip() {
-    return make_counted<zip_datum_stream_t>(this->counted_from_this());
+    return make_counted<zip_datum_stream_t>(counted_from_this());
 }
 counted_t<datum_stream_t> datum_stream_t::indexes_of(counted_t<func_t> f) {
     return make_counted<indexes_of_datum_stream_t>(f, counted_from_this());
