@@ -251,7 +251,7 @@ RDB_SERIALIZE_OUTSIDE(backtrace_t);
 const backtrace_t::frame_t head_frame = backtrace_t::frame_t::head();
 
 // A RQL exception.
-class exc_t : public base_exc_t {
+class exc_t FINAL : public base_exc_t {
 public:
     // We have a default constructor because these are serialized.
     exc_t() : base_exc_t(base_exc_t::GENERIC), exc_msg_("UNINITIALIZED") { }
