@@ -715,6 +715,7 @@ void rdb_r_unshard_visitor_t::operator()(const point_read_t &) {
 }
 
 void rdb_r_unshard_visitor_t::operator()(const rget_read_t &rg) {
+    // RSI: Are there parallelization opportunities here?
     if (rg.transforms.size() != 0 || rg.terminal) {
         // This asserts that the optargs have been initialized.  (There is always a
         // 'db' optarg.)  We have the same assertion in rdb_read_visitor_t.

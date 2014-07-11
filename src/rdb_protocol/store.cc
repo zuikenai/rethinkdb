@@ -87,7 +87,6 @@ void store_t::help_construct_bring_sindexes_up_to_date() {
     }
 }
 
-// TODO: get rid of this extra response_t copy on the stack
 struct rdb_read_visitor_t : public boost::static_visitor<void> {
     void operator()(const changefeed_subscribe_t &s) {
         guarantee(store->changefeed_server.has());
@@ -125,6 +124,8 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
         response->response = rget_read_response_t();
         rget_read_response_t *res =
             boost::get<rget_read_response_t>(&response->response);
+
+        // RSI: Yeah, parallelize something here or in the callees.
 
         if (!rget.sindex) {
             // Normal rget
