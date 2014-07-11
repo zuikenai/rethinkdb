@@ -58,8 +58,8 @@ private:
         return false;
     }
 
-    // RSI: Can js terms be parallelized?  Implement parallelization_level?  We
-    // already have multiple hash-shards though.
+    // RSI: Can js terms be parallelized?  We already have multiple hash-shards
+    // though.
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
