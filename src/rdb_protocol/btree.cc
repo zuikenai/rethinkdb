@@ -779,6 +779,8 @@ public:
     THROWS_ONLY(interrupted_exc_t);
     void finish() THROWS_ONLY(interrupted_exc_t);
 private:
+    // RSI: Something involving this job_data_t or io_data_t is where the
+    // parallelization might happen.
     const io_data_t io; // How do get data in/out.
     job_data_t job; // What to do next (stateful).
     const boost::optional<sindex_data_t> sindex; // Optional sindex information.

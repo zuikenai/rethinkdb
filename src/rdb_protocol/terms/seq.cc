@@ -368,6 +368,7 @@ private:
     bool op_is_deterministic() const FINAL { return false; }
 
     // RSI: Once we parallelize union_datum_stream_t, this'll need to change.
+    // RSI: Probably, we will want 1 + params_parallelization_level() to make sure we don't parallelize too early.
     int parallelization_level() const FINAL {
         return params_parallelization_level();
     }
