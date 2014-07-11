@@ -289,7 +289,7 @@ RDB_SERIALIZE_OUTSIDE(exc_t);
 // correspond to part of the source tree.  It's usually thrown from inside
 // datum.{hpp,cc} and must be caught by the enclosing term/stream/whatever and
 // turned into a normal `exc_t`.
-class datum_exc_t : public base_exc_t {
+class datum_exc_t FINAL : public base_exc_t {
 public:
     datum_exc_t() : base_exc_t(base_exc_t::GENERIC), exc_msg("UNINITIALIZED") { }
     explicit datum_exc_t(base_exc_t::type_t type, const std::string &_exc_msg)
