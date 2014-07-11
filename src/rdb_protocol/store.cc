@@ -129,6 +129,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
 
         if (!rget.sindex) {
             // Normal rget
+            // RSI: Parallelize whatever in rdb_rget_slice(?)
             rdb_rget_slice(btree, rget.region.inner, superblock,
                            &ql_env, rget.batchspec, rget.transforms, rget.terminal,
                            rget.sorting, res);
@@ -168,6 +169,7 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
             sindex_multi_bool_t multi_bool;
             deserialize_sindex_info(sindex_mapping_data, &sindex_mapping, &multi_bool);
 
+            // RSI: Parallelize whatever in rdb_rget_secondary_slice(?)
             rdb_rget_secondary_slice(
                 store->get_sindex_slice(sindex_uuid),
                 rget.sindex->original_range, rget.sindex->region,

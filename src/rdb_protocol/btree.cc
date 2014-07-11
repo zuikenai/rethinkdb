@@ -892,7 +892,6 @@ THROWS_ONLY(interrupted_exc_t) {
     }
 }
 
-// TODO: Having two functions which are 99% the same sucks.
 void rdb_rget_slice(
     btree_slice_t *slice,
     const key_range_t &range,
