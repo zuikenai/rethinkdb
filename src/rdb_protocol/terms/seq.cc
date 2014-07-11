@@ -12,8 +12,6 @@
 
 namespace ql {
 
-// RSI: Double-check op_is_deterministic impls in this file.
-
 template<class T>
 class map_acc_term_t : public grouped_seq_op_term_t {
 protected:
@@ -267,6 +265,7 @@ private:
     }
     const char *name() const FINAL { return "reduce"; }
 
+    // RSI: We behave deterministically with arrays?
     bool op_is_deterministic() const FINAL { return true; }
 
     // RSI: This'll need to change once we parallelize transformations/terminals.
@@ -288,7 +287,7 @@ private:
     const char *name() const FINAL { return "changes"; }
 
     // We should never be asking if the operation is deterministic... but I think we
-    // might.  Anyway, it isn't.
+    // might.  Anyway, returning false is fine.
     bool op_is_deterministic() const { return false; }
 
     // RSI: Um.  Maybe the API should be changed because with some expressions,
