@@ -338,9 +338,6 @@ private:
     }
     const char *name() const FINAL { return "between"; }
 
-    // RSI: filter_func is unused?
-    protob_t<Term> filter_func;
-
     // Apparently this can only be called on a table.  Welp, we're deterministic if
     // the table is.
     bool op_is_deterministic() const { return true; }
