@@ -96,7 +96,7 @@ $(TOP)/mk/gen/phony-list.mk: $(CONFIG)
 	  | egrep '^.PHONY: |^MAKEFILE_LIST = ' \
 	  | egrep -v '\$$' \
 	  | sed 's/^.PHONY:/PHONY_LIST +=/' \
-	  | sed 's|^MAKEFILE_LIST :?= \(.*\)$$|$$(TOP)/mk/gen/phony-list.mk: $$(patsubst $(TOP)/%,$$(TOP)/%,$$(filter-out %.d,\1))|' \
+	  | sed 's|^MAKEFILE_LIST =|$$(TOP)/mk/gen/phony-list.mk: $$(patsubst $(TOP)/%,$$(TOP)/%,$$(filter-out %.d,|;s|$$|))|' \
 	  > $@ 2>/dev/null
 
 # Don't try to rebuild any of the Makefiles

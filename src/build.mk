@@ -384,6 +384,15 @@ $(OBJ_DIR)/%.o: $(SOURCE_DIR)/%.cc $(MAKEFILE_DEPENDENCY) $(V8_INCLUDE_DEP) $(RE
 	  sleep 1; touch $< \
 	)
 
+FORCE_ALL_DEPS := $(patsubst %,force-dep/%,$(NAMES))
+force-dep/%: $(SOURCE_DIR)/%.cc $(QL2_PROTO_HEADERS)
+	$P CXX_DEPS $(DEP_DIR)/$*$(DEPS_POSTFIX).d
+	mkdir -p $(dir $(DEP_DIR)/$*)
+	$(RT_CXX) $(RT_CXXFLAGS) $(SOURCE_DIR)/$*.cc -MP -MQ $(OBJ_DIR)/$*.o -M -MF $(DEP_DIR)/$*$(DEPS_POSTFIX).d
+
+.PHONY: deps
+deps: $(FORCE_ALL_DEPS)
+
 -include $(DEPS)
 
 .PHONY: build-clean
