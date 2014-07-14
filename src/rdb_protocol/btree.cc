@@ -886,14 +886,30 @@ THROWS_ONLY(interrupted_exc_t) {
                 &serial_recombination_fifo_sink,
                 serial_recombination_fifo_source.enter_write());
 
+        // RSI: Support more fine-grained parallelization of transformers.
+        // RSI: This could be parallelizing things with a parallelization level of 2 right now.
+
+        // RSI: This logic might be bad with respect to
+        // concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible.
+        bool must_be_ordered = false;
+        for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
+            must_be_ordered |= op->must_be_ordered();
+        }
+
+        if (!must_be_ordered) {
+            waiter.end();
+        }
+
         // RSI: Parallelize better here?
         for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
             op->apply_op(job.env, &data, sindex_val);
             //                           ^^^^^^^^^^ NULL if no sindex
         }
 
-        // RSI: Support calling waiter.end() before, so that we actually parallelize.
-        waiter.end();
+        if (must_be_ordered) {
+            waiter.end();
+        }
+
         // RSI: Should this be wait_interruptible?
         exiter.wait();
 

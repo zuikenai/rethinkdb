@@ -616,9 +616,16 @@ public:
         r_sanity_check((funcs.size() + append_index) != 0);
     }
 private:
+    // I don't know what group_trans_t does, this code is really complicated.  But it
+    // doesn't have any mutable state, which means it must be ok for this not to be
+    // ordered.
+    bool must_be_ordered() const { return false; }
+
     void apply_op(env_t *env, groups_t *groups,
                   const counted_t<const datum_t> &sindex_val) FINAL {
-        if (groups->size() == 0) return;
+        if (groups->size() == 0) {
+            return;
+        }
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
         datums_t *ds = &groups->begin()->second;
         for (auto el = ds->begin(); el != ds->end(); ++el) {
@@ -722,6 +729,8 @@ public:
     explicit map_trans_t(const map_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
+    bool must_be_ordered() const { return false; }
+
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
         try {
@@ -732,7 +741,7 @@ private:
             throw exc_t(e, f->backtrace().get(), 1);
         }
     }
-    counted_t<func_t> f;
+    const counted_t<func_t> f;
 };
 
 // Note: this removes duplicates ONLY TO SAVE NETWORK TRAFFIC.  It's possible
@@ -744,6 +753,11 @@ class distinct_trans_t : public ungrouped_op_t {
 public:
     distinct_trans_t(const distinct_wire_func_t &f) : use_index(f.use_index) { }
 private:
+    // This carries left-to-right state, which means you MUST apply it to a stream in
+    // order?  Or, it means you SHOULD apply it to a stream in order (since this only
+    // exists to save network traffic).
+    bool must_be_ordered() const { return true; }
+
     // sindex_val may be NULL
     void transform_list(env_t *, datums_t *list,
                         const counted_t<const datum_t> &sindex_val) FINAL {
@@ -775,6 +789,8 @@ public:
                       ? _f.default_filter_val->compile_wire_func()
                       : counted_t<func_t>()) { }
 private:
+    bool must_be_ordered() const { return false; }
+
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
         auto it = list->begin();
@@ -791,7 +807,8 @@ private:
         }
         list->erase(loc, list->end());
     }
-    counted_t<func_t> f, default_val;
+    const counted_t<func_t> f;
+    const counted_t<func_t> default_val;
 };
 
 class concatmap_trans_t : public ungrouped_op_t {
@@ -799,6 +816,8 @@ public:
     explicit concatmap_trans_t(const concatmap_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
+    bool must_be_ordered() const { return false; }
+
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
         datums_t new_list;
@@ -820,7 +839,7 @@ private:
         }
         list->swap(new_list);
     }
-    counted_t<func_t> f;
+    const counted_t<func_t> f;
 };
 
 class transform_visitor_t : public boost::static_visitor<op_t *> {

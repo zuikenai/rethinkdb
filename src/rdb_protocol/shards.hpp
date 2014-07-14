@@ -256,6 +256,10 @@ class op_t {
 public:
     op_t() = default;
     virtual ~op_t() { }
+    // Returns true if the op_t must run on a stream from left to right.  (I.e. if
+    // the op_t has internal state that expects to be used from left to right.)
+    virtual bool must_be_ordered() const = 0;
+
     virtual void apply_op(env_t *env,
                           groups_t *groups,
                           // sindex_val may be NULL
