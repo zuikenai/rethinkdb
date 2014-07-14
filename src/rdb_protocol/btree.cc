@@ -842,7 +842,12 @@ THROWS_ONLY(interrupted_exc_t) {
         row.reset();
     }
     guarantee(!row.references_parent());
+
+    // We reset the key/value.  This says that we're done reading the data -- and it
+    // lets the buf_lock_t and associated blobs get released.
     keyvalue.reset();
+
+    // Waits for our exclusive turn.
     waiter.wait_interruptible();
 
     try {
