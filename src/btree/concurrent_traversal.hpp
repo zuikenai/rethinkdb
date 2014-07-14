@@ -16,10 +16,11 @@ public:
 private:
     friend class concurrent_traversal_adapter_t;
 
-    concurrent_traversal_fifo_enforcer_signal_t(signal_t *eval_exclusivity_signal,
-                                                concurrent_traversal_adapter_t *parent);
+    concurrent_traversal_fifo_enforcer_signal_t(
+            fifo_enforcer_sink_t::exit_write_t *eval_exclusivity_signal,
+            concurrent_traversal_adapter_t *parent);
 
-    signal_t *const eval_exclusivity_signal_;
+    fifo_enforcer_sink_t::exit_write_t *const eval_exclusivity_signal_;
     concurrent_traversal_adapter_t *const parent_;
 };
 

@@ -58,8 +58,8 @@ public:
         done_traversing_t done;
         try {
             done = cb_->handle_pair(
-                std::move(keyvalue),
-                concurrent_traversal_fifo_enforcer_signal_t(&exit_write, this));
+                    std::move(keyvalue),
+                    concurrent_traversal_fifo_enforcer_signal_t(&exit_write, this));
         } catch (const interrupted_exc_t &) {
             done = done_traversing_t::YES;
         }
@@ -113,7 +113,7 @@ private:
 
 concurrent_traversal_fifo_enforcer_signal_t::
 concurrent_traversal_fifo_enforcer_signal_t(
-        signal_t *eval_exclusivity_signal,
+        fifo_enforcer_sink_t::exit_write_t *eval_exclusivity_signal,
         concurrent_traversal_adapter_t *parent)
     : eval_exclusivity_signal_(eval_exclusivity_signal),
       parent_(parent) { }
