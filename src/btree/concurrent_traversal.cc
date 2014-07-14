@@ -142,6 +142,10 @@ void concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible()
     ::wait_interruptible(eval_exclusivity_signal_, parent_->failure_cond_);
 }
 
+void concurrent_traversal_fifo_enforcer_signal_t::end() {
+    eval_exclusivity_signal_->end();
+}
+
 bool btree_concurrent_traversal(superblock_t *superblock, const key_range_t &range,
                                 concurrent_traversal_callback_t *cb,
                                 direction_t direction) {
