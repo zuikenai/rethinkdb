@@ -397,7 +397,7 @@ td, th {
         </style>
     </head>
     <body>
-            """
+"""
             
             print """<h1>BTree</h1>"""
             
