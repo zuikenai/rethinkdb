@@ -358,7 +358,7 @@ class Profile():
 
     def __repr__(self):
         res = StringIO.StringIO()
-        print >>res, "Profile: ", 
+        res.write("Profile:  ")
         for event in self.events:
             print >>res, event,
         return res.getvalue()
