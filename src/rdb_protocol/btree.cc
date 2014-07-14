@@ -779,6 +779,12 @@ public:
     THROWS_ONLY(interrupted_exc_t);
     void finish() THROWS_ONLY(interrupted_exc_t);
 private:
+    // At this moment in time, we support evaluating transforms in parallel but
+    // require that accumulators run serially, so to speak.
+    // RSI: Rename to serial_accumulation.
+    fifo_enforcer_source_t serial_recombination_fifo_source;
+    fifo_enforcer_sink_t serial_recombination_fifo_sink;
+
     // RSI: Something involving this job_data_t or io_data_t is where the
     // parallelization might happen.
     const io_data_t io; // How do get data in/out.
@@ -875,11 +881,22 @@ THROWS_ONLY(interrupted_exc_t) {
 
         ql::groups_t data = {{counted_t<const ql::datum_t>(), ql::datums_t{val}}};
 
-        // RSI: Parallelize here?
+        // Get in line for serial recombination.
+        fifo_enforcer_sink_t::exit_write_t exiter(
+                &serial_recombination_fifo_sink,
+                serial_recombination_fifo_source.enter_write());
+
+        // RSI: Parallelize better here?
         for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
             op->apply_op(job.env, &data, sindex_val);
             //                           ^^^^^^^^^^ NULL if no sindex
         }
+
+        // RSI: Support calling waiter.end() before, so that we actually parallelize.
+        waiter.end();
+        // RSI: Should this be wait_interruptible?
+        exiter.wait();
+
         // We need lots of extra data for the accumulation because we might be
         // accumulating `rget_item_t`s for a batch.
         return (*job.accumulator)(job.env,
