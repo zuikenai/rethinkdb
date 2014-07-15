@@ -897,6 +897,7 @@ THROWS_ONLY(interrupted_exc_t) {
         }
 
         if (!must_be_ordered) {
+            debugf("about to run parallel\n");
             waiter.end();
         }
 
@@ -907,11 +908,13 @@ THROWS_ONLY(interrupted_exc_t) {
         }
 
         if (must_be_ordered) {
+            debugf("did not run parallel\n");
             waiter.end();
         }
 
         // RSI: Should this be wait_interruptible?
         exiter.wait();
+        debugf("waited for recombination\n");
 
         // We need lots of extra data for the accumulation because we might be
         // accumulating `rget_item_t`s for a batch.

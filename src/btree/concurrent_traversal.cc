@@ -9,6 +9,7 @@
 #include "concurrency/auto_drainer.hpp"
 #include "concurrency/semaphore.hpp"
 #include "concurrency/fifo_enforcer.hpp"
+#include "debug.hpp"
 
 class incr_decr_t {
 public:
@@ -122,6 +123,9 @@ void concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible()
     THROWS_ONLY(interrupted_exc_t) {
     incr_decr_t incr_decr(&parent_->sink_waiters_);
 
+    debugf("semaphore capacity %ld, sink_waiters_ = %ld\n",
+           parent_->semaphore_.get_capacity(),
+           parent_->sink_waiters_);
     if (parent_->sink_waiters_ >= 2) {
         // If we have two or more things waiting for the signal (including ourselves)
         // we're probably looking too far ahead.  Lower the capacity by 1.  This might
