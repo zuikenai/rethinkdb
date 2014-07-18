@@ -67,6 +67,8 @@ public:
                 send_response(error_response, handler, conn, interruptor);
                 return false;
             }
+            // The JSON protocol always accepts `r_json`.
+            (*query_out)->set_accepts_r_json(true);
         }
         return true;
     }
