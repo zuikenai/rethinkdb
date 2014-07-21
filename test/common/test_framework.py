@@ -460,19 +460,16 @@ class TermView(TextView):
         if self.running_list:
             running = len(self.running_list)
             
-            passed = str(self.passed)
-            failed = str(self.failed)
-            
             remaining = self.total - self.passed - self.failed - running
             duration = self.format_duration(time.time() - self.start_time)
             
             def format(names, useColor=self.use_color):
-                strPassed = str(passed)
-                strFailed = str(failed)
+                strPassed = str(self.passed)
+                strFailed = str(self.failed)
                 if useColor:
-                    if passed:
+                    if self.passed:
                         strPassed = self.green + strPassed + self.nocolor
-                    if failed:
+                    if self.failed:
                         strFailed = self.red + strFailed + self.nocolor
                 
                 return '[%s/%s/%d/%d %s%s]' % (strPassed, strFailed, running, remaining, duration, names)
