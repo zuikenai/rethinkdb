@@ -367,7 +367,7 @@ class TextView(object):
                 self.green = (curses.tparm(setf, 2) if setf != '' else '') + bold
                 self.yellow = (curses.tparm(setf, 3) if setf != '' else '') + bold
                 self.nocolor = curses.tigetstr('sgr0') or ''
-            except: pass
+            except Exception: pass
 
     def tell(self, event, name, **args):
         if event not in ['STARTED', 'CANCEL']:
@@ -398,7 +398,7 @@ class TextView(object):
 class TermView(TextView):
     
     statusPadding = 5 # some padding to the right of the status lines to allow for a little buffer for window resizing
-    columns = None
+    columns = 80
     clear_line = "\n"
     
     def __init__(self, total):
@@ -416,7 +416,7 @@ class TermView(TextView):
             self.columns = struct.unpack('hh', fcntl.ioctl(1, termios.TIOCGWINSZ, '1234'))[1]
             signal.signal(signal.SIGWINCH, lambda *args: self.tell('SIGWINCH', args))
             self.clear_line = curses.tigetstr('cr') + (curses.tigetstr('dl1') or curses.tigetstr('el'))
-        except: pass
+        except Exception: pass
         
         self.thread = threading.Thread(target=self.run, name='TermView')
         self.thread.daemon = True
@@ -485,23 +485,18 @@ class TermView(TextView):
                 
                 return '[%s/%s/%d/%d %s%s]' % (strPassed, strFailed, running, remaining, duration, names)
             
-            if self.columns is None:
-                # unable to determine window width, so will just print everything and a newline
-                self.buffer += format(self.format_running(running))
+            names = ''
+            charsAvailable = self.columns - self.statusPadding - len(format('', useColor=False))
+            testsToList = 0
+            while testsToList <= running:
+                canidateNames = ' ' + self.format_running(testsToList)
+                if len(canidateNames) <= charsAvailable:
+                    names = canidateNames
+                else:
+                    break 
+                testsToList += 1
             
-            else:
-                names = ''
-                charsAvailable = self.columns - self.statusPadding - len(format('', useColor=False))
-                testsToList = 0
-                while testsToList <= running:
-                    canidateNames = ' ' + self.format_running(testsToList)
-                    if len(canidateNames) <= charsAvailable:
-                        names = canidateNames
-                    else:
-                        break 
-                    testsToList += 1
-                
-                self.buffer += format(names)
+            self.buffer += format(names)
 
     def format_duration(self, elapsed):
         elapsed = math.floor(elapsed)
