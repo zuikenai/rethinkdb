@@ -4,9 +4,9 @@
 #include <algorithm>
 #include <functional>
 
-#include "clustering/administration/metadata.hpp"
 #include "concurrency/cross_thread_signal.hpp"
 #include "concurrency/cross_thread_watchable.hpp"
+#include "containers/archive/boost_types.hpp"
 #include "containers/cow_ptr.hpp"
 #include "containers/disk_backed_queue.hpp"
 #include "rdb_protocol/btree.hpp"
@@ -15,9 +15,6 @@
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/ql2.pb.h"
 #include "rdb_protocol/store.hpp"
-#include "rpc/semilattice/view.hpp"
-#include "rpc/semilattice/view/field.hpp"
-#include "rpc/semilattice/watchable.hpp"
 
 #include "debug.hpp"
 
@@ -333,130 +330,6 @@ void add_status(const single_sindex_status_t &new_status,
 
 }  // namespace rdb_protocol
 
-rdb_context_t::rdb_context_t()
-    : extproc_pool(NULL),
-      ns_repo(NULL),
-      directory_read_manager(NULL),
-      manager(NULL),
-      changefeed_client(NULL),
-      ql_stats_membership(
-          &get_global_perfmon_collection(), &ql_stats_collection, "query_language"),
-      ql_ops_running_membership(&ql_stats_collection, &ql_ops_running, "ops_running"),
-      reql_http_proxy(),
-      cross_thread_namespace_watchables(get_num_threads()),
-      cross_thread_database_watchables(get_num_threads())
-{ }
-
-void rdb_context_t::help_construct_cross_thread_watchables() {
-    for (int thread = 0; thread < get_num_threads(); ++thread) {
-        cross_thread_namespace_watchables[thread].init(new cross_thread_watchable_variable_t<cow_ptr_t<namespaces_semilattice_metadata_t> >(
-                                                    clone_ptr_t<semilattice_watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> > >
-                                                        (new semilattice_watchable_t<cow_ptr_t<namespaces_semilattice_metadata_t> >(
-                                                            metadata_field(&cluster_semilattice_metadata_t::rdb_namespaces, cluster_metadata))), threadnum_t(thread)));
-
-        cross_thread_database_watchables[thread].init(new cross_thread_watchable_variable_t<databases_semilattice_metadata_t>(
-                                                    clone_ptr_t<semilattice_watchable_t<databases_semilattice_metadata_t> >
-                                                        (new semilattice_watchable_t<databases_semilattice_metadata_t>(
-                                                            metadata_field(&cluster_semilattice_metadata_t::databases, cluster_metadata))), threadnum_t(thread)));
-
-    }
-}
-
-rdb_context_t::rdb_context_t(
-        extproc_pool_t *_extproc_pool,
-        base_namespace_repo_t *_ns_repo,
-        boost::shared_ptr< semilattice_readwrite_view_t<cluster_semilattice_metadata_t> > _cluster_metadata,
-        uuid_u _machine_id)
-    : extproc_pool(_extproc_pool),
-      ns_repo(_ns_repo),
-      cluster_metadata(_cluster_metadata),
-      directory_read_manager(NULL),
-      machine_id(_machine_id),
-      manager(NULL),
-      changefeed_client(NULL),
-      ql_stats_membership(
-          &get_global_perfmon_collection(), &ql_stats_collection, "query_language"),
-      ql_ops_running_membership(&ql_stats_collection, &ql_ops_running, "ops_running"),
-      reql_http_proxy(),
-      cross_thread_namespace_watchables(get_num_threads()),
-      cross_thread_database_watchables(get_num_threads()) {
-    help_construct_cross_thread_watchables();
-}
-
-rdb_context_t::rdb_context_t(
-    extproc_pool_t *_extproc_pool,
-    mailbox_manager_t *mailbox_manager,
-    namespace_repo_t *_ns_repo,
-    boost::shared_ptr<semilattice_readwrite_view_t<cluster_semilattice_metadata_t> >
-        _cluster_metadata,
-    boost::shared_ptr<semilattice_readwrite_view_t<auth_semilattice_metadata_t> >
-        _auth_metadata,
-    directory_read_manager_t<cluster_directory_metadata_t>
-        *_directory_read_manager,
-    machine_id_t _machine_id,
-    perfmon_collection_t *global_stats,
-    const std::string &_reql_http_proxy)
-    : extproc_pool(_extproc_pool),
-      ns_repo(_ns_repo),
-      cluster_metadata(_cluster_metadata),
-      auth_metadata(_auth_metadata),
-      directory_read_manager(_directory_read_manager),
-      machine_id(_machine_id),
-      manager(mailbox_manager),
-      changefeed_client(manager
-                        ? make_scoped<ql::changefeed::client_t>(manager)
-                        : scoped_ptr_t<ql::changefeed::client_t>()),
-      ql_stats_membership(global_stats, &ql_stats_collection, "query_language"),
-      ql_ops_running_membership(&ql_stats_collection, &ql_ops_running, "ops_running"),
-      reql_http_proxy(_reql_http_proxy),
-      cross_thread_namespace_watchables(get_num_threads()),
-      cross_thread_database_watchables(get_num_threads())
-{
-    help_construct_cross_thread_watchables();
-}
-
-rdb_context_t::~rdb_context_t() { }
-
-template <class T>
-void copy_value(const T *in, T *out) {
-    *out = *in;
-}
-
-clone_ptr_t< watchable_t< cow_ptr_t<namespaces_semilattice_metadata_t> > >
-rdb_context_t::get_namespaces_watchable() {
-    int threadnum = get_thread_id().threadnum;
-    r_sanity_check(cross_thread_namespace_watchables[threadnum].has());
-    return cross_thread_namespace_watchables[threadnum]->get_watchable();
-}
-
-cow_ptr_t<namespaces_semilattice_metadata_t> rdb_context_t::get_namespaces_metadata() {
-    int threadnum = get_thread_id().threadnum;
-    r_sanity_check(cross_thread_namespace_watchables[threadnum].has());
-    cow_ptr_t<namespaces_semilattice_metadata_t> ret;
-    cross_thread_namespace_watchables[threadnum]->apply_read(
-            std::bind(&copy_value< cow_ptr_t<namespaces_semilattice_metadata_t> >,
-                      ph::_1, &ret));
-    return ret;
-}
-
-clone_ptr_t< watchable_t<databases_semilattice_metadata_t> >
-rdb_context_t::get_databases_watchable() {
-    int threadnum = get_thread_id().threadnum;
-    r_sanity_check(cross_thread_database_watchables[threadnum].has());
-    return cross_thread_database_watchables[threadnum]->get_watchable();
-}
-
-void rdb_context_t::get_databases_metadata(databases_semilattice_metadata_t *out) {
-    int threadnum = get_thread_id().threadnum;
-    r_sanity_check(cross_thread_database_watchables[threadnum].has());
-    cross_thread_database_watchables[threadnum]->apply_read(
-            std::bind(&copy_value<databases_semilattice_metadata_t>,
-                      ph::_1, out));
-}
-
-
-
-
 namespace rdb_protocol {
 // Construct a region containing only the specified key
 region_t monokey_region(const store_key_t &k) {
@@ -533,6 +406,10 @@ struct rdb_r_get_region_visitor : public boost::static_visitor<region_t> {
         return t.region;
     }
 
+    region_t operator()(const changefeed_point_stamp_t &t) const {
+        return rdb_protocol::monokey_region(t.key);
+    }
+
     region_t operator()(const sindex_status_t &ss) const {
         return ss.region;
     }
@@ -582,6 +459,10 @@ struct rdb_r_shard_visitor_t : public boost::static_visitor<bool> {
 
     bool operator()(const changefeed_stamp_t &t) const {
         return rangey_read(t);
+    }
+
+    bool operator()(const changefeed_point_stamp_t &t) const {
+        return keyed_read(t, t.key);
     }
 
     bool operator()(const rget_read_t &rg) const {
@@ -666,6 +547,7 @@ public:
     void operator()(const sindex_status_t &rg);
     void operator()(const changefeed_subscribe_t &);
     void operator()(const changefeed_stamp_t &);
+    void operator()(const changefeed_point_stamp_t &);
 
 private:
     const profile_bool_t profile;
@@ -706,6 +588,12 @@ void rdb_r_unshard_visitor_t::operator()(const changefeed_stamp_t &) {
             }
         }
     }
+}
+
+void rdb_r_unshard_visitor_t::operator()(const changefeed_point_stamp_t &) {
+    guarantee(count == 1);
+    guarantee(boost::get<changefeed_point_stamp_response_t>(&responses[0].response));
+    *response_out = responses[0];
 }
 
 void rdb_r_unshard_visitor_t::operator()(const point_read_t &) {
@@ -1080,7 +968,8 @@ struct rdb_w_unshard_visitor_t : public boost::static_visitor<void> {
     // sharded into multiple operations instead of getting sent unsplit in a
     // single direction.
     void merge_stats() const {
-        counted_t<const ql::datum_t> stats(new ql::datum_t(ql::datum_t::R_OBJECT));
+        counted_t<const ql::datum_t> stats = ql::datum_t::empty_object();
+
         for (size_t i = 0; i < count; ++i) {
             const counted_t<const ql::datum_t> *stats_i =
                 boost::get<counted_t<const ql::datum_t> >(&responses[i].response);
@@ -1166,7 +1055,12 @@ RDB_IMPL_SERIALIZABLE_2_SINCE_v1_13(
 RDB_IMPL_SERIALIZABLE_1_SINCE_v1_13(sindex_list_response_t, sindexes);
 RDB_IMPL_SERIALIZABLE_1_SINCE_v1_13(sindex_status_response_t, statuses);
 RDB_IMPL_SERIALIZABLE_2_SINCE_v1_13(changefeed_subscribe_response_t, server_uuids, addrs);
-RDB_IMPL_SERIALIZABLE_1_SINCE_v1_13(changefeed_stamp_response_t, stamps);
+
+RDB_MAKE_SERIALIZABLE_1(changefeed_stamp_response_t, stamps);
+INSTANTIATE_SERIALIZABLE_FOR_CLUSTER(changefeed_stamp_response_t);
+RDB_IMPL_ME_SERIALIZABLE_2(changefeed_point_stamp_response_t, stamp, initial_val);
+INSTANTIATE_SERIALIZABLE_FOR_CLUSTER(changefeed_point_stamp_response_t);
+
 RDB_IMPL_SERIALIZABLE_3_SINCE_v1_13(
         read_response_t, response, event_log, n_shards);
 
@@ -1192,7 +1086,11 @@ RDB_IMPL_SERIALIZABLE_3_SINCE_v1_13(
 RDB_IMPL_SERIALIZABLE_0_SINCE_v1_13(sindex_list_t);
 RDB_IMPL_SERIALIZABLE_2_SINCE_v1_13(sindex_status_t, sindexes, region);
 RDB_IMPL_SERIALIZABLE_2_SINCE_v1_13(changefeed_subscribe_t, addr, region);
-RDB_IMPL_SERIALIZABLE_2_SINCE_v1_13(changefeed_stamp_t, addr, region);
+
+RDB_MAKE_SERIALIZABLE_2(changefeed_stamp_t, addr, region);
+INSTANTIATE_SERIALIZABLE_FOR_CLUSTER(changefeed_stamp_t);
+RDB_MAKE_SERIALIZABLE_2(changefeed_point_stamp_t, addr, key);
+INSTANTIATE_SERIALIZABLE_FOR_CLUSTER(changefeed_point_stamp_t);
 
 RDB_MAKE_SERIALIZABLE_2(read_t, read, profile);
 INSTANTIATE_SERIALIZABLE_FOR_CLUSTER(read_t);

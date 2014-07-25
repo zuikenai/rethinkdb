@@ -14,7 +14,7 @@
 #include "errors.hpp"
 #include <boost/optional.hpp>
 
-#include "clustering/administration/namespace_interface_repository.hpp"
+#include "rdb_protocol/context.hpp"
 #include "rdb_protocol/protocol.hpp"
 
 namespace ql {
@@ -181,7 +181,7 @@ private:
 
 class ordered_distinct_datum_stream_t FINAL : public wrapper_datum_stream_t {
 public:
-    ordered_distinct_datum_stream_t(counted_t<datum_stream_t> _source);
+    explicit ordered_distinct_datum_stream_t(counted_t<datum_stream_t> _source);
 private:
     std::vector<counted_t<const datum_t> >
     next_raw_batch(env_t *env, const batchspec_t &batchspec);

@@ -3,8 +3,6 @@
 
 #include "btree/slice.hpp"
 #include "btree/superblock.hpp"
-#include "clustering/administration/database_metadata.hpp"
-#include "clustering/administration/namespace_metadata.hpp"
 #include "concurrency/cross_thread_signal.hpp"
 #include "concurrency/cross_thread_watchable.hpp"
 #include "concurrency/wait_any.hpp"
@@ -101,9 +99,21 @@ struct rdb_read_visitor_t : public boost::static_visitor<void> {
     void operator()(const changefeed_stamp_t &s) {
         guarantee(store->changefeed_server.has());
         response->response = changefeed_stamp_response_t();
-        boost::get<changefeed_stamp_response_t>(&response->response)
-            ->stamps[store->changefeed_server->get_uuid()]
+        auto res = boost::get<changefeed_stamp_response_t>(&response->response);
+        res->stamps[store->changefeed_server->get_uuid()]
             = store->changefeed_server->get_stamp(s.addr);
+    }
+
+    void operator()(const changefeed_point_stamp_t &s) {
+        guarantee(store->changefeed_server.has());
+        response->response = changefeed_point_stamp_response_t();
+        auto res = boost::get<changefeed_point_stamp_response_t>(&response->response);
+        res->stamp = std::make_pair(
+            store->changefeed_server->get_uuid(),
+            store->changefeed_server->get_stamp(s.addr));
+        point_read_response_t val;
+        rdb_get(s.key, btree, superblock, &val, ql_env.trace.get_or_null());
+        res->initial_val = val.data;
     }
 
     void operator()(const point_read_t &get) {
@@ -337,7 +347,7 @@ private:
 
 class datum_replacer_t : public btree_batched_replacer_t {
 public:
-    datum_replacer_t(const batched_insert_t &bi)
+    explicit datum_replacer_t(const batched_insert_t &bi)
         : datums(&bi.inserts), conflict_behavior(bi.conflict_behavior),
           pkey(bi.pkey), return_vals(bi.return_vals) { }
     counted_t<const ql::datum_t> replace(const counted_t<const ql::datum_t> &d,

@@ -10,7 +10,7 @@ namespace ql {
 class datum_term_t : public term_t {
 public:
     explicit datum_term_t(protob_t<const Term> t)
-        : term_t(t), raw_val(new_val(make_counted<const datum_t>(&t->datum()))) { }
+        : term_t(t), raw_val(new_val(to_datum(&t->datum()))) { }
 private:
     void accumulate_captures(var_captures_t *) const FINAL { /* do nothing */ }
     bool is_deterministic() const FINAL { return true; }
@@ -50,7 +50,8 @@ public:
         : op_term_t(env, term, argspec_t(0, -1)) { }
 private:
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
-        datum_ptr_t acc(datum_t::R_ARRAY);
+        datum_array_builder_t acc;
+        acc.reserve(args->num_args());
         {
             profile::sampler_t sampler("Evaluating elements in make_array.", env->env->trace);
             for (size_t i = 0; i < args->num_args(); ++i) {
@@ -58,7 +59,7 @@ private:
                 sampler.new_sample();
             }
         }
-        return new_val(acc.to_counted());
+        return new_val(std::move(acc).to_counted());
     }
     const char *name() const FINAL { return "make_array"; }
 
@@ -92,7 +93,7 @@ public:
     counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t flags) const {
         bool literal_ok = flags & LITERAL_OK;
         eval_flags_t new_flags = literal_ok ? LITERAL_OK : NO_FLAGS;
-        datum_ptr_t acc(datum_t::R_OBJECT);
+        datum_object_builder_t acc;
         {
             profile::sampler_t sampler("Evaluating elements in make_obj.", env->env->trace);
             for (auto it = optargs.begin(); it != optargs.end(); ++it) {
@@ -102,7 +103,7 @@ public:
                 sampler.new_sample();
             }
         }
-        return new_val(acc.to_counted());
+        return new_val(std::move(acc).to_counted());
     }
 
     int parallelization_level() const FINAL {

@@ -21,6 +21,7 @@
 #include "perfmon/perfmon.hpp"
 #include "protocol_api.hpp"
 #include "rdb_protocol/changefeed.hpp"
+#include "rdb_protocol/context.hpp"
 #include "region/region.hpp"
 #include "repli_timestamp.hpp"
 #include "rdb_protocol/shards.hpp"
@@ -29,17 +30,10 @@
 class store_t;
 class buf_lock_t;
 template <class> class clone_ptr_t;
-class extproc_pool_t;
-class cluster_directory_metadata_t;
 template <class> class cow_ptr_t;
 template <class> class cross_thread_watchable_variable_t;
 class cross_thread_signal_t;
-class databases_semilattice_metadata_t;
-template <class> class directory_read_manager_t;
-class namespace_repo_t;
-class namespaces_semilattice_metadata_t;
 struct secondary_index_t;
-template <class> class semilattice_readwrite_view_t;
 class traversal_progress_combiner_t;
 template <class> class watchable_t;
 class Term;
@@ -181,77 +175,6 @@ enum class sindex_multi_bool_t { SINGLE = 0, MULTI = 1};
 ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(sindex_multi_bool_t, int8_t,
         sindex_multi_bool_t::SINGLE, sindex_multi_bool_t::MULTI);
 
-class auth_semilattice_metadata_t;
-class cluster_semilattice_metadata_t;
-class mailbox_manager_t;
-
-class rdb_context_t {
-public:
-    // Used by unit tests.
-    rdb_context_t();
-    // Also used by unit tests.
-    rdb_context_t(extproc_pool_t *extproc_pool,
-                  base_namespace_repo_t *ns_repo,
-                  boost::shared_ptr< semilattice_readwrite_view_t<cluster_semilattice_metadata_t> > cluster_metadata,
-                  uuid_u machine_id);
-
-    // The "real" constructor used outside of unit tests.
-    rdb_context_t(extproc_pool_t *_extproc_pool,
-                  mailbox_manager_t *mailbox_manager,
-                  namespace_repo_t *_ns_repo,
-                  boost::shared_ptr< semilattice_readwrite_view_t<cluster_semilattice_metadata_t> > _cluster_metadata,
-                  boost::shared_ptr< semilattice_readwrite_view_t<auth_semilattice_metadata_t> > _auth_metadata,
-                  directory_read_manager_t<cluster_directory_metadata_t> *_directory_read_manager,
-                  uuid_u _machine_id,
-                  perfmon_collection_t *global_stats,
-                  const std::string &_reql_http_proxy);
-    ~rdb_context_t();
-
-    cow_ptr_t<namespaces_semilattice_metadata_t> get_namespaces_metadata();
-
-    clone_ptr_t< watchable_t< cow_ptr_t<namespaces_semilattice_metadata_t> > >
-    get_namespaces_watchable();
-
-    // This could soooo be optimized if you don't want to copy the whole thing.
-    void get_databases_metadata(databases_semilattice_metadata_t *out);
-
-    clone_ptr_t< watchable_t<databases_semilattice_metadata_t> >
-    get_databases_watchable();
-
-    extproc_pool_t *extproc_pool;
-    base_namespace_repo_t *ns_repo;
-
-    boost::shared_ptr< semilattice_readwrite_view_t<
-                           cluster_semilattice_metadata_t> > cluster_metadata;
-    boost::shared_ptr< semilattice_readwrite_view_t<auth_semilattice_metadata_t> >
-    auth_metadata;
-    directory_read_manager_t<cluster_directory_metadata_t> *directory_read_manager;
-    uuid_u machine_id;
-
-    mailbox_manager_t *manager;
-    scoped_ptr_t<ql::changefeed::client_t> changefeed_client;
-
-    perfmon_collection_t ql_stats_collection;
-    perfmon_membership_t ql_stats_membership;
-    perfmon_counter_t ql_ops_running;
-    perfmon_membership_t ql_ops_running_membership;
-
-    const std::string reql_http_proxy;
-
-private:
-    void help_construct_cross_thread_watchables();
-
-    /* These arrays contain a watchable for each thread.
-       i.e. cross_thread_namespace_watchables[0] is a watchable for thread 0.  (In
-       the bogus unit testing default-constructed rdb_context_t, these are arrays
-       with empty scoped pointers.) */
-    scoped_array_t< scoped_ptr_t< cross_thread_watchable_variable_t< cow_ptr_t<namespaces_semilattice_metadata_t> > > > cross_thread_namespace_watchables;
-
-    scoped_array_t< scoped_ptr_t< cross_thread_watchable_variable_t< databases_semilattice_metadata_t> > > cross_thread_database_watchables;
-
-    DISABLE_COPYING(rdb_context_t);
-};
-
 struct point_read_response_t {
     counted_t<const ql::datum_t> data;
     point_read_response_t() { }
@@ -322,14 +245,25 @@ struct changefeed_stamp_response_t {
     // machines and don't synchronize with each other.)
     std::map<uuid_u, uint64_t> stamps;
 };
-
 RDB_DECLARE_SERIALIZABLE(changefeed_stamp_response_t);
+
+struct changefeed_point_stamp_response_t {
+    changefeed_point_stamp_response_t() { }
+    // The `uuid_u` below is the uuid of the changefeed `server_t`.  (We have
+    // different timestamps for each `server_t` because they're on different
+    // machines and don't synchronize with each other.)
+    std::pair<uuid_u, uint64_t> stamp;
+    counted_t<const ql::datum_t> initial_val;
+    RDB_DECLARE_ME_SERIALIZABLE;
+};
+RDB_SERIALIZE_OUTSIDE(changefeed_point_stamp_response_t);
 
 struct read_response_t {
     typedef boost::variant<point_read_response_t,
                            rget_read_response_t,
                            changefeed_subscribe_response_t,
                            changefeed_stamp_response_t,
+                           changefeed_point_stamp_response_t,
                            distribution_read_response_t,
                            sindex_list_response_t,
                            sindex_status_response_t> variant_t;
@@ -465,14 +399,25 @@ public:
     ql::changefeed::client_t::addr_t addr;
     region_t region;
 };
-
 RDB_DECLARE_SERIALIZABLE(changefeed_stamp_t);
+
+// This is a separate class because it needs to shard and unshard differently.
+class changefeed_point_stamp_t {
+public:
+    changefeed_point_stamp_t() { }
+    explicit changefeed_point_stamp_t(ql::changefeed::client_t::addr_t _addr,
+                                      store_key_t &&_key)
+        : addr(std::move(_addr)), key(std::move(_key)) { }
+    ql::changefeed::client_t::addr_t addr;
+    store_key_t key;
+};
 
 struct read_t {
     typedef boost::variant<point_read_t,
                            rget_read_t,
                            changefeed_subscribe_t,
                            changefeed_stamp_t,
+                           changefeed_point_stamp_t,
                            distribution_read_t,
                            sindex_list_t,
                            sindex_status_t> variant_t;

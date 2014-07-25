@@ -583,9 +583,9 @@ counted_t<const ql::datum_t> js_make_datum(const v8::Handle<v8::Value> &value,
             result = make_counted<const ql::datum_t>(num_val);
         }
     } else if (value->IsBoolean()) {
-        result = make_counted<const ql::datum_t>(ql::datum_t::R_BOOL, value->BooleanValue());
+        result = ql::datum_t::boolean(value->BooleanValue());
     } else if (value->IsNull()) {
-        result = make_counted<const ql::datum_t>(ql::datum_t::R_NULL);
+        result = ql::datum_t::null();
     } else {
         errmsg->assign(value->IsUndefined() ?
                        "Cannot convert javascript `undefined` to ql::datum_t." :
@@ -607,6 +607,10 @@ counted_t<const ql::datum_t> js_to_datum(const v8::Handle<v8::Value> &value, std
 v8::Handle<v8::Value> js_from_datum(const counted_t<const ql::datum_t> &datum) {
     guarantee(datum.has());
     switch (datum->get_type()) {
+    case ql::datum_t::type_t::R_BINARY:
+        // TODO: In order to support this, we need to link against a static version of
+        // V8, which provides an ArrayBuffer API.
+        crash("`r.binary` data cannot be used in `r.js`.");
     case ql::datum_t::type_t::R_BOOL:
         if (datum->as_bool()) {
             return v8::True();
@@ -653,7 +657,6 @@ v8::Handle<v8::Value> js_from_datum(const counted_t<const ql::datum_t> &datum) {
         }
     }
 
-    case ql::datum_t::type_t::UNINITIALIZED:
     default:
         crash("bad datum value in js extproc");
     }
