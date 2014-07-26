@@ -133,8 +133,9 @@ private:
         for (size_t i = 1; i < n; ++i) {
             paths.push_back(args->arg(env, i)->as_datum());
         }
-        pathspec_t pathspec(make_counted<const datum_t>(std::move(paths)), this);
-        return new_val(project(obj, pathspec, DONT_RECURSE));
+        pathspec_t pathspec(make_counted<const datum_t>(std::move(paths),
+                                                        env->env->limits), this);
+        return new_val(project(obj, pathspec, DONT_RECURSE, env->env->limits));
     }
     bool op_is_deterministic() const FINAL { return true; }
     const char *name() const FINAL { return "pluck"; }
@@ -155,8 +156,9 @@ private:
         for (size_t i = 1; i < n; ++i) {
             paths.push_back(args->arg(env, i)->as_datum());
         }
-        pathspec_t pathspec(make_counted<const datum_t>(std::move(paths)), this);
-        return new_val(unproject(obj, pathspec, DONT_RECURSE));
+        pathspec_t pathspec(make_counted<const datum_t>(std::move(paths),
+                                                        env->env->limits), this);
+        return new_val(unproject(obj, pathspec, DONT_RECURSE, env->env->limits));
     }
     bool op_is_deterministic() const FINAL { return true; }
     const char *name() const FINAL { return "without"; }
@@ -232,7 +234,8 @@ private:
         for (size_t i = 1; i < n; ++i) {
             paths.push_back(args->arg(env, i)->as_datum());
         }
-        pathspec_t pathspec(make_counted<const datum_t>(std::move(paths)), this);
+        pathspec_t pathspec(make_counted<const datum_t>(std::move(paths),
+                                                        env->env->limits), this);
         return new_val_bool(contains(obj, pathspec));
     }
     bool op_is_deterministic() const FINAL { return true; }

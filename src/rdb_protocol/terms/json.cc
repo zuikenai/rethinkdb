@@ -19,7 +19,7 @@ public:
                  (data.size() > 40
                   ? (data.to_std().substr(0, 37) + "...").c_str()
                   : data.c_str())));
-        return new_val(to_datum(cjson.get()));
+        return new_val(to_datum(cjson.get(), env->env->limits));
     }
 
     int parallelization_level() const FINAL {
@@ -35,4 +35,3 @@ counted_t<term_t> make_json_term(compile_env_t *env, const protob_t<const Term> 
     return make_counted<json_term_t>(env, term);
 }
 } // namespace ql
-
