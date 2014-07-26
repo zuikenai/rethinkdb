@@ -774,9 +774,10 @@ public:
               boost::optional<sindex_data_t> &&_sindex,
               const key_range_t &range);
 
-    virtual done_traversing_t handle_pair(scoped_key_value_t &&keyvalue,
-                               concurrent_traversal_fifo_enforcer_signal_t waiter)
-    THROWS_ONLY(interrupted_exc_t);
+    done_traversing_t handle_pair(scoped_key_value_t &&keyvalue,
+                                  concurrent_traversal_fifo_enforcer_signal_t waiter)
+        THROWS_ONLY(interrupted_exc_t) FINAL;
+
     void finish() THROWS_ONLY(interrupted_exc_t);
 private:
     // At this moment in time, we support evaluating transforms in parallel but
@@ -821,9 +822,10 @@ void rget_cb_t::finish() THROWS_ONLY(interrupted_exc_t) {
 }
 
 // Handle a keyvalue pair.  Returns whether or not we're done early.
-done_traversing_t rget_cb_t::handle_pair(scoped_key_value_t &&keyvalue,
-                              concurrent_traversal_fifo_enforcer_signal_t waiter)
-THROWS_ONLY(interrupted_exc_t) {
+done_traversing_t rget_cb_t::handle_pair(
+        scoped_key_value_t &&keyvalue,
+        concurrent_traversal_fifo_enforcer_signal_t waiter)
+    THROWS_ONLY(interrupted_exc_t) {
     sampler->new_sample();
 
     if (bad_init || boost::get<ql::exc_t>(&io.response->result) != NULL) {
