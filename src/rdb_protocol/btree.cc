@@ -828,9 +828,7 @@ private:
 
     // RSI: Something involving this job_data_t or io_data_t is where the
     // parallelization might happen.
-    // How do get data in/out.
-    const io_data_t io;
-    // What to do next (stateful).
+    io_data_t io;
     job_data_t job;
     // Relevant sindex info, maybe.
     const boost::optional<sindex_data_t> sindex;
@@ -895,15 +893,19 @@ done_traversing_t rget_cb_t::handle_pair(
     // lets the buf_lock_t and associated blobs get released.
     keyvalue.reset();
 
-    // Waits for our exclusive turn.
-    waiter.wait_interruptible();
-
-    try {
-        // Update the last considered key.
+    // Update the last considered key.
+    {
+        ASSERT_NO_CORO_WAITING;
         if ((io.response->last_key < key && !reversed(job.sorting)) ||
             (io.response->last_key > key && reversed(job.sorting))) {
             io.response->last_key = key;
         }
+    }
+
+    // Waits for our exclusive turn.
+    waiter.wait_interruptible();
+
+    try {
 
         // Check whether we're out of sindex range.
         counted_t<const ql::datum_t> sindex_val; // NULL if no sindex.
