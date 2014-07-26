@@ -793,7 +793,6 @@ private:
     const boost::optional<sindex_data_t> sindex; // Optional sindex information.
 
     // State for internal bookkeeping.
-    bool bad_init;
     scoped_ptr_t<profile::disabler_t> disabler;
     scoped_ptr_t<profile::sampler_t> sampler;
 };
@@ -804,8 +803,7 @@ rget_cb_t::rget_cb_t(io_data_t &&_io,
                      const key_range_t &range)
     : io(std::move(_io)),
       job(std::move(_job)),
-      sindex(std::move(_sindex)),
-      bad_init(false) {
+      sindex(std::move(_sindex)) {
     io.response->last_key = !reversed(job.sorting)
         ? range.left
         : (!range.right.unbounded ? range.right.key : store_key_t::max());
@@ -828,7 +826,7 @@ done_traversing_t rget_cb_t::handle_pair(
     THROWS_ONLY(interrupted_exc_t) {
     sampler->new_sample();
 
-    if (bad_init || boost::get<ql::exc_t>(&io.response->result) != NULL) {
+    if (NULL != boost::get<ql::exc_t>(&io.response->result)) {
         return done_traversing_t::YES;
     }
 
