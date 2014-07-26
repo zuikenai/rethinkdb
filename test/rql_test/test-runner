@@ -15,7 +15,7 @@ import test_util
 
 try:
     unicode
-except:
+except NameError:
     unicode = str
 
 # -- settings
@@ -37,10 +37,11 @@ class SrcLang(object):
     interpreter_version = None
     interpreter_env_name = None
     
-    driver_source_env_name = None
     driver_source_path = None
     driver_build_env_name = None
     driver_build_path = None
+    
+    instance_setup = False
     
     # -- class variables
     
@@ -53,6 +54,9 @@ class SrcLang(object):
         if singletonName not in cls._singletons:
             cls._singletons[singletonName] = super(SrcLang, cls).__new__(cls)
         return cls._singletons[singletonName]
+    
+    def __init__(self):
+        self.instance_setup = True
     
     # Returns the approriate line comment string
     def comment(self):
@@ -111,7 +115,8 @@ class SrcLang(object):
                         self.interpreter_version = self.version_check(candidatePath)
                         executablePath = candidatePath
                         break
-                    except: pass
+                    except Exception:
+                        pass
         else:
             self.interpreter_version = self.version_check(executablePath) # execption on failure
             
@@ -147,7 +152,6 @@ class PyLang(SrcLang):
     minVersion = None
     maxVersion = None
     
-    driver_source_env_name = 'PYTHON_DRIVER_SRC_DIR'
     driver_source_path = os.getenv('PYTHON_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'python')
     driver_build_env_name = 'PYTHON_DRIVER_DIR'
     driver_build_path = os.getenv('PYTHON_DRIVER_DIR') or os.path.join(utils.project_root_dir(), 'build', 'drivers', 'python')
@@ -155,6 +159,10 @@ class PyLang(SrcLang):
     polyglot_language_header = os.path.join(os.path.dirname(__file__), 'drivers', 'driver.py')
     
     def __init__(self, version, interpreter_env_name='PYTHON'):
+        if self.instance_setup is True:
+            return
+        
+        super(PyLang, self).__init__()
         
         self.display_name = 'python ' + version
         self.test_types = []
@@ -166,7 +174,7 @@ class PyLang(SrcLang):
         self.minVersion = distutils.version.LooseVersion(version)
         self.maxVersion = distutils.version.LooseVersion(version + '.999')
         
-        if version not in (None, ''):
+        if version != '':
             lastVersion = None
             workingVersion = version
             while lastVersion != workingVersion:
@@ -177,11 +185,10 @@ class PyLang(SrcLang):
                 workingVersion = os.path.splitext(workingVersion)[0]
         self.test_types.append('py')
         self.interpreter_name_exe_names.append('python')
-        
     
     def langrepr(self, val):
         encoded = None
-        if not isinstance(val, unicode) or unicode == str:
+        if not isinstance(val, unicode):
             encoded = repr(str(val))
         else:
             encoded = repr(unicode(val))
@@ -194,13 +201,13 @@ class PyLang(SrcLang):
         return re.sub("(?<!\"|')null(?!\"|')", 'None', strng)
     
     def get_interpreter_version(self, executablePath):
-        verionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        output, __ = verionCheckProcess.communicate()
+        versionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, __ = versionCheckProcess.communicate()
         
-        if verionCheckProcess.returncode != 0:
+        if versionCheckProcess.returncode != 0:
             raise test_exceptions.TestingFrameworkException(detail='Unable to determine the version of %s' % executablePath)
         
-        versionNumbers = re.findall(r'\b([\d\.]+)\b', str(output))
+        versionNumbers = re.findall(r'\b([\d\.]+)\b', str(output.decode('utf-8')))
         if len(versionNumbers) != 1:
             raise test_exceptions.TestingFrameworkException(detail='Got multiple possible version numbers for %s' % executablePath)
         
@@ -215,7 +222,6 @@ class JsLang(SrcLang):
     minVersion = None # no version requirements yet
     maxVersion = None
     
-    driver_source_env_name = 'JAVASCRIPT_DRIVER_SRC_DIR'
     driver_source_path = os.getenv('JAVASCRIPT_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'javascript')
     driver_build_env_name = 'JAVASCRIPT_DRIVER_DIR'
     driver_build_path = os.getenv('JAVASCRIPT_DRIVER_DIR') or os.path.join(utils.project_root_dir(), 'build', 'packages', 'js')
@@ -243,13 +249,13 @@ class JsLang(SrcLang):
             return re.sub('__', '_', name)
     
     def get_interpreter_version(self, executablePath):
-        verionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        output, __ = verionCheckProcess.communicate()
+        versionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, __ = versionCheckProcess.communicate()
         
-        if verionCheckProcess.returncode != 0:
+        if versionCheckProcess.returncode != 0:
             raise test_exceptions.TestingFrameworkException(detail='Unable to determine the version of %s' % executablePath)
         
-        versionNumber = str(output).lstrip('v').strip()
+        versionNumber = str(output.decode('utf-8')).lstrip('v').strip()
         return distutils.version.LooseVersion(versionNumber)
 
 class RbLang(SrcLang):
@@ -261,7 +267,6 @@ class RbLang(SrcLang):
     minVersion = distutils.version.LooseVersion('1.9')
     maxVersion = distutils.version.LooseVersion('2.9')
     
-    driver_source_env_name = 'RUBY_DRIVER_SRC_DIR'
     driver_source_path = os.getenv('RUBY_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'ruby')
     driver_build_env_name = 'RUBY_DRIVER_DIR'
     driver_build_path = os.getenv('RUBY_DRIVER_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'ruby', 'lib')
@@ -291,13 +296,13 @@ class RbLang(SrcLang):
     
     def get_interpreter_version(self, executablePath):
         '''Return the version string for this interpreter'''
-        verionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        output, __ = verionCheckProcess.communicate()
+        versionCheckProcess = subprocess.Popen([executablePath, '--version'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, __ = versionCheckProcess.communicate()
         
-        if verionCheckProcess.returncode != 0:
+        if versionCheckProcess.returncode != 0:
             raise test_exceptions.TestingFrameworkException(detail='Unable to determine the version of %s' % executablePath)
         
-        versionNumber = str(output.split()[1]).strip()
+        versionNumber = str(output.decode('utf-8').split()[1]).strip()
         return distutils.version.LooseVersion(versionNumber)
 
 interpreters = {
@@ -551,7 +556,7 @@ def check_language(option, opt_str, value, parser):
             if language not in selectedValues:
                 selectedValues.append(language)
                 break # default is to only take one language from a group
-        except:
+        except Exception:
             continue
     
     if foundAny is False:
@@ -661,7 +666,7 @@ def cleanup(*args):
     for processGroupId in runningProcessGroupsIds:
         try:
             os.killpg(processGroupId, signal.SIGKILL) # TODO: police this
-        except:
+        except Exception:
             pass
     if len(args) == 2 and args[0] == signal.SIGINT:
         sys.exit(130) # standard signal.SIGINT exit code
@@ -741,7 +746,7 @@ def main():
                     language.get_interpreter_path()
                     options.languages.append(language)
                     break
-                except: pass
+                except Exception: pass
         if len(options.languages) == 0:
             parser.error('Unable to find interperters for any of the default languages')
     
@@ -944,7 +949,7 @@ def main():
             if testProcessGroupId is not None:
                 try:
                     os.killpg(testProcessGroupId, signal.SIGINT) # TODO: police this
-                except:
+                except Exception:
                     pass
             if testProcessGroupId in runningProcessGroupsIds:
                 runningProcessGroupsIds.remove(testProcessGroupId)
