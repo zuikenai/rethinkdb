@@ -375,7 +375,11 @@ class TestGroup(object):
             
             # - write the shebang line
             
-            outputFile.write('#!%s\n\n' % language.get_interpreter_path())
+            outputFile.write('#!%s\n' % language.get_interpreter_path())
+            
+            # - write in the encoding (mostly for Python2.6)
+            
+            outputFile.write('%s -*- coding: utf-8 -*-\n\n' % language.comment())
             
             # - mark start of the header/driver
             
