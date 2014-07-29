@@ -90,6 +90,7 @@ private:
                 &error)) {
             rfail(base_exc_t::GENERIC, "%s", error.c_str());
         }
+
         return "created";
     }
     const char *name() const FINAL { return "db_create"; }
