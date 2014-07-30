@@ -35,13 +35,13 @@ public:
     /* All of these methods return `true` on success and `false` on failure; if they
     fail, they will set `*error_out` to a description of the problem. They can all throw
     `interrupted_exc_t`.
-    
+
     These methods are safe to call from any thread, and the calls can overlap
     concurrently in arbitrary ways. By the time a method returns, any changes it makes
     must be visible on every thread. */
 
     virtual bool db_create(const name_string_t &name,
-            signal_t *interruptor, std::string *error_out) = 0; 
+            signal_t *interruptor, std::string *error_out) = 0;
     virtual bool db_drop(const name_string_t &name,
             signal_t *interruptor, std::string *error_out) = 0;
     virtual bool db_list(

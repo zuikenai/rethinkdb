@@ -247,6 +247,7 @@ private:
         case Term::TABLE_LIST:
         case Term::INDEX_LIST:
         case Term::INDEX_STATUS:
+        case Term::SLEEP:
             return false;
         default: unreachable();
         }
@@ -415,6 +416,7 @@ private:
         case Term::OCTOBER:
         case Term::NOVEMBER:
         case Term::DECEMBER:
+        case Term::SLEEP:
             return false;
         default: unreachable();
         }

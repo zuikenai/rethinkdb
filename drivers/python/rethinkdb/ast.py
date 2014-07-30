@@ -353,6 +353,9 @@ class RqlQuery(object):
     def skip(self, *args):
         return Skip(self, *args)
 
+    def sleep(self, *args):
+        return Sleep(self, *args)
+
     def limit(self, *args):
         return Limit(self, *args)
 
@@ -843,6 +846,10 @@ class Slice(RqlBracketQuery):
             return T(args[0], '[', args[1], ':', args[2], ']')
         else:
             return RqlBracketQuery.compose(self, args, optargs)
+
+class Sleep(RqlMethodQuery):
+    tt = pTerm.SLEEP
+    st = 'sleep'
 
 class Skip(RqlMethodQuery):
     tt = pTerm.SKIP

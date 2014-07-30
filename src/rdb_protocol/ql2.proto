@@ -655,6 +655,9 @@ message Term {
 
         // BINARY is client-only at the moment, it is not supported on the server
         // BINARY = 155; // STRING -> PSEUDOTYPE(BINARY)
+
+        // RSI This is for debugging parallelization, remove this.
+        SLEEP = 888;
     }
     optional TermType type = 1;
 

@@ -231,6 +231,26 @@ private:
     }
 };
 
+class sleep_term_t : public op_term_t {
+public:
+    sleep_term_t(compile_env_t *env, const protob_t<const Term> &term)
+        : op_term_t(env, term, argspec_t(2)) { }
+private:
+    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+        double seconds = args->arg(env, 1)->as_num();
+
+        int64_t milliseconds = std::max<int64_t>(0, seconds * 1000);
+        nap(milliseconds, env->env->interruptor);
+        return args->arg(env, 0);
+    }
+
+    const char *name() const FINAL { return "sleep"; }
+    int parallelization_level() const FINAL {
+        return std::max(1, params_parallelization_level());
+    }
+    bool op_is_deterministic() const FINAL { return true; }
+};
+
 counted_t<term_t> make_iso8601_term(compile_env_t *env, const protob_t<const Term> &term) {
     return make_counted<iso8601_term_t>(env, term);
 }
@@ -265,6 +285,10 @@ counted_t<term_t> make_time_term(compile_env_t *env, const protob_t<const Term> 
 counted_t<term_t> make_portion_term(compile_env_t *env, const protob_t<const Term> &term,
                                     pseudo::time_component_t component) {
     return make_counted<portion_term_t>(env, term, component);
+}
+
+counted_t<term_t> make_sleep_term(compile_env_t *env, const protob_t<const Term> &term) {
+    return make_counted<sleep_term_t>(env, term);
 }
 
 } // namespace ql

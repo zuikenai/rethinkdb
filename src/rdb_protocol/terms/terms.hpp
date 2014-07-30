@@ -256,6 +256,8 @@ counted_t<term_t> make_time_term(
 counted_t<term_t> make_portion_term(
     compile_env_t *env, const protob_t<const Term> &term,
                                     pseudo::time_component_t component);
+counted_t<term_t> make_sleep_term(
+    compile_env_t *env, const protob_t<const Term> &term);
 
 // type_manip.cc
 counted_t<term_t> make_coerce_term(

@@ -202,6 +202,8 @@ class RDBVal extends TermBase
 
     default: (args...) -> new Default {}, @, args...
 
+    sleep: (args...) -> new Sleep {}, @, args...
+
     or: (args...) -> new Any {}, @, args...
     and: (args...) -> new All {}, @, args...
 
@@ -512,6 +514,10 @@ class UserError extends RDBOp
 class Random extends RDBOp
     tt: protoTermType.RANDOM
     st: 'random'
+
+class Sleep extends RDBOp
+    tt: protoTermType.SLEEP
+    st: 'sleep'
 
 class ImplicitVar extends RDBOp
     tt: protoTermType.IMPLICIT_VAR
