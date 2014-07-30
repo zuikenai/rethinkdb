@@ -23,6 +23,16 @@ try:
 except AttributeError:
     dict_items = lambda d: d.items()
 
+def decodeUFTPipe(inputPipe):
+    # attempt to decode input as utf-8 with fallbacks to get something useful
+    try:
+        return inputPipe.decode('utf-8', errors='ignore')
+    except TypeError:
+        try:
+            return inputPipe.decode('utf-8')
+        except UnicodeError:
+            return repr(inputPipe)
+
 class Query(object):
     def __init__(self, type, token, term, global_optargs):
         self.type = type
@@ -146,7 +156,7 @@ class Connection(object):
 
         if response != b"SUCCESS":
             self.close(noreply_wait=False)
-            raise RqlDriverError("Server dropped connection with message: \"%s\"" % response.decode('utf-8').strip())
+            raise RqlDriverError("Server dropped connection with message: \"%s\"" % decodeUFTPipe(response).strip())
 
         # Connection is now initialized
 
