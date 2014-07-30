@@ -20,9 +20,9 @@ try:
 except NameError:
     unicode = str
 try:
-	xrange
+    xrange
 except NameError:
-	xrange = range
+    xrange = range
 try:
     {}.iteritems
     dict_items = lambda d: d.iteritems()
