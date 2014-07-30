@@ -12,7 +12,7 @@ import rethinkdb as r
 try:
     import cPickle as pickle
 except ImportError:
-	import pickle
+    import pickle
 try:
     from itertools import imap
 except ImportError:
