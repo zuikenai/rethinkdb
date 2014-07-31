@@ -137,6 +137,7 @@ MUST_USE archive_result_t datum_deserialize(
     // Using position should make this function take linear time, not
     // sz*log(sz) time.
     auto position = m->begin();
+    m->reserve(sz);
 
     for (uint64_t i = 0; i < sz; ++i) {
         std::pair<std::string, counted_t<const datum_t> > p;
