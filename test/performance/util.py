@@ -13,13 +13,13 @@ except NameError:
 def gen_doc(size_doc, i):
     if size_doc == "small":
         return {
-            "field0": str(i / 1000),
+            "field0": str(i // 1000),
             "field1": str(i),
         }
     elif size_doc == "big":
         # Size between 17 and 18k
         return {
-            "field0": str(i / 1000),
+            "field0": str(i // 1000),
             "field1": str(i),
             "string": str(uuid.uuid1()),
             "int": i,
