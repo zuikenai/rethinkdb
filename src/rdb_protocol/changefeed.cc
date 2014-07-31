@@ -193,8 +193,8 @@ private:
 class feed_t : public home_thread_mixin_t, public slow_atomic_countable_t<feed_t> {
 public:
     feed_t(client_t *client,
-           mailbox_manager_t *manager,
-           base_namespace_repo_t *ns_repo,
+           mailbox_manager_t *_manager,
+           namespace_interface_t *ns_if,
            uuid_u uuid,
            std::string pkey,
            signal_t *interruptor);
@@ -674,7 +674,7 @@ void feed_t::each_point_sub(
 
 void feed_t::each_point_sub_cb(const std::function<void(subscription_t *)> &f, int i) {
     on_thread_t th((threadnum_t(i)));
-    for (const auto &pair : point_subs) {
+    for (auto const &pair : point_subs) {
         for (subscription_t *sub : pair.second[i]) {
             f(sub);
         }
@@ -747,9 +747,10 @@ void feed_t::mailbox_cb(stamped_msg_t msg) {
     }
 }
 
+/* This mustn't hold onto the `namespace_interface_t` after it returns */
 feed_t::feed_t(client_t *_client,
                mailbox_manager_t *_manager,
-               base_namespace_repo_t *ns_repo,
+               namespace_interface_t *ns_if,
                uuid_u _uuid,
                std::string _pkey,
                signal_t *interruptor)
@@ -761,12 +762,10 @@ feed_t::feed_t(client_t *_client,
       table_subs(get_num_threads()),
       num_subs(0),
       detached(false) {
-    base_namespace_repo_t::access_t access(ns_repo, uuid, interruptor);
-    namespace_interface_t *nif = access.get_namespace_if();
     read_t read(changefeed_subscribe_t(mailbox.get_address()),
                 profile_bool_t::DONT_PROFILE);
     read_response_t read_resp;
-    nif->read(read, &read_resp, order_token_t::ignore, interruptor);
+    ns_if->read(read, &read_resp, order_token_t::ignore, interruptor);
     auto resp = boost::get<changefeed_subscribe_response_t>(&read_resp.response);
 
     guarantee(resp != NULL);
@@ -836,17 +835,25 @@ feed_t::~feed_t() {
     }
 }
 
-client_t::client_t(mailbox_manager_t *_manager)
-  : manager(_manager) {
+client_t::client_t(
+        mailbox_manager_t *_manager,
+        const std::function<
+            namespace_interface_access_t(
+                const namespace_id_t &,
+                signal_t *)
+            > &_namespace_source) :
+    manager(_manager),
+    namespace_source(_namespace_source)
+{
     guarantee(manager != NULL);
 }
 client_t::~client_t() { }
 
 counted_t<datum_stream_t>
-client_t::new_feed(const counted_t<table_t> &tbl, keyspec_t &&keyspec, env_t *env) {
+client_t::new_feed(env_t *env, const namespace_id_t &uuid,
+        const protob_t<const Backtrace> &bt, const std::string &table_name,
+        const std::string &pkey, keyspec_t &&keyspec) {
     try {
-        uuid_u uuid = tbl->get_uuid();
-        std::string pkey = tbl->get_pkey();
         scoped_ptr_t<subscription_t> sub;
         boost::variant<scoped_ptr_t<table_sub_t>, scoped_ptr_t<point_sub_t> > presub;
         addr_t addr;
@@ -860,11 +867,13 @@ client_t::new_feed(const counted_t<table_t> &tbl, keyspec_t &&keyspec, env_t *en
             auto feed_it = feeds.find(uuid);
             if (feed_it == feeds.end()) {
                 spot.write_signal()->wait_lazily_unordered();
+                namespace_interface_access_t access =
+                        namespace_source(uuid, &interruptor);
                 // Even though we have the user's feed here, multiple
                 // users may share a feed_t, and this code path will
                 // only be run for the first one.  Rather than mess
                 // about, just use the defaults.
-                auto val = make_scoped<feed_t>(this, manager, env->ns_repo(), uuid,
+                auto val = make_scoped<feed_t>(this, manager, access.get(), uuid,
                                                pkey, &interruptor);
                 feed_it = feeds.insert(std::make_pair(uuid, std::move(val))).first;
             }
@@ -887,14 +896,13 @@ client_t::new_feed(const counted_t<table_t> &tbl, keyspec_t &&keyspec, env_t *en
             };
             sub.init(boost::apply_visitor(keyspec_visitor_t(feed), keyspec.spec));
         }
-        base_namespace_repo_t::access_t access(env->ns_repo(), uuid, env->interruptor);
-        namespace_interface_t *nif = access.get_namespace_if();
-        sub->start(env, nif, &addr);
-        return make_counted<stream_t>(std::move(sub), tbl->backtrace());
+        namespace_interface_access_t access = namespace_source(uuid, env->interruptor);
+        sub->start(env, access.get(), &addr);
+        return make_counted<stream_t>(std::move(sub), bt);
     } catch (const cannot_perform_query_exc_t &e) {
-        rfail_datum(ql::base_exc_t::GENERIC,
+        rfail_datum(base_exc_t::GENERIC,
                     "cannot subscribe to table `%s`: %s",
-                    tbl->name.c_str(), e.what());
+                    table_name.c_str(), e.what());
     }
 }
 
