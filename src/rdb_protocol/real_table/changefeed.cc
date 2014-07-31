@@ -392,7 +392,7 @@ public:
     void operator()(const msg_t::change_t &change) const {
         counted_t<const ql::datum_t> null = ql::datum_t::null();
         ql::configured_limits_t default_limits;
-        std::map<std::string, counted_t<const ql::datum_t> > obj{
+        std::unordered_map<std::string, counted_t<const ql::datum_t> > obj{
             {"new_val", change.new_val.has() ? change.new_val : null},
             {"old_val", change.old_val.has() ? change.old_val : null}
         };
@@ -489,7 +489,7 @@ subscription_t::get_els(ql::batcher_t *batcher, const signal_t *interruptor) {
     } else if (skipped != 0) {
         v.push_back(
             make_counted<const ql::datum_t>(
-                std::map<std::string, counted_t<const ql::datum_t> >{
+                std::unordered_map<std::string, counted_t<const ql::datum_t> >{
                     {"error", make_counted<const ql::datum_t>(
                             strprintf("Changefeed cache over array size limit, "
                                       "skipped %zu elements.", skipped))}}));

@@ -13,7 +13,7 @@ public:
 private:
     virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<const datum_t> d = args->arg(env, 0)->as_datum();
-        const std::map<std::string, counted_t<const datum_t> > &obj = d->as_object();
+        const std::unordered_map<std::string, counted_t<const datum_t> > &obj = d->as_object();
 
         std::vector<counted_t<const datum_t> > arr;
         arr.reserve(obj.size());

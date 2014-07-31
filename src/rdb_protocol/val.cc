@@ -138,7 +138,7 @@ counted_t<const datum_t> table_view_t::sindex_status(env_t *env,
     for (auto it = statuses.begin(); it != statuses.end(); ++it) {
         r_sanity_check(std_contains(sindexes, it->first) || sindexes.empty());
         sindexes.erase(it->first);
-        std::map<std::string, counted_t<const datum_t> > status =
+        std::unordered_map<std::string, counted_t<const datum_t> > status =
             it->second->as_object();
         std::string index_name = it->first;
         status["index"] = make_counted<const datum_t>(std::move(index_name));

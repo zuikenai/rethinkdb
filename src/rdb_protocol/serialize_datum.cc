@@ -100,7 +100,7 @@ MUST_USE archive_result_t datum_deserialize(read_stream_t *s, std::string *out) 
 
 
 size_t datum_serialized_size(
-        const std::map<std::string, counted_t<const datum_t> > &m) {
+        const std::unordered_map<std::string, counted_t<const datum_t> > &m) {
     size_t ret = varint_uint64_serialized_size(m.size());
     for (auto it = m.begin(), e = m.end(); it != e; ++it) {
         ret += datum_serialized_size(it->first);
@@ -111,7 +111,7 @@ size_t datum_serialized_size(
 
 serialization_result_t
 datum_serialize(write_message_t *wm,
-                const std::map<std::string, counted_t<const datum_t> > &m) {
+                const std::unordered_map<std::string, counted_t<const datum_t> > &m) {
     serialization_result_t res = serialization_result_t::SUCCESS;
     serialize_varint_uint64(wm, m.size());
     for (auto it = m.begin(), e = m.end(); it != e; ++it) {
@@ -123,7 +123,7 @@ datum_serialize(write_message_t *wm,
 
 MUST_USE archive_result_t datum_deserialize(
         read_stream_t *s,
-        std::map<std::string, counted_t<const datum_t> > *m) {
+        std::unordered_map<std::string, counted_t<const datum_t> > *m) {
     m->clear();
 
     uint64_t sz;
@@ -337,7 +337,7 @@ archive_result_t datum_deserialize(read_stream_t *s, counted_t<const datum_t> *d
         }
     } break;
     case datum_serialized_type_t::R_OBJECT: {
-        std::map<std::string, counted_t<const datum_t> > value;
+        std::unordered_map<std::string, counted_t<const datum_t> > value;
         res = datum_deserialize(s, &value);
         if (bad(res)) {
             return res;

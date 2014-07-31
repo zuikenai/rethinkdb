@@ -60,10 +60,10 @@ datum_t::data_wrapper_t::data_wrapper_t(std::vector<counted_t<const datum_t> > &
     type(R_ARRAY),
     r_array(new std::vector<counted_t<const datum_t> >(std::move(array))) { }
 
-datum_t::data_wrapper_t::data_wrapper_t(std::map<std::string,
+datum_t::data_wrapper_t::data_wrapper_t(std::unordered_map<std::string,
                                                  counted_t<const datum_t> > &&object) :
     type(R_OBJECT),
-    r_object(new std::map<std::string, counted_t<const datum_t> >(std::move(object))) { }
+    r_object(new std::unordered_map<std::string, counted_t<const datum_t> >(std::move(object))) { }
 
 datum_t::data_wrapper_t::~data_wrapper_t() {
     switch (type) {
@@ -117,19 +117,19 @@ datum_t::datum_t(std::vector<counted_t<const datum_t> > &&_array,
 datum_t::datum_t(std::vector<counted_t<const datum_t> > &&_array,
                  no_array_size_limit_check_t) : data(std::move(_array)) { }
 
-datum_t::datum_t(std::map<std::string, counted_t<const datum_t> > &&_object,
+datum_t::datum_t(std::unordered_map<std::string, counted_t<const datum_t> > &&_object,
                  const std::set<std::string> &allowed_pts)
     : data(std::move(_object)) {
     maybe_sanitize_ptype(allowed_pts);
 }
 
-datum_t::datum_t(std::map<std::string, counted_t<const datum_t> > &&_object,
+datum_t::datum_t(std::unordered_map<std::string, counted_t<const datum_t> > &&_object,
                  no_sanitize_ptype_t)
     : data(std::move(_object)) { }
 
 counted_t<const datum_t> to_datum(grouped_data_t &&gd,
                                   const configured_limits_t &limits) {
-    std::map<std::string, counted_t<const datum_t> > map;
+    std::unordered_map<std::string, counted_t<const datum_t> > map;
     map[datum_t::reql_type_string] = make_counted<const datum_t>("GROUPED_DATA");
 
     {
@@ -159,7 +159,7 @@ counted_t<const datum_t> datum_t::empty_array() {
 }
 
 counted_t<const datum_t> datum_t::empty_object() {
-    return make_counted<datum_t>(std::map<std::string, counted_t<const datum_t> >());
+    return make_counted<datum_t>(std::unordered_map<std::string, counted_t<const datum_t> >());
 }
 
 counted_t<const datum_t> datum_t::null() {
@@ -200,7 +200,7 @@ counted_t<const datum_t> to_datum(cJSON *json, const configured_limits_t &limits
         return make_counted<datum_t>(std::move(array), limits);
     } break;
     case cJSON_Object: {
-        std::map<std::string, counted_t<const datum_t> > map;
+        std::unordered_map<std::string, counted_t<const datum_t> > map;
         json_object_iterator_t it(json);
         while (cJSON *item = it.next()) {
             auto res = map.insert(std::make_pair(item->string, to_datum(item, limits)));
@@ -413,7 +413,7 @@ void datum_t::maybe_sanitize_ptype(const std::set<std::string> &allowed_pts) {
         }
         if (s == pseudo::binary_string) {
             // Clear the pseudotype data and convert it to binary data
-            scoped_ptr_t<std::map<std::string, counted_t<const datum_t> > >
+            scoped_ptr_t<std::unordered_map<std::string, counted_t<const datum_t> > >
                 obj_data(data.r_object);
             data.r_object = NULL;
 
@@ -462,7 +462,7 @@ counted_t<const datum_t> datum_t::drop_literals(bool *encountered_literal_out) c
     counted_t<const datum_t> copied_result;
 
     if (get_type() == R_OBJECT) {
-        const std::map<std::string, counted_t<const datum_t> > &obj = as_object();
+        const std::unordered_map<std::string, counted_t<const datum_t> > &obj = as_object();
         datum_object_builder_t builder;
 
         for (auto it = obj.begin(); it != obj.end(); ++it) {
@@ -829,7 +829,7 @@ counted_t<const datum_t> datum_t::get(size_t index, throw_bool_t throw_bool) con
 
 counted_t<const datum_t> datum_t::get(const std::string &key,
                                       throw_bool_t throw_bool) const {
-    std::map<std::string, counted_t<const datum_t> >::const_iterator it
+    std::unordered_map<std::string, counted_t<const datum_t> >::const_iterator it
         = as_object().find(key);
     if (it != as_object().end()) return it->second;
     if (throw_bool == THROW) {
@@ -839,7 +839,7 @@ counted_t<const datum_t> datum_t::get(const std::string &key,
     return counted_t<const datum_t>();
 }
 
-const std::map<std::string, counted_t<const datum_t> > &datum_t::as_object() const {
+const std::unordered_map<std::string, counted_t<const datum_t> > &datum_t::as_object() const {
     check_type(R_OBJECT);
     return *data.r_object;
 }
@@ -860,7 +860,7 @@ cJSON *datum_t::as_json_raw() const {
     } break;
     case R_OBJECT: {
         scoped_cJSON_t obj(cJSON_CreateObject());
-        for (std::map<std::string, counted_t<const datum_t> >::const_iterator
+        for (std::unordered_map<std::string, counted_t<const datum_t> >::const_iterator
                  it = data.r_object->begin(); it != data.r_object->end(); ++it) {
             obj.AddItemToObject(it->first.c_str(), it->second->as_json_raw());
         }
@@ -913,7 +913,7 @@ counted_t<const datum_t> datum_t::merge(counted_t<const datum_t> rhs) const {
     }
 
     datum_object_builder_t d(as_object());
-    const std::map<std::string, counted_t<const datum_t> > &rhs_obj = rhs->as_object();
+    const std::unordered_map<std::string, counted_t<const datum_t> > &rhs_obj = rhs->as_object();
     for (auto it = rhs_obj.begin(); it != rhs_obj.end(); ++it) {
         counted_t<const datum_t> sub_lhs = d.try_get(it->first);
         bool is_literal = it->second->is_ptype(pseudo::literal_string);
@@ -947,7 +947,7 @@ counted_t<const datum_t> datum_t::merge(counted_t<const datum_t> rhs,
                                         merge_resoluter_t f,
                                         const configured_limits_t &limits) const {
     datum_object_builder_t d(as_object());
-    const std::map<std::string, counted_t<const datum_t> > &rhs_obj = rhs->as_object();
+    const std::unordered_map<std::string, counted_t<const datum_t> > &rhs_obj = rhs->as_object();
     for (auto it = rhs_obj.begin(); it != rhs_obj.end(); ++it) {
         if (counted_t<const datum_t> left = get(it->first, NOTHROW)) {
             d.overwrite(it->first, f(it->first, left, it->second, limits));
@@ -1002,8 +1002,8 @@ int datum_t::cmp(const datum_t &rhs) const {
             }
             return pseudo_cmp(rhs);
         } else {
-            const std::map<std::string, counted_t<const datum_t> > &obj = as_object();
-            const std::map<std::string, counted_t<const datum_t> > &rhs_obj
+            const std::unordered_map<std::string, counted_t<const datum_t> > &obj = as_object();
+            const std::unordered_map<std::string, counted_t<const datum_t> > &rhs_obj
                 = rhs.as_object();
             auto it = obj.begin();
             auto it2 = rhs_obj.begin();
@@ -1068,7 +1068,7 @@ counted_t<const datum_t> to_datum(const Datum *d, const configured_limits_t &lim
         return std::move(out).to_counted();
     } break;
     case Datum::R_OBJECT: {
-        std::map<std::string, counted_t<const datum_t> > map;
+        std::unordered_map<std::string, counted_t<const datum_t> > map;
         const int count = d->r_object_size();
         for (int i = 0; i < count; ++i) {
             const Datum_AssocPair *ap = &d->r_object(i);
@@ -1139,7 +1139,8 @@ void datum_t::write_to_protobuf(Datum *d, use_json_t use_json) const {
         case R_OBJECT: {
             d->set_type(Datum::R_OBJECT);
             // We use rbegin and rend so that things print the way we expect.
-            for (auto it = data.r_object->rbegin(); it != data.r_object->rend(); ++it) {
+            // TODO! ^^
+            for (auto it = data.r_object->begin(); it != data.r_object->end(); ++it) {
                 Datum_AssocPair *ap = d->add_r_object();
                 ap->set_key(it->first);
                 it->second->write_to_protobuf(ap->mutable_val(), use_json);

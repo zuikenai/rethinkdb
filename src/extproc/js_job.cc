@@ -570,7 +570,7 @@ counted_t<const ql::datum_t> js_make_datum(const v8::Handle<v8::Value> &value,
             v8::Handle<v8::Array> properties = objh->GetPropertyNames();
             guarantee(!properties.IsEmpty());
 
-            std::map<std::string, counted_t<const ql::datum_t> > datum_map;
+            std::unordered_map<std::string, counted_t<const ql::datum_t> > datum_map;
 
             uint32_t len = properties->Length();
             for (uint32_t i = 0; i < len; ++i) {
@@ -669,7 +669,7 @@ v8::Handle<v8::Value> js_from_datum(const counted_t<const ql::datum_t> &datum) {
             return date;
         } else {
             v8::Handle<v8::Object> obj = v8::Object::New();
-            const std::map<std::string, counted_t<const ql::datum_t> > &source_map = datum->as_object();
+            const std::unordered_map<std::string, counted_t<const ql::datum_t> > &source_map = datum->as_object();
 
             for (auto it = source_map.begin(); it != source_map.end(); ++it) {
                 DECLARE_HANDLE_SCOPE(scope);

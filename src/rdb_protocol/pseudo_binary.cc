@@ -42,7 +42,7 @@ std::string encode_base64(const wire_string_t &data) {
     for (; remaining_bytes > 3;
          remaining_bytes -= 3) {
         binary_to_base64_chunk(chunk, encoded_chunk);
-        res.append(encoded_chunk, 4); 
+        res.append(encoded_chunk, 4);
         if (res.size() % 78 == 76) {
             res.append("\r\n");
         }
@@ -51,7 +51,7 @@ std::string encode_base64(const wire_string_t &data) {
 
     char partial_chunk[4] = { 0, 0, 0, 0 };
     for (size_t i = 0; i < remaining_bytes; ++i) {
-        partial_chunk[i] = chunk[i];       
+        partial_chunk[i] = chunk[i];
     }
     binary_to_base64_chunk(partial_chunk, encoded_chunk);
 
@@ -146,7 +146,7 @@ scoped_cJSON_t encode_base64_ptype(const wire_string_t &data) {
 
 // Given a `r.binary` pseudotype with base64 encoding, decodes it into a raw data string
 scoped_ptr_t<wire_string_t> decode_base64_ptype(
-        const std::map<std::string, counted_t<const datum_t> > &ptype) {
+        const std::unordered_map<std::string, counted_t<const datum_t> > &ptype) {
     bool has_data = false;
     scoped_ptr_t<wire_string_t> res;
     for (auto it = ptype.begin(); it != ptype.end(); ++it) {

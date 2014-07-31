@@ -203,11 +203,11 @@ real_table_t::sindex_status(ql::env_t *env, const std::set<std::string> &sindexe
     read_with_profile(env, read, &res, false);
     auto s_res = boost::get<sindex_status_response_t>(&res.response);
     r_sanity_check(s_res);
-    
+
     std::map<std::string, counted_t<const ql::datum_t> > statuses;
     for (const std::pair<std::string, rdb_protocol::single_sindex_status_t> &pair :
             s_res->statuses) {
-        std::map<std::string, counted_t<const ql::datum_t> > status;
+        std::unordered_map<std::string, counted_t<const ql::datum_t> > status;
         if (pair.second.blocks_processed != 0) {
             status["blocks_processed"] =
                 make_counted<const ql::datum_t>(

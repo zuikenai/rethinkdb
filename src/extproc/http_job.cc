@@ -338,7 +338,7 @@ std::string url_encode_fields(CURL *curl_handle,
         return std::string();
     }
 
-    const std::map<std::string, counted_t<const ql::datum_t> > &fields_map =
+    const std::unordered_map<std::string, counted_t<const ql::datum_t> > &fields_map =
         fields->as_object();
     std::map<std::string, std::string> translated_fields;
 
@@ -679,8 +679,8 @@ private:
     http_parser parser;
 
     RE2 link_parser;
-    std::map<std::string, counted_t<const ql::datum_t> > header_fields;
-    std::map<std::string, counted_t<const ql::datum_t> > link_headers;
+    std::unordered_map<std::string, counted_t<const ql::datum_t> > header_fields;
+    std::unordered_map<std::string, counted_t<const ql::datum_t> > link_headers;
     std::string current_field;
 };
 header_parser_singleton_t *header_parser_singleton_t::instance = NULL;

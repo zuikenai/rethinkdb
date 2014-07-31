@@ -4,7 +4,7 @@
 
 #include <float.h>
 
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <set>
 #include <string>
@@ -124,13 +124,13 @@ public:
     datum_t(std::vector<counted_t<const datum_t> > &&_array,
             no_array_size_limit_check_t);
     // This calls maybe_sanitize_ptype(allowed_pts).
-    explicit datum_t(std::map<std::string, counted_t<const datum_t> > &&object,
+    explicit datum_t(std::unordered_map<std::string, counted_t<const datum_t> > &&object,
                      const std::set<std::string> &allowed_pts = _allowed_pts);
 
     enum class no_sanitize_ptype_t { };
     // This .. does not call maybe_sanitize_ptype.
     // TODO(2014-08): Remove this constructor, it's a hack.
-    datum_t(std::map<std::string, counted_t<const datum_t> > &&object,
+    datum_t(std::unordered_map<std::string, counted_t<const datum_t> > &&object,
             no_sanitize_ptype_t);
 
     ~datum_t();
@@ -176,7 +176,7 @@ public:
     // Access an element of an array.
     counted_t<const datum_t> get(size_t index, throw_bool_t throw_bool = THROW) const;
     // Use of `get` is preferred to `as_object` when possible.
-    const std::map<std::string, counted_t<const datum_t> > &as_object() const;
+    const std::unordered_map<std::string, counted_t<const datum_t> > &as_object() const;
 
     // Access an element of an object.
     counted_t<const datum_t> get(const std::string &key,
@@ -269,7 +269,7 @@ private:
         explicit data_wrapper_t(scoped_ptr_t<wire_string_t> str);
         explicit data_wrapper_t(const char *cstr);
         explicit data_wrapper_t(std::vector<counted_t<const datum_t> > &&array);
-        data_wrapper_t(std::map<std::string, counted_t<const datum_t> > &&object);
+        data_wrapper_t(std::unordered_map<std::string, counted_t<const datum_t> > &&object);
 
         ~data_wrapper_t();
 
@@ -279,7 +279,7 @@ private:
             double r_num;
             wire_string_t *r_str;
             std::vector<counted_t<const datum_t> > *r_array;
-            std::map<std::string, counted_t<const datum_t> > *r_object;
+            std::unordered_map<std::string, counted_t<const datum_t> > *r_object;
         };
     private:
         DISABLE_COPYING(data_wrapper_t);
@@ -310,7 +310,7 @@ class datum_object_builder_t {
 public:
     datum_object_builder_t() { }
 
-    datum_object_builder_t(const std::map<std::string, counted_t<const datum_t> > &m)
+    datum_object_builder_t(const std::unordered_map<std::string, counted_t<const datum_t> > &m)
         : map(m) { }
 
     // Returns true if the insertion did _not_ happen because the key was already in
@@ -333,7 +333,7 @@ public:
             const std::set<std::string> &permissible_ptypes) RVALUE_THIS;
 
 private:
-    std::map<std::string, counted_t<const datum_t> > map;
+    std::unordered_map<std::string, counted_t<const datum_t> > map;
     DISABLE_COPYING(datum_object_builder_t);
 };
 

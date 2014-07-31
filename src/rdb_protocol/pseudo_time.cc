@@ -550,7 +550,7 @@ counted_t<const datum_t> time_in_tz(counted_t<const datum_t> t,
 }
 
 counted_t<const datum_t> make_time(double epoch_time, std::string tz) {
-    std::map<std::string, counted_t<const datum_t> > map
+    std::unordered_map<std::string, counted_t<const datum_t> > map
         = { { datum_t::reql_type_string, make_counted<const datum_t>(time_string) },
             { epoch_time_key, make_counted<const datum_t>(epoch_time) },
             { timezone_key, make_counted<const datum_t>(std::move(tz)) } };

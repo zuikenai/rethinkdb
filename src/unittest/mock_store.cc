@@ -6,7 +6,7 @@
 namespace unittest {
 
 write_t mock_overwrite(std::string key, std::string value) {
-    std::map<std::string, counted_t<const ql::datum_t> > m;
+    std::unordered_map<std::string, counted_t<const ql::datum_t> > m;
     m["id"] = make_counted<ql::datum_t>(std::string(key));
     m["value"] = make_counted<ql::datum_t>(std::move(value));
 

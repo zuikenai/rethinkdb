@@ -112,7 +112,7 @@ private:
 void check_url_params(const counted_t<const datum_t> &params,
                       pb_rcheckable_t *val) {
     if (params->get_type() == datum_t::R_OBJECT) {
-        const std::map<std::string, counted_t<const datum_t> > &params_map =
+        const std::unordered_map<std::string, counted_t<const datum_t> > &params_map =
             params->as_object();
         for (auto it = params_map.begin(); it != params_map.end(); ++it) {
             if (it->second->get_type() != datum_t::R_NUM &&
@@ -283,8 +283,8 @@ bool http_datum_stream_t::apply_depaginate(env_t *env, const http_result_t &res)
 
     // Provide an empty OBJECT datum instead of any non-existent arguments
     counted_t<const datum_t> empty
-        = make_counted<const datum_t>(std::map<std::string, counted_t<const datum_t> >());
-    std::map<std::string, counted_t<const datum_t> > arg_obj
+        = make_counted<const datum_t>(std::unordered_map<std::string, counted_t<const datum_t> >());
+    std::unordered_map<std::string, counted_t<const datum_t> > arg_obj
         = { { "params", opts.url_params.has() ? opts.url_params : empty },
             { "header", res.header.has() ? res.header : empty },
             { "body", res.body.has() ? res.body : empty } };
@@ -451,7 +451,7 @@ void http_term_t::get_header(scope_env_t *env,
     if (header.has()) {
         counted_t<const datum_t> datum_header = header->as_datum();
         if (datum_header->get_type() == datum_t::R_OBJECT) {
-            const std::map<std::string, counted_t<const datum_t> > &header_map =
+            const std::unordered_map<std::string, counted_t<const datum_t> > &header_map =
                 datum_header->as_object();
             for (auto it = header_map.begin(); it != header_map.end(); ++it) {
                 std::string str;
@@ -633,7 +633,7 @@ void http_term_t::get_data(
                 // encoding they need when they pass a string
                 data_out->assign(datum_data->as_str().to_std());
             } else if (datum_data->get_type() == datum_t::R_OBJECT) {
-                const std::map<std::string, counted_t<const datum_t> > &form_map =
+                const std::unordered_map<std::string, counted_t<const datum_t> > &form_map =
                     datum_data->as_object();
                 for (auto it = form_map.begin(); it != form_map.end(); ++it) {
                     std::string val_str = print_http_param(it->second,

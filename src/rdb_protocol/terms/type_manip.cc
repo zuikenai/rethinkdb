@@ -186,7 +186,7 @@ private:
 
                 // OBJECT -> ARRAY
                 if (start_type == R_OBJECT_TYPE && end_type == R_ARRAY_TYPE) {
-                    const std::map<std::string, counted_t<const datum_t> > &obj
+                    const std::unordered_map<std::string, counted_t<const datum_t> > &obj
                         = d->as_object();
                     std::vector<counted_t<const datum_t> > arr;
                     arr.reserve(obj.size());
@@ -276,7 +276,7 @@ private:
         v.reserve(groups->size());
         for (auto it = groups->begin(); it != groups->end(); ++it) {
             r_sanity_check(it->first.has() && it->second.has());
-            std::map<std::string, counted_t<const datum_t> > m =
+            std::unordered_map<std::string, counted_t<const datum_t> > m =
                 {{"group", std::move(it->first)}, {"reduction", std::move(it->second)}};
             v.push_back(make_counted<const datum_t>(std::move(m)));
         }

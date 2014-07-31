@@ -299,14 +299,14 @@ SPAWNER_TEST(JSProc, Passthrough) {
     // Object
     counted_t<const ql::datum_t> object_datum;
     {
-        std::map<std::string, counted_t<const ql::datum_t> > object_data;
+        std::unordered_map<std::string, counted_t<const ql::datum_t> > object_data;
         object_datum = make_counted<const ql::datum_t>(std::move(object_data));
         passthrough_test_internal(&pool, array_datum);
 
         for (size_t i = 0; i < 100; ++i) {
             object_data.insert(std::make_pair(std::string(i, 'a'),
                                               make_counted<const ql::datum_t>(static_cast<double>(i))));
-            std::map<std::string, counted_t<const ql::datum_t> > copied_data(object_data);
+            std::unordered_map<std::string, counted_t<const ql::datum_t> > copied_data(object_data);
             object_datum = make_counted<const ql::datum_t>(std::move(copied_data));
             passthrough_test_internal(&pool, array_datum);
         }

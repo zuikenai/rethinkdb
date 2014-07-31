@@ -20,7 +20,7 @@ void write_binary_to_protobuf(Datum *d, const wire_string_t &data);
 
 // Given a `r.binary` pseudotype with base64 encoding, decodes it into a raw data string
 scoped_ptr_t<wire_string_t> decode_base64_ptype(
-    const std::map<std::string, counted_t<const datum_t> > &ptype);
+    const std::unordered_map<std::string, counted_t<const datum_t> > &ptype);
 
 } // namespace pseudo
 } // namespace ql
