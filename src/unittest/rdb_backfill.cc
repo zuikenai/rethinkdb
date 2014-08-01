@@ -47,9 +47,7 @@ void run_with_broadcaster(
     io_backender_t io_backender(file_direct_io_mode_t::buffered_desired);
 
     extproc_pool_t extproc_pool(2);
-    rdb_context_t ctx(&extproc_pool,
-                      NULL,
-                      NULL);
+    rdb_context_t ctx(&extproc_pool, NULL);
 
     /* Set up a broadcaster and initial listener */
     test_store_t initial_store(&io_backender, &order_source, &ctx);

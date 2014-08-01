@@ -8,6 +8,11 @@ import yaml
 
 import atexit, collections, distutils.version, distutils.spawn, optparse, os, re, shutil, signal, stat, subprocess, sys, tempfile, time
 
+try:
+    import yaml
+except ImportError:
+    sys.exit('%s requires that PyYAML be installed' % os.path.basename(__file__))
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, "common"))
 import test_exceptions, utils
 sys.path.insert(0, os.path.dirname(__file__))
@@ -958,6 +963,8 @@ def main():
             if testProcessGroupId in runningProcessGroupsIds:
                 runningProcessGroupsIds.remove(testProcessGroupId)
             testProcessGroupId = None
+            sys.stderr.flush()
+            sys.stdout.flush()
     
     if len(failedTests) == 0:
         testNumberMessage = 'the 1 test'

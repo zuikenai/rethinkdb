@@ -267,18 +267,18 @@ class RqlQuery(object):
     def update(self, *args, **kwargs):
         kwargs.setdefault('non_atomic', ())
         kwargs.setdefault('durability', ())
-        kwargs.setdefault('return_vals', ())
+        kwargs.setdefault('return_changes', ())
         return Update(self, *[func_wrap(arg) for arg in args], **kwargs)
 
     def replace(self, *args, **kwargs):
         kwargs.setdefault('non_atomic', ())
         kwargs.setdefault('durability', ())
-        kwargs.setdefault('return_vals', ())
+        kwargs.setdefault('return_changes', ())
         return Replace(self, *[func_wrap(arg) for arg in args], **kwargs)
 
     def delete(self, *args, **kwargs):
         kwargs.setdefault('durability', ())
-        kwargs.setdefault('return_vals', ())
+        kwargs.setdefault('return_changes', ())
         return Delete(self, *args, **kwargs)
 
     # Rql type inspection
@@ -642,7 +642,7 @@ def reql_type_binary_to_bytes(obj):
     if not 'data' in obj:
         raise RqlDriverError('pseudo-type BINARY object %s does not have the ' \
                              'expected field "data".' % py_json.dumps(obj))
-    return RqlBinary(base64.b64decode(obj['data']))
+    return RqlBinary(base64.b64decode(obj['data'].encode('utf-8')))
 
 def convert_pseudotype(obj, format_opts):
     reql_type = obj.get('$reql_type$')
@@ -661,7 +661,11 @@ def convert_pseudotype(obj, format_opts):
             elif group_format != 'raw':
                 raise RqlDriverError("Unknown group_format run option \"%s\"." % group_format)
         elif reql_type == 'BINARY':
-            return reql_type_binary_to_bytes(obj)
+            binary_format = format_opts.get('binary_format')
+            if binary_format is None or binary_format == 'native':
+                return reql_type_binary_to_bytes(obj)
+            elif binary_format != 'raw':
+                raise RqlDriverError("Unknown binary_format run option \"%s\"." % binary_format)
         else:
             raise RqlDriverError("Unknown pseudo-type %s" % reql_type)
     # If there was no pseudotype, or the time format is raw, return the original object
@@ -957,7 +961,7 @@ class Table(RqlQuery):
     def insert(self, *args, **kwargs):
         kwargs.setdefault('conflict', ())
         kwargs.setdefault('durability', ())
-        kwargs.setdefault('return_vals', ())
+        kwargs.setdefault('return_changes', ())
         return Insert(self, *[expr(arg) for arg in args], **kwargs)
 
     def get(self, *args):
@@ -1268,7 +1272,7 @@ class Binary(RqlTopLevelQuery):
         return T('r.', self.st, '(bytes(', str(self.data), '))')
         
     def build(self):
-        return { '$reql_type$': 'BINARY', 'data': self.base64_data }
+        return { '$reql_type$': 'BINARY', 'data': self.base64_data.decode('utf-8') }
 
 class ToISO8601(RqlMethodQuery):
     tt = pTerm.TO_ISO8601
