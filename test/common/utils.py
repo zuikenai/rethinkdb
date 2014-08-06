@@ -151,17 +151,13 @@ def import_python_driver(targetDir=None):
     
     # - return the imported module
     
-    keptPaths = sys.path[:]
-    try:
-        moduleFile, pathname, desc = imp.find_module('rethinkdb', [os.path.dirname(driverDir)])
-        driverModule = imp.load_module('rethinkdb', moduleFile, pathname, desc)
-        if moduleFile is not None:
-            moduleFile.close()
-        loadedFrom = os.path.dirname(os.path.realpath(driverModule.__file__))
-        assert loadedFrom.startswith(driverDir), "The wrong version or the rethinkdb Python driver got imported. It should have been in %s but was from %s" % (driverDir, loadedFrom)
-        return driverModule
-    finally:
-        sys.path = keptPaths
+    moduleFile, pathname, desc = imp.find_module('rethinkdb', [os.path.dirname(driverDir)])
+    driverModule = imp.load_module('rethinkdb', moduleFile, pathname, desc)
+    if moduleFile is not None:
+        moduleFile.close()
+    loadedFrom = os.path.dirname(os.path.realpath(driverModule.__file__))
+    assert loadedFrom.startswith(driverDir), "The wrong version or the rethinkdb Python driver got imported. It should have been in %s but was from %s" % (driverDir, loadedFrom)
+    return driverModule
 
 class PerformContinuousAction(threading.Thread):
     '''Use to continuously perform an action on a table. Either provide an action (reql command without run) on instantiation, or subclass and override runAction'''
