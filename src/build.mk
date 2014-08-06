@@ -103,7 +103,10 @@ ifeq ($(OS),Linux)
   RT_CXXFLAGS += -D_FILE_OFFSET_BITS=64
 endif
 
-
+# Allow the user to turn off CPU-sharding, for some testing purposes.
+ifeq ($(NO_CPU_SHARDING),1)
+  RT_CXXFLAGS += -DCPU_SHARDING_FACTOR=1
+endif
 
 ifneq (1,$(ALLOW_WARNINGS))
   RT_CXXFLAGS += -Werror
