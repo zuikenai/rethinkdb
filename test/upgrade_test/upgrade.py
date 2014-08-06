@@ -31,6 +31,8 @@ r = utils.import_python_driver(new_repository)
 # Issue 2789 was that secondary indexes had bad key ordering.  We want
 # to make sure they still work.
 def old_2789(conn):
+    print "old_2789"
+
     res = r.table_create('2789').run(conn)
     assert res['created'] == 1, res
     table = r.table('2789')
@@ -47,6 +49,8 @@ def old_2789(conn):
     assert res == [2,1], res
 
 def new_2789(conn):
+    print "new_2789"
+
     table = r.table('2789')
     # Create a new index, which should obey new-style ordering.
     res = table.index_create('idx2', lambda x: x['idx']).run(conn)
@@ -94,15 +98,77 @@ def new_2789(conn):
     res = r.table_drop('2789').run(conn)
     assert res['dropped'] == 1, res
 
-# Issue 2697 is that insert_at and splice_at didn't obey the array size limit.
-def old_2697(conn):
-    res = r.table_create('2697').run(conn)
+def create_2697_index(conn, index_name):
+    table = r.table('2697')
+    array_ten = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    array_99998 = r.expr(array_ten).do(lambda ten: ten.concat_map(lambda x: ten).do(lambda hundred: ten.concat_map(lambda x: hundred).concat_map(lambda x: hundred))).delete_at(0, 2)
+
+    res = table.index_create(index_name, lambda x: array_99998.splice_at(0, x['a']).count()).run(conn)
     assert res['created'] == 1, res
 
+    res = table.index_wait(index_name).run(conn)
+    assert len(res) == 1 and res[0]['ready'], res
+
+def values_for_2697(begin, end):
+    return [{'id': i, 'a': range(0, i)} for i in range(begin, end)]
+
+# Issue 2697 is that insert_at and splice_at didn't obey the array size limit.
+def old_2697(conn):
+    print "old_2697"
+
+    res = r.table_create('2697').run(conn)
+    assert res['created'] == 1, res
+    table = r.table('2697')
+    create_2697_index(conn, 'a_len')
+
+    values = values_for_2697(0, 5)
+    res = table.insert(values).run(conn)
+    assert res['inserted'] == 5, res
+
+    print "old_2697 inserted values"
+
+    res = table.between(99995, 100010, index='a_len').coerce_to('array').run(conn)
+    assert res == values, res
+
+    print "old_2697 between query worked as expected"
+
+
 def new_2697(conn):
+    print "new_2697"
+
+    table = r.table('2697')
+
+    res = table.between(99995, 100010, index='a_len').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 5), res
+
+    print "new_2697 between query with old index worked"
+
+    create_2697_index(conn, 'a_len_2')
+
+    print "new_2697 created new index"
+
+    res = table.between(99995, 100010, index='a_len_2').coerce_to('array').run(conn)
+    # Only 3 of the values wouldn't overflow the 100k array size
+    # limit, which is now in effect.
+    assert res == values_for_2697(0, 3)
+
+    print "new_2697 between query with new index worked"
+
+    res = table.insert(values_for_2697(5, 6)).run(conn)
+    assert res['inserted'] == 1
+
+    # The old index still doesn't error with the old value.
+    res = table.between(99995, 100010, index='a_len').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 6), res
+
+    # The new index does error with the new value.
+    res = table.between(99995, 100010, index='a_len_2').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 3), res
+
+    print "new_2697 between query after insertion worked"
+
     res = r.table_drop('2697').run(conn)
     assert res['dropped'] == 1, res
-
 
 with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
