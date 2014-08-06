@@ -135,9 +135,9 @@ class RethinkDBTestServer(object):
         self.cpp_server = Popen([self.executable, 'serve',
                                  '--directory', self.rdbfile_path,
                                  '--driver-port', str(self.driver_port),
-                                 '--cluster-port', str(self.cluster_port)],
+                                 '--cluster-port', str(self.cluster_port),
                                  '--http-port', '0',
-                                 '--cache-size', str(self.cache_size),
+                                 '--cache-size', str(self.cache_size)],
                                 stdout=self.log_file, stderr=self.log_file)
         runningServers.append(self)
         sleep(2)
