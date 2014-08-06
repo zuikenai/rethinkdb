@@ -25,7 +25,7 @@ if compileProcess.poll() is None:
 	print('Compiling the test, this make take some time')
 if compileProcess.wait() != 0:
 	outputFile.seek(0)
-	sys.exit('Failed comiling test, got error code %d and output:\n%s\n' % (compileProcess.returncode, outputFile.read()))
+	sys.exit('Failed compiling test, got error code %d and output:\n%s\n' % (compileProcess.returncode, outputFile.read()))
 
 # - find the executable path from the output
 

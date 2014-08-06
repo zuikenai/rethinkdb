@@ -47,8 +47,8 @@ def latest_build_dir(check_executable=True):
     
     # -- find the build directory with the most recent mtime
     
-    canidatePath    = None
-    canidateMtime   = None
+    candidatePath    = None
+    candidateMtime   = None
     for name in os.listdir(masterBuildDir):
         path = os.path.join(masterBuildDir, name)
         if os.path.isdir(path) and (name in ('release', 'debug') or name.startswith('debug_') or name.startswith('release_')):
@@ -57,14 +57,14 @@ def latest_build_dir(check_executable=True):
                     continue
             
             mtime = os.path.getmtime(path)
-            if canidateMtime is None or mtime > canidateMtime:
-                canidateMtime = mtime
-                canidatePath = path
+            if candidateMtime is None or mtime > candidateMtime:
+                candidateMtime = mtime
+                candidatePath = path
     
-    if canidatePath is None:
+    if candidatePath is None:
         raise test_exceptions.NotBuiltException(detail='no version of this project have yet been built')
     else:
-        return canidatePath
+        return candidatePath
 
 def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, buildOptions=None):
     '''Call `make -C` on a folder to build it. If waitNotification is given wait notificationTimeout seconds and then print the notificaiton'''
@@ -84,10 +84,10 @@ def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, 
     
     if makeProcess.wait() != 0:
         raise test_exceptions.NotBuiltException(detail='Failed making: %s' % targetFolder, debugInfo=outputFile)
-       
-def import_pyton_driver(targetDir=None):
+
+def import_python_driver(targetDir=None):
     '''import the latest built version of the python driver into the caller's namespace, ensuring that the drivers are built'''
-    import inspect
+    import imp # note: depreciated but not gone in 3.4, will have to add importlib at some point
     
     # TODO: modify this to allow for system-installled drivers
     
@@ -105,7 +105,7 @@ def import_pyton_driver(targetDir=None):
     srcDir = None
     
     if not os.path.isdir(targetDir):
-        raise ValueError('import_pyton_driver got a non-directory path: %s' % str(targetDir))
+        raise ValueError('import_python_driver got a non-directory path: %s' % str(targetDir))
     targetDir = os.path.realpath(targetDir)
     
     validSourceFolder = lambda path: os.path.basename(path) == 'rethinkdb' and all(map(lambda x: os.path.isfile(os.path.join(path, x)), ['__init__.py', 'ast.py', 'docs.py']))
@@ -134,7 +134,7 @@ def import_pyton_driver(targetDir=None):
         srcDir = os.path.dirname(targetDir)
     
     else:
-        raise ValueError('import_pyton_driver was unable to determine the locations from: %s' % targetDir)
+        raise ValueError('import_python_driver was unable to determine the locations from: %s' % targetDir)
     
     # -- build if needed
     
@@ -146,19 +146,18 @@ def import_pyton_driver(targetDir=None):
     
     # --
     
-    if not os.path.isdir(driverDir) or not os.path.basename(driverDir) == 'rethinkdb':
-        raise ValueError('import_pyton_driver got an invalid driverDir: %s' % driverDir)
+    if not os.path.isdir(driverDir) or not os.path.basename(driverDir) == 'rethinkdb' or not os.path.isfile(os.path.join(driverDir, '__init__.py')): # ToDo: handle ziped egg case
+        raise ValueError('import_python_driver got an invalid driverDir: %s' % driverDir)
     
     # - return the imported module
     
-    keptPaths = sys.path
-    try:
-        sys.path.insert(0, os.path.dirname(driverDir))
-        import rethinkdb as driverModule
-        assert(os.path.realpath(inspect.getfile(driverModule)).startswith(driverDir)), "The wrong version or the rethinkdb Python driver got imported. It should have been in %s but was %s" % (driverDir, os.path.realpath(inspect.getfile(driverModule)))
-        return driverModule
-    finally:
-        sys.path = keptPaths
+    moduleFile, pathname, desc = imp.find_module('rethinkdb', [os.path.dirname(driverDir)])
+    driverModule = imp.load_module('rethinkdb', moduleFile, pathname, desc)
+    if moduleFile is not None:
+        moduleFile.close()
+    loadedFrom = os.path.dirname(os.path.realpath(driverModule.__file__))
+    assert loadedFrom.startswith(driverDir), "The wrong version or the rethinkdb Python driver got imported. It should have been in %s but was from %s" % (driverDir, loadedFrom)
+    return driverModule
 
 class PerformContinuousAction(threading.Thread):
     '''Use to continuously perform an action on a table. Either provide an action (reql command without run) on instantiation, or subclass and override runAction'''
