@@ -20,10 +20,10 @@ new_repository = sys.argv[2]
 print("old_repository: " + old_repository)
 print("new_repository: " + new_repository)
 
-old_python_driver = utils.import_pyton_driver(old_repository)
+old_python_driver = utils.import_python_driver(old_repository)
 print "old_python_driver:",  old_python_driver
 
 
-new_python_driver = utils.import_pyton_driver(new_repository)
+new_python_driver = utils.import_python_driver(new_repository)
 print "new_python_driver:",  new_python_driver
 
