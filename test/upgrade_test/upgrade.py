@@ -98,15 +98,21 @@ def new_2789(conn):
     res = r.table_drop('2789').run(conn)
     assert res['dropped'] == 1, res
 
-def create_2697_index(conn, index_name):
+def create_2697_indexes(conn, splice_name, insert_name):
     table = r.table('2697')
     array_ten = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     array_99998 = r.expr(array_ten).do(lambda ten: ten.concat_map(lambda x: ten).do(lambda hundred: ten.concat_map(lambda x: hundred).concat_map(lambda x: hundred))).delete_at(0, 2)
 
-    res = table.index_create(index_name, lambda x: array_99998.splice_at(0, x['a']).count()).run(conn)
+    res = table.index_create(splice_name, lambda x: array_99998.splice_at(0, x['a']).count()).run(conn)
     assert res['created'] == 1, res
 
-    res = table.index_wait(index_name).run(conn)
+    res = table.index_create(insert_name, lambda x: array_99998.splice_at(0, x['a']).insert_at(0, -1).count()).run(conn)
+    assert res['created'] == 1, res
+
+    res = table.index_wait(splice_name).run(conn)
+    assert len(res) == 1 and res[0]['ready'], res
+
+    res = table.index_wait(insert_name).run(conn)
     assert len(res) == 1 and res[0]['ready'], res
 
 def values_for_2697(begin, end):
@@ -119,7 +125,7 @@ def old_2697(conn):
     res = r.table_create('2697').run(conn)
     assert res['created'] == 1, res
     table = r.table('2697')
-    create_2697_index(conn, 'a_len')
+    create_2697_indexes(conn, 'a_splice', 'a_insert')
 
     values = values_for_2697(0, 5)
     res = table.insert(values).run(conn)
@@ -127,10 +133,17 @@ def old_2697(conn):
 
     print "old_2697 inserted values"
 
-    res = table.between(99995, 100010, index='a_len').coerce_to('array').run(conn)
+    res = table.between(99995, 100010, index='a_splice').coerce_to('array').run(conn)
     assert res == values, res
 
-    print "old_2697 between query worked as expected"
+    # We expect only 0, 1, and 2-length arrays to survive the a_insert
+    # index, because the datum_ptr_t in insert_at_term_t (in v1.13)
+    # checks the array size limit.  This means its count must be <=
+    # 100000 before the insertion, and <= 100001 after the insertion.
+    res = table.between(99995, 100010, index='a_insert').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 3), res
+
+    print "old_2697 between queries worked as expected"
 
 
 def new_2697(conn):
@@ -138,36 +151,112 @@ def new_2697(conn):
 
     table = r.table('2697')
 
-    res = table.between(99995, 100010, index='a_len').coerce_to('array').run(conn)
+    res = table.between(99995, 100010, index='a_splice').coerce_to('array').run(conn)
     assert res == values_for_2697(0, 5), res
 
-    print "new_2697 between query with old index worked"
+    res = table.between(99995, 100010, index='a_insert').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 3), res
 
-    create_2697_index(conn, 'a_len_2')
+    print "new_2697 between queries with old indexes worked"
 
-    print "new_2697 created new index"
+    create_2697_indexes(conn, 'a_splice_2', 'a_insert_2')
 
-    res = table.between(99995, 100010, index='a_len_2').coerce_to('array').run(conn)
+    print "new_2697 created new indexes"
+
+    res = table.between(99995, 100010, index='a_splice_2').coerce_to('array').run(conn)
     # Only 3 of the values wouldn't overflow the 100k array size
     # limit, which is now in effect.
     assert res == values_for_2697(0, 3)
 
-    print "new_2697 between query with new index worked"
+    res = table.between(99995, 100010, index='a_insert_2').coerce_to('array').run(conn)
+    # Only 2 of the values wouldn't overflow the 100k array size
+    # limit, which is now in effect.
+    assert res == values_for_2697(0, 2)
+
+    print "new_2697 between queries with new index worked"
 
     res = table.insert(values_for_2697(5, 6)).run(conn)
     assert res['inserted'] == 1
 
-    # The old index still doesn't error with the old value.
-    res = table.between(99995, 100010, index='a_len').coerce_to('array').run(conn)
+    # The old indexes still don't error with the old value.
+    res = table.between(99995, 100010, index='a_splice').coerce_to('array').run(conn)
     assert res == values_for_2697(0, 6), res
 
-    # The new index does error with the new value.
-    res = table.between(99995, 100010, index='a_len_2').coerce_to('array').run(conn)
+    res = table.between(99995, 100010, index='a_insert').coerce_to('array').run(conn)
     assert res == values_for_2697(0, 3), res
 
-    print "new_2697 between query after insertion worked"
+    # The new indexes do error with the new value.
+    res = table.between(99995, 100010, index='a_splice_2').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 3), res
+
+    res = table.between(99995, 100010, index='a_insert_2').coerce_to('array').run(conn)
+    assert res == values_for_2697(0, 2), res
+
+    print "new_2697 between queries after insertion worked"
 
     res = r.table_drop('2697').run(conn)
+    assert res['dropped'] == 1, res
+
+def insert_2774(conn):
+    res = r.table('2774').insert([{'id': 1, 'a': 'hello', 'b': r.now()},
+                                  {'id': 2, 'a': r.now(), 'b': 'hello'}]).run(conn)
+    assert res['inserted'] == 2, res
+
+def old_2774(conn):
+    print "old_2774"
+
+    res = r.table_create('2774').run(conn)
+    assert res['created'] == 1, res
+    table = r.table('2774')
+    res = table.index_create('idx', lambda x: x['a'] < x['b']).run(conn)
+    assert res['created'] == 1, res
+    res = table.index_wait('idx').run(conn)
+    assert len(res) == 1 and res[0]['ready'], res
+
+    insert_2774(conn)
+
+    res = table.get_all(True, index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
+    assert res == [1], res
+
+    res = table.get_all(False, index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
+    assert res == [2], res
+
+
+def new_2774(conn):
+    print "new_2774"
+
+    table = r.table('2774')
+    res = table.index_create('idx2', lambda x: x['a'] < x['b']).run(conn)
+    assert res['created'] == 1, res
+    res = table.index_wait('idx2').run(conn)
+    assert len(res) == 1 and res[0]['ready'], res
+
+    def check_results():
+        # Expect the ordering to still be bad with the old index.
+        res = table.get_all(True, index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
+        assert res == [1], res
+
+        res = table.get_all(False, index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
+        assert res == [2], res
+
+        # Expect the ordering to still be good with the new index.
+        res = table.get_all(True, index = 'idx2').map(r.row['id']).coerce_to('array').run(conn)
+        assert res == [2], res
+
+        res = table.get_all(False, index = 'idx2').map(r.row['id']).coerce_to('array').run(conn)
+        assert res == [1], res
+
+    check_results()
+
+    # Delete everything from the table... and reinsert!
+    table.delete().run(conn)
+    insert_2774(conn)
+
+    # And check again.
+    print "new_2774 reinserted, checking again"
+    check_results()
+
+    res = r.table_drop('2774').run(conn)
     assert res['dropped'] == 1, res
 
 with driver.Metacluster() as metacluster:
@@ -190,6 +279,7 @@ with driver.Metacluster() as metacluster:
 
             old_2789(conn)
             old_2697(conn)
+            old_2774(conn)
 
     finally:
         process.check_and_stop()
@@ -205,6 +295,7 @@ with driver.Metacluster() as metacluster:
         with r.connect('localhost', process.driver_port) as conn:
             new_2789(conn)
             new_2697(conn)
+            new_2774(conn)
 
     finally:
         process.check_and_stop()
