@@ -115,8 +115,11 @@ def create_2697_indexes(conn, splice_name, insert_name):
     res = table.index_wait(insert_name).run(conn)
     assert len(res) == 1 and res[0]['ready'], res
 
-def values_for_2697(begin, end):
+def array_values(begin, end):
     return [{'id': i, 'a': range(0, i)} for i in range(begin, end)]
+
+def values_for_2697(begin, end):
+    return array_values(begin, end)
 
 # Issue 2697 is that insert_at and splice_at didn't obey the array size limit.
 def old_2697(conn):
@@ -249,7 +252,8 @@ def new_2774(conn):
     check_results()
 
     # Delete everything from the table... and reinsert!
-    table.delete().run(conn)
+    res = table.delete().run(conn)
+    assert res['deleted'] == 2, res
     insert_2774(conn)
 
     # And check again.
@@ -258,6 +262,69 @@ def new_2774(conn):
 
     res = r.table_drop('2774').run(conn)
     assert res['dropped'] == 1, res
+
+def insert_2696(conn):
+    res = r.table('2696').insert(array_values(0, 5)).run(conn)
+    assert res['inserted'] == 5, res
+
+def old_2696(conn):
+    print "old_2696"
+
+    res = r.table_create('2696').run(conn)
+    assert res['created'] == 1, res
+    table = r.table('2696')
+
+    res = table.index_create('idx', lambda x: x['a'].delete_at(2, 2)).run(conn)
+    assert res['created'] == 1, res
+
+    res = table.index_wait('idx').run(conn)
+    assert len(res) == 1 and res[0]['ready'], res
+
+    insert_2696(conn)
+
+    # The value whose array is of length 2 is excluded because of the
+    # v1.13 delete_at bug.
+    res = table.order_by(index='idx').coerce_to('array').run(conn)
+    # We have the reverse order because of #2789?
+    assert res == array_values(3, 5)[::-1], res
+
+
+def new_2696(conn):
+    print "new_2696"
+
+    table = r.table('2696')
+
+    res = table.index_create('idx2', lambda x: x['a'].delete_at(2, 2)).run(conn)
+    assert res['created'] == 1, res
+
+    res = table.index_wait('idx2').run(conn)
+    assert len(res) == 1 and res[0]['ready'], res
+
+    def check_ordering():
+        res = table.order_by(index='idx').coerce_to('array').run(conn)
+        # We're asserting buggy v1.13 (#2789?) behavior is maintained.
+        assert res == array_values(3, 5)[::-1], res
+
+        # Now the 2-element array's included, so we see the extra
+        # value in the new index.
+        res = table.order_by(index='idx2').coerce_to('array').run(conn)
+        assert res == array_values(2, 5), res
+
+    check_ordering()
+
+    # Delete everything and insert it again.
+
+    res = table.delete().run(conn)
+    assert res['deleted'] == 5, res
+
+    insert_2696(conn)
+
+    # Check ordering a second time.
+    check_ordering()
+
+    res = r.table_drop('2696')
+    assert res['dropped'] == 1, res
+
 
 with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
@@ -280,6 +347,7 @@ with driver.Metacluster() as metacluster:
             old_2789(conn)
             old_2697(conn)
             old_2774(conn)
+            old_2696(conn)
 
     finally:
         process.check_and_stop()
@@ -296,6 +364,7 @@ with driver.Metacluster() as metacluster:
             new_2789(conn)
             new_2697(conn)
             new_2774(conn)
+            new_2696(conn)
 
     finally:
         process.check_and_stop()
