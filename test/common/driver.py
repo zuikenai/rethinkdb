@@ -254,7 +254,7 @@ class _Process(object):
     
     process_group_id = None
     
-    def __init__(self, cluster, options, log_path = None, executable_path = None, command_prefix=None):
+    def __init__(self, cluster, options, log_path=None, executable_path=None, command_prefix=None):
         global runningServers
         
         assert isinstance(cluster, Cluster)
@@ -272,9 +272,19 @@ class _Process(object):
         for other_cluster in cluster.metacluster.clusters:
             if other_cluster is not cluster:
                 other_cluster._block_process(self)
-
+        
+        # - set defaults
+        
+        if not '--cache-size' in options:
+            options += ['--cache-size', '1024']
+        
+        if not '--bind' in options:
+            options += ['--bind', 'all']
+        
+        # -
+        
         try:
-            self.args = command_prefix + [executable_path] + options + ["--bind", "all"]
+            self.args = command_prefix + [executable_path] + options
             for peer in cluster.processes:
                 if peer is not self:
                     # TODO(OSX) Why did we ever use socket.gethostname() and not localhost?
