@@ -33,60 +33,62 @@ r = utils.import_python_driver(new_repository)
 def old_2789(conn):
     res = r.table_create('2789').run(conn)
     assert res['created'] == 1, res
-    res = r.table('2789').insert([{'id': 1, 'idx': ''}, {'id': 2, 'idx': ' '}]).run(conn)
+    table = r.table('2789')
+    res = table.insert([{'id': 1, 'idx': ''}, {'id': 2, 'idx': ' '}]).run(conn)
     assert res['inserted'] == 2, res
 
-    res = r.table('2789').index_create('idx').run(conn)
+    res = table.index_create('idx').run(conn)
     assert res['created'] == 1, res
 
-    res = r.table('2789').index_wait('idx').run(conn)
+    res = table.index_wait('idx').run(conn)
     assert len(res) == 1 and res[0]['ready'], res
 
-    res = r.table('2789').order_by(index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
+    res = table.order_by(index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
     assert res == [2,1], res
 
 def new_2789(conn):
+    table = r.table('2789')
     # Create a new index, which should obey new-style ordering.
-    res = r.table('2789').index_create('idx2', lambda x: x['idx']).run(conn)
+    res = table.index_create('idx2', lambda x: x['idx']).run(conn)
     assert res['created'] == 1, res
 
     def check_order(idx_res, idx2_res):
         # See the wrong order with the old index.
-        res = r.table('2789').order_by(index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
+        res = table.order_by(index = 'idx').map(r.row['id']).coerce_to('array').run(conn)
         assert res == idx_res, res
 
         # See the right order with the new index.
-        res = r.table('2789').order_by(index = 'idx2').map(r.row['id']).coerce_to('array').run(conn)
+        res = table.order_by(index = 'idx2').map(r.row['id']).coerce_to('array').run(conn)
         assert res == idx2_res, res
 
     check_order([2, 1], [1, 2])
 
     # Do a modification that doesn't affect secondary index ordering.
-    res = r.table('2789').get(1).update({'a': 3}).run(conn)
+    res = table.get(1).update({'a': 3}).run(conn)
     assert res['replaced'] == 1, res
 
     check_order([2, 1], [1, 2])
 
     # Do another modification that doesn't affect secondary index ordering.
-    res = r.table('2789').get(2).update({'a': -1}).run(conn)
+    res = table.get(2).update({'a': -1}).run(conn)
     assert res['replaced'] == 1, res
 
     check_order([2, 1], [1, 2])
 
     # Do another modification, that should affect ordering (both get it right).
-    res = r.table('2789').get(1).update({'idx': '!'}).run(conn)
+    res = table.get(1).update({'idx': '!'}).run(conn)
     assert res['replaced'] == 1, res
 
     check_order([2, 1], [2, 1])
 
     # Add a new value, that should have incorrect ordering in 'idx'.
-    res = r.table('2789').insert({'id': 3, 'idx': ''}).run(conn)
+    res = table.insert({'id': 3, 'idx': ''}).run(conn)
     assert res['inserted'] == 1, res
 
     check_order([2, 1, 3], [3, 2, 1])
 
     # Dropping indexes works, I hope.
-    res = r.table('2789').index_drop('idx').run(conn)
+    res = table.index_drop('idx').run(conn)
     assert res['dropped'] == 1, res
 
     res = r.table_drop('2789').run(conn)
