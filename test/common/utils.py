@@ -47,8 +47,8 @@ def latest_build_dir(check_executable=True):
     
     # -- find the build directory with the most recent mtime
     
-    canidatePath    = None
-    canidateMtime   = None
+    candidatePath    = None
+    candidateMtime   = None
     for name in os.listdir(masterBuildDir):
         path = os.path.join(masterBuildDir, name)
         if os.path.isdir(path) and (name in ('release', 'debug') or name.startswith('debug_') or name.startswith('release_')):
@@ -57,14 +57,14 @@ def latest_build_dir(check_executable=True):
                     continue
             
             mtime = os.path.getmtime(path)
-            if canidateMtime is None or mtime > canidateMtime:
-                canidateMtime = mtime
-                canidatePath = path
+            if candidateMtime is None or mtime > candidateMtime:
+                candidateMtime = mtime
+                candidatePath = path
     
-    if canidatePath is None:
+    if candidatePath is None:
         raise test_exceptions.NotBuiltException(detail='no version of this project have yet been built')
     else:
-        return canidatePath
+        return candidatePath
 
 def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, buildOptions=None):
     '''Call `make -C` on a folder to build it. If waitNotification is given wait notificationTimeout seconds and then print the notificaiton'''
