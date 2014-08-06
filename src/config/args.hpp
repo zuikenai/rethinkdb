@@ -31,7 +31,9 @@
 // The number of hash-based CPU shards per table.
 // This "must" be hard-coded because a cluster cannot run with
 // differing cpu sharding factors.
+#ifndef CPU_SHARDING_FACTOR
 #define CPU_SHARDING_FACTOR                       8
+#endif
 
 // Defines the maximum size of the batch of IO events to process on
 // each loop iteration. A larger number will increase throughput but
