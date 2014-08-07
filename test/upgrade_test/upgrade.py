@@ -23,7 +23,7 @@ print "new_repository: ", new_repository
 old_executable_path = os.path.join(old_repository, "build/debug/rethinkdb")
 new_executable_path = os.path.join(new_repository, "build/debug/rethinkdb")
 
-# RSI: Assert somehow that the CPU sharding factor of the executables
+# TODO(2014-08): Assert somehow that the CPU sharding factor of the executables
 # is 1.  Or make this be a run-time option.
 
 r = utils.import_python_driver(new_repository)
