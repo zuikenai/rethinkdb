@@ -1,11 +1,8 @@
-import types
-import sys
-import datetime
-import numbers
-import collections
-import time
-import re
+# Copyright 2010-2014 RethinkDB, all rights reserved.
+
 import base64
+import collections
+import datetime
 import json as py_json
 from threading import Lock
 
