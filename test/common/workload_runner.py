@@ -1,6 +1,22 @@
-# Copyright 2010-2012 RethinkDB, all rights reserved.
-import subprocess, os, time, string, signal, sys
+# Copyright 2010-2014 RethinkDB, all rights reserved.
+
+from __future__ import print_function
+
+import atexit, os, time, signal, string, subprocess, sys
+
 from vcoptparse import *
+
+killManagedProcessGroupIDs = []
+@atexit.register
+def killManagedProcessGroups():
+    global killManagedProcessGroupIDs
+    
+    for groupId in killManagedProcessGroupIDs[:]:
+        try:
+            os.killpg(groupId, signal.SIGKILL)
+            killManagedProcessGroupIDs.remove(groupId)
+        except Exception:
+            pass
 
 class RDBPorts(object):
     def __init__(self, host, http_port, rdb_port, db_name, table_name):
@@ -17,37 +33,41 @@ class RDBPorts(object):
         env["TABLE_NAME"] = self.table_name
 
 def run(command_line, ports, timeout):
+    global killManagedProcessGroupIDs
     assert isinstance(ports, RDBPorts)
 
     start_time = time.time()
     end_time = start_time + timeout
-    print "Running workload %r..." % (command_line,)
+    print("Running workload %r..." % command_line)
 
     # Set up environment
     new_environ = os.environ.copy()
     ports.add_to_environ(new_environ)
 
-    proc = subprocess.Popen(command_line, shell = True, env = new_environ, preexec_fn = lambda: os.setpgid(0, 0))
-
+    proc = subprocess.Popen(command_line, shell=True, env=new_environ, preexec_fn=os.setpgrp)
+    killManagedProcessGroupIDs.append(self.proc.pid)
+    
     try:
         while time.time() < end_time:
             result = proc.poll()
             if result is None:
                 time.sleep(1)
             elif result == 0:
-                print "Done (%d seconds)" % (time.time() - start_time)
+                print("Done (%d seconds)" % (time.time() - start_time))
                 return
             else:
-                print "Failed (%d seconds)" % (time.time() - start_time)
+                print("Failed (%d seconds)" % (time.time() - start_time))
                 sys.stderr.write("workload '%s' failed with error code %d\n" % (command_line, result))
                 exit(1)
-        sys.stderr.write("\nWorkload timed out after %d seconds (%s)\n"
-                         % (time.time() - start_time, command_line))
+        sys.stderr.write("\nWorkload timed out after %d seconds (%s)\n" % (time.time() - start_time, command_line))
     finally:
         try:
-            os.killpg(proc.pid, signal.SIGTERM)
+            os.killpg(proc.pid, signal.SIGTERM) # OSError if there is no such group
+            time.sleep(2)
+            os.killpg(proc.pid, signal.SIGKILL)
         except OSError:
-            pass
+            if self.proc.pid in killManagedProcessGroupIDs:
+                killManagedProcessGroupIDs.remove(proc.pid)
     exit(1)
 
 class ContinuousWorkload(object):
@@ -61,6 +81,7 @@ class ContinuousWorkload(object):
         return self
 
     def start(self):
+        global killManagedProcessGroupIDs
         assert not self.running
         print "Starting workload %r..." % (self.command_line,)
 
@@ -68,10 +89,10 @@ class ContinuousWorkload(object):
         new_environ = os.environ.copy()
         self.ports.add_to_environ(new_environ)
 
-        self.proc = subprocess.Popen(self.command_line, shell = True, env = new_environ, preexec_fn = lambda: os.setpgid(0, 0))
-
+        self.proc = subprocess.Popen(self.command_line, shell=True, env=new_environ, preexec_fn=os.setpgrp)
+        killManagedProcessGroupIDs.append(self.proc.pid)
+        
         self.running = True
-
         self.check()
 
     def check(self):
@@ -82,8 +103,9 @@ class ContinuousWorkload(object):
             raise RuntimeError("workload '%s' stopped prematurely with error code %d" % (self.command_line, result))
 
     def stop(self):
+        global killManagedProcessGroupIDs
         self.check()
-        print "Stopping %r..." % self.command_line
+        print("Stopping %r..." % self.command_line)
         os.killpg(self.proc.pid, signal.SIGINT)
         shutdown_grace_period = 10   # seconds
         end_time = time.time() + shutdown_grace_period
@@ -91,14 +113,21 @@ class ContinuousWorkload(object):
             result = self.proc.poll()
             if result is None:
                 time.sleep(1)
-            elif result == 0 or result == -signal.SIGINT:
-                print "OK"
-                self.running = False
-                break
             else:
                 self.running = False
-                raise RuntimeError("workload '%s' failed when interrupted with error code %d" % (self.command_line, result))
+                if self.proc.pid in killManagedProcessGroupIDs:
+                    killManagedProcessGroupIDs.remove(self.proc.pid)
+                
+                if result == 0 or result == -signal.SIGINT:
+                    print("OK")
+                    break
+                else:
+                    raise RuntimeError("workload '%s' failed when interrupted with error code %d" % (self.command_line, result))
         else:
+            try:
+                os.killpg(self.proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
             raise RuntimeError("workload '%s' failed to terminate within %d seconds of SIGINT" % (self.command_line, shutdown_grace_period))
 
     def __exit__(self, exc = None, ty = None, tb = None):
@@ -141,8 +170,7 @@ class SplitOrContinuousWorkload(object):
     def _spin_continuous_workloads(self, seconds):
         assert self.opts["workload-during"]
         if seconds != 0:
-            print "Letting %s run for %d seconds..." % \
-                (" and ".join(repr(x) for x in self.opts["workload-during"]), seconds)
+            print("Letting %s run for %d seconds..." % " and ".join(repr(x) for x in self.opts["workload-during"]), seconds)
             for i in xrange(seconds):
                 time.sleep(1)
                 self.check()
