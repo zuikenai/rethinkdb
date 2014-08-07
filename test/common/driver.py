@@ -60,13 +60,13 @@ def cleanupMetaclusterFolder(path):
             print('Warning: unable to cleanup Metacluster folder: %s - got error: %s' % (str(path), str(e)))
 
 runningServers = []
+@atexit.register
 def endRunningServers():
     for server in runningServers[:]:
         try:
             server.check_and_stop()
         except Exception as e:
             sys.stderr.write('Got error while shutting down server at exit: %s\n' % str(e))
-atexit.register(endRunningServers)
 
 def get_table_host(processes):
     return ("localhost", random.choice(processes).driver_port)
