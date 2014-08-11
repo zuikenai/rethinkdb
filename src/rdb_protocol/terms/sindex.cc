@@ -296,8 +296,8 @@ public:
         }
     }
 
+    // RSI: Not really sure what to do here.
     virtual int parallelization_level() const {
-        // RSI: Check what the other stuff where this is nonsense is doing now.
         return params_parallelization_level();
     }
 
