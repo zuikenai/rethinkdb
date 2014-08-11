@@ -26,7 +26,7 @@ class RethinkDBTestServers(object):
     group_data_dir = None
     servers = None
     
-    def __init__(self, num_servers=4, server_build_dir=None, use_default_port=False, cache_size=1024, group_data_dir='./run'):
+    def __init__(self, num_servers=4, server_build_dir=None, use_default_port=False, cache_size=512, group_data_dir='./run'):
         assert num_servers >= 1
         self.num_servers = num_servers
         self.server_build_dir = server_build_dir
@@ -91,7 +91,7 @@ class RethinkDBTestServer(object):
     log_file = None
     rdbfile_path = None
     
-    def __init__(self, server_build_dir=None, use_default_port=False, cache_size=1024, group_data_dir='./run'):
+    def __init__(self, server_build_dir=None, use_default_port=False, cache_size=512, group_data_dir='./run'):
         self.server_build_dir = server_build_dir
         self.use_default_port = use_default_port
         self.cache_size = cache_size
