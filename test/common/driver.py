@@ -276,7 +276,7 @@ class _Process(object):
         # - set defaults
         
         if not '--cache-size' in options:
-            options += ['--cache-size', '1024']
+            options += ['--cache-size', '512']
         
         if not '--bind' in options:
             options += ['--bind', 'all']
