@@ -58,7 +58,7 @@ def uuid
   AnyUUID
 end
 
-def err(type, message, backtrace)
+def err(type, message, backtrace=[])
   Err.new(type, message, backtrace, false)
 end
 
