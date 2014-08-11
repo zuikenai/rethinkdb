@@ -275,9 +275,6 @@ class _Process(object):
         
         # - set defaults
         
-        if not '--cache-size' in options:
-            options += ['--cache-size', '512']
-        
         if not '--bind' in options:
             options += ['--bind', 'all']
         
@@ -443,7 +440,10 @@ class Process(_Process):
 
         self.port_offset = cluster.metacluster.port_offset + self.files.id_number
         self.local_cluster_port = 29015 + self.port_offset
-
+        
+        if not '--cache-size' in extra_options:
+            extra_options += ['--cache-size', '512']
+        
         options = ["serve",
                    "--directory", self.files.db_path,
                    "--port-offset", str(self.port_offset),
