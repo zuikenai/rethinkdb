@@ -9,7 +9,7 @@ public:
     json_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 
-    ~json_term_t() FINAL = default;
+    virtual ~json_term_t() = default;
 
     counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         const wire_string_t &data = args->arg(env, 0)->as_str();
@@ -22,13 +22,13 @@ public:
         return new_val(to_datum(cjson.get(), env->env->limits));
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "json"; }
+    virtual const char *name() const { return "json"; }
 };
 
 counted_t<term_t> make_json_term(compile_env_t *env, const protob_t<const Term> &term) {

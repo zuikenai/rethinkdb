@@ -13,7 +13,7 @@ public:
     match_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         std::string str = args->arg(env, 0)->as_str().to_std();
         RE2 regexp(args->arg(env, 1)->as_str().c_str());
         if (!regexp.ok()) {
@@ -64,13 +64,13 @@ private:
         }
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "match"; }
+    virtual const char *name() const { return "match"; }
 };
 
 const char *const splitchars = " \t\n\r\x0B\x0C";
@@ -80,7 +80,7 @@ public:
     split_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, 3)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         std::string s = args->arg(env, 0)->as_str().to_std();
 
         boost::optional<std::string> delim;
@@ -129,13 +129,13 @@ private:
         return new_val(make_counted<const datum_t>(std::move(res), env->env->limits));
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "split"; }
+    virtual const char *name() const { return "split"; }
 };
 
 counted_t<term_t> make_match_term(compile_env_t *env,

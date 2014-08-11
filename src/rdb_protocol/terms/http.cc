@@ -31,13 +31,13 @@ public:
                                 "result_format" }))
     { }
 private:
-    const char *name() const FINAL { return "http"; }
+    virtual const char *name() const { return "http"; }
 
-    bool op_is_deterministic() const FINAL {
+    virtual bool op_is_deterministic() const {
         return false;
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         // This is a blocking operation.  So it could be parallelized.
         // RSI: Are all HTTP terms parallelizable?  I mean, maybe some don't actually do a request?
         // RSI: This overrides the op_term_t implementation, discarding parallellization level info about its args.  This is important!  Make an op_parallelization_level or something?

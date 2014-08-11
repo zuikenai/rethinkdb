@@ -12,13 +12,13 @@ public:
     datum_term_t(protob_t<const Term> t, const configured_limits_t &limits)
         : term_t(t), raw_val(new_val(to_datum(&t->datum(), limits))) { }
 private:
-    void accumulate_captures(var_captures_t *) const FINAL { /* do nothing */ }
-    bool is_deterministic() const FINAL { return true; }
-    int parallelization_level() const FINAL { return 0; }
-    counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const FINAL {
+    virtual void accumulate_captures(var_captures_t *) const { /* do nothing */ }
+    virtual bool is_deterministic() const { return true; }
+    virtual int parallelization_level() const { return 0; }
+    virtual counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const {
         return raw_val;
     }
-    const char *name() const FINAL { return "datum"; }
+    virtual const char *name() const { return "datum"; }
     counted_t<val_t> raw_val;
 };
 
@@ -29,16 +29,16 @@ public:
                     double constant, const char *name)
         : op_term_t(env, t, argspec_t(0)), constant_(constant), name_(name) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *, args_t *, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *, args_t *, eval_flags_t) const {
         return new_val(make_counted<const datum_t>(constant_));
     }
-    const char *name() const FINAL { return name_; }
+    virtual const char *name() const { return name_; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
     const double constant_;
     const char *const name_;
@@ -49,7 +49,7 @@ public:
     make_array_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, -1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         datum_array_builder_t acc(env->env->limits);
         acc.reserve(args->num_args());
         {
@@ -61,11 +61,11 @@ private:
         }
         return new_val(std::move(acc).to_counted());
     }
-    const char *name() const FINAL { return "make_array"; }
+    virtual const char *name() const { return "make_array"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -106,11 +106,11 @@ public:
         return new_val(std::move(acc).to_counted());
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return max_parallelization_level(optargs);
     }
 
-    bool is_deterministic() const FINAL {
+    virtual bool is_deterministic() const {
         return all_are_deterministic(optargs);
     }
 

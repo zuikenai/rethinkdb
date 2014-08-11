@@ -33,7 +33,7 @@ public:
         : op_term_t(env, std::move(term), std::move(argspec), std::move(optargspec)) { }
 
 private:
-    bool op_is_deterministic() const FINAL { return false; }
+    virtual bool op_is_deterministic() const { return false; }
 };
 
 class meta_write_op_t : public meta_op_term_t {
@@ -46,7 +46,7 @@ private:
     virtual std::string write_eval_impl(scope_env_t *env,
                                         args_t *args,
                                         eval_flags_t flags) const = 0;
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t flags) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t flags) const {
         std::string op = write_eval_impl(env, args, flags);
         datum_object_builder_t res;
         UNUSED bool b = res.add(op, make_counted<datum_t>(1.0));
@@ -58,7 +58,7 @@ class db_term_t : public meta_op_term_t {
 public:
     db_term_t(compile_env_t *env, const protob_t<const Term> &term) : meta_op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         name_string_t db_name = get_name(args->arg(env, 0), this, "Database");
         counted_t<const db_t> db;
         std::string error;
@@ -68,11 +68,11 @@ private:
         }
         return new_val(db);
     }
-    const char *name() const FINAL { return "db"; }
+    virtual const char *name() const { return "db"; }
 
     // An r.db('aaa') term doesn't do any blocking... but the subsequent table term
     // might.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -82,7 +82,7 @@ public:
     db_create_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1)) { }
 private:
-    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         name_string_t db_name = get_name(args->arg(env, 0), this, "Database");
         std::string error;
         if (!env->env->reql_cluster_interface()->db_create(db_name,
@@ -92,9 +92,9 @@ private:
 
         return "created";
     }
-    const char *name() const FINAL { return "db_create"; }
+    virtual const char *name() const { return "db_create"; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         // Creating a db blocks, so it has (at least) a parallelization level of 1.
         return std::max(1, params_parallelization_level());
     }
@@ -118,7 +118,7 @@ public:
         meta_write_op_t(env, term, argspec_t(1, 2),
                         optargspec_t({"datacenter", "primary_key", "durability"})) { }
 private:
-    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
 
         /* Parse arguments */
         boost::optional<name_string_t> primary_dc;
@@ -156,7 +156,7 @@ private:
 
         return "created";
     }
-    const char *name() const FINAL { return "table_create"; }
+    virtual const char *name() const { return "table_create"; }
 
     // Creating a table blocks.
     int parallelization_level() const {
@@ -169,7 +169,7 @@ public:
     db_drop_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1)) { }
 private:
-    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         name_string_t db_name = get_name(args->arg(env, 0), this, "Database");
 
         std::string error;
@@ -180,10 +180,10 @@ private:
 
         return "dropped";
     }
-    const char *name() const FINAL { return "db_drop"; }
+    virtual const char *name() const { return "db_drop"; }
 
     // Dropping a db blocks.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return std::max(1, params_parallelization_level());
     }
 };
@@ -193,7 +193,7 @@ public:
     table_drop_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_write_op_t(env, term, argspec_t(1, 2)) { }
 private:
-    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<const db_t> db;
         name_string_t tbl_name;
         if (args->num_args() == 1) {
@@ -214,10 +214,10 @@ private:
 
         return "dropped";
     }
-    const char *name() const FINAL { return "table_drop"; }
+    virtual const char *name() const { return "table_drop"; }
 
     // Dropping a table blocks.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return std::max(1, params_parallelization_level());
     }
 };
@@ -227,7 +227,7 @@ public:
     db_list_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_op_term_t(env, term, argspec_t(0)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *, eval_flags_t) const {
         std::set<name_string_t> dbs;
         std::string error;
         if (!env->env->reql_cluster_interface()->db_list(
@@ -243,9 +243,9 @@ private:
 
         return new_val(make_counted<const datum_t>(std::move(arr), env->env->limits));
     }
-    const char *name() const FINAL { return "db_list"; }
+    virtual const char *name() const { return "db_list"; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -255,7 +255,7 @@ public:
     table_list_term_t(compile_env_t *env, const protob_t<const Term> &term) :
         meta_op_term_t(env, term, argspec_t(0, 1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<const ql::db_t> db;
         if (args->num_args() == 0) {
             counted_t<val_t> dbv = args->optarg(env, "db");
@@ -279,9 +279,9 @@ private:
         }
         return new_val(make_counted<const datum_t>(std::move(arr), env->env->limits));
     }
-    const char *name() const FINAL { return "table_list"; }
+    virtual const char *name() const { return "table_list"; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -292,15 +292,15 @@ public:
         : meta_write_op_t(env, term, argspec_t(1)) { }
 
 private:
-    std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual std::string write_eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> t = args->arg(env, 0)->as_table();
         bool success = t->sync(env->env, this);
         r_sanity_check(success);
         return "synced";
     }
-    const char *name() const FINAL { return "sync"; }
+    virtual const char *name() const { return "sync"; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         // This inherits the parallelization level from its left-hand table argument.
         return params_parallelization_level();
     }
@@ -311,7 +311,7 @@ public:
     table_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, 2), optargspec_t({ "use_outdated" })) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<val_t> t = args->optarg(env, "use_outdated");
         bool use_outdated = t ? t->as_bool() : false;
         counted_t<const db_t> db;
@@ -335,8 +335,8 @@ private:
         return new_val(make_counted<table_t>(
             std::move(table), db, name.str(), use_outdated, backtrace()));
     }
-    bool op_is_deterministic() const FINAL { return false; }
-    const char *name() const FINAL { return "table"; }
+    virtual bool op_is_deterministic() const { return false; }
+    virtual const char *name() const { return "table"; }
 
     // This is a bit icky, because the exact sort of parallelization depends on
     // the operation that's attached to the table.  An operation which treats the
@@ -348,7 +348,7 @@ private:
     // by an info_term_t or a get_term_t if those can only operate on tables.)
 
     // Getting a result set or a row from a table can block.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return std::max(1, params_parallelization_level());
     }
 };
@@ -357,17 +357,17 @@ class get_term_t : public op_term_t {
 public:
     get_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(2)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         counted_t<const datum_t> pkey = args->arg(env, 1)->as_datum();
         counted_t<const datum_t> row = table->get_row(env->env, pkey);
         return new_val(row, pkey, table);
     }
-    const char *name() const FINAL { return "get"; }
+    virtual const char *name() const { return "get"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         // We inherit the parallelization level from the left-hand table expression.
         return params_parallelization_level();
     }
@@ -378,7 +378,7 @@ public:
     get_all_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2, -1), optargspec_t({ "index" })) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         counted_t<val_t> index = args->optarg(env, "index");
         std::string index_str = index ? index->as_str().to_std() : "";
@@ -408,20 +408,20 @@ private:
             return new_val(stream, table);
         }
     }
-    const char *name() const FINAL { return "get_all"; }
+    virtual const char *name() const { return "get_all"; }
 
     // Right now, because the left-hand argument is a table,
     // op_term_t::is_deterministic will return false anyway.  However, if it becomse
     // possible for a "deterministic table" to exist, we'll still be
     // non-deterministic unless you can prove otherwise, because the relative order
     // of elements having equal secondary index keys is not rock-solidly well-defined.
-    bool op_is_deterministic() const FINAL {
+    virtual bool op_is_deterministic() const {
         // RSI: This should check if the "index" optarg exists, and return true if it
         // doesn't, because getting a bunch of rows should be o.k.
         return false;
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         // This inherits the parallelization level from the left-hand table
         // expression (or from its argument expression, if one of those is crazily
         // parallelizable).

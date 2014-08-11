@@ -37,22 +37,22 @@ public:
     }
 
 private:
-    void accumulate_captures(var_captures_t *captures) const FINAL {
+    virtual void accumulate_captures(var_captures_t *captures) const {
         captures->vars_captured.insert(varname);
     }
 
-    bool is_deterministic() const FINAL {
+    virtual bool is_deterministic() const {
         return true;
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return 0;
     }
 
-    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const {
         return new_val(env->scope.lookup_var(varname));
     }
-    const char *name() const FINAL { return "var"; }
+    virtual const char *name() const { return "var"; }
 
     sym_t varname;
 };
@@ -71,22 +71,22 @@ public:
                : "Cannot use r.row in nested queries.  Use functions instead.");
     }
 private:
-    void accumulate_captures(var_captures_t *captures) const FINAL {
+    virtual void accumulate_captures(var_captures_t *captures) const {
         captures->implicit_is_captured = true;
     }
 
-    bool is_deterministic() const FINAL {
+    virtual bool is_deterministic() const {
         return true;
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return 0;
     }
 
-    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const {
         return new_val(env->scope.lookup_implicit());
     }
-    const char *name() const FINAL { return "implicit_var"; }
+    virtual const char *name() const { return "implicit_var"; }
 };
 
 counted_t<term_t> make_var_term(compile_env_t *env, const protob_t<const Term> &term) {

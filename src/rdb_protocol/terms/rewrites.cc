@@ -30,17 +30,17 @@ public:
     }
 
 private:
-    void accumulate_captures(var_captures_t *captures) const FINAL {
+    virtual void accumulate_captures(var_captures_t *captures) const {
         return real->accumulate_captures(captures);
     }
-    bool is_deterministic() const FINAL {
+    virtual bool is_deterministic() const {
         return real->is_deterministic();
     }
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return real->parallelization_level();
     }
 
-    counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const {
         return real->eval(env);
     }
 
@@ -79,7 +79,7 @@ public:
         return term;
     }
 
-    const char *name() const FINAL { return "inner_join"; }
+    virtual const char *name() const { return "inner_join"; }
 };
 
 class outer_join_term_t : public rewrite_term_t {
@@ -118,7 +118,7 @@ public:
         return term;
     }
 
-    const char *name() const FINAL { return "outer_join"; }
+    virtual const char *name() const { return "outer_join"; }
 };
 
 class eq_join_term_t : public rewrite_term_t {
@@ -151,7 +151,7 @@ private:
                                                r::optarg("right", v)))))));
 
     }
-    const char *name() const FINAL { return "inner_join"; }
+    virtual const char *name() const { return "inner_join"; }
 };
 
 class delete_term_t : public rewrite_term_t {
@@ -170,7 +170,7 @@ private:
         term.copy_optargs_from_term(*optargs_in);
         return term;
      }
-     const char *name() const FINAL { return "delete"; }
+    virtual  const char *name() const { return "delete"; }
 };
 
 class update_term_t : public rewrite_term_t {
@@ -202,7 +202,7 @@ private:
         term.copy_optargs_from_term(*optargs_in);
         return term;
     }
-    const char *name() const FINAL { return "update"; }
+    virtual const char *name() const { return "update"; }
 };
 
 class skip_term_t : public rewrite_term_t {
@@ -220,7 +220,7 @@ private:
         term.copy_optargs_from_term(*optargs_in);
         return term;
      }
-     const char *name() const FINAL { return "skip"; }
+    virtual  const char *name() const { return "skip"; }
 };
 
 class difference_term_t : public rewrite_term_t {
@@ -242,7 +242,7 @@ private:
         return term;
     }
 
-     const char *name() const FINAL { return "difference"; }
+    virtual  const char *name() const { return "difference"; }
 };
 
 class with_fields_term_t : public rewrite_term_t {
@@ -262,7 +262,7 @@ private:
 
         return pluck;
     }
-    const char *name() const FINAL { return "with_fields"; }
+    virtual const char *name() const { return "with_fields"; }
 };
 
 counted_t<term_t> make_skip_term(

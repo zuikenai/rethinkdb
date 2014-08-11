@@ -11,7 +11,7 @@ public:
     keys_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<const datum_t> d = args->arg(env, 0)->as_datum();
         const std::map<std::string, counted_t<const datum_t> > &obj = d->as_object();
 
@@ -24,13 +24,13 @@ private:
         return new_val(make_counted<const datum_t>(std::move(arr), env->env->limits));
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "keys"; }
+    virtual const char *name() const { return "keys"; }
 };
 
 class object_term_t : public op_term_t {
@@ -38,7 +38,7 @@ public:
     object_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(0, -1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         rcheck(args->num_args() % 2 == 0,
                base_exc_t::GENERIC,
                strprintf("OBJECT expects an even number of arguments (but found %zu).",
@@ -58,13 +58,13 @@ private:
         return new_val(std::move(obj).to_counted());
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "object"; }
+    virtual const char *name() const { return "object"; }
 };
 
 counted_t<term_t> make_keys_term(compile_env_t *env, const protob_t<const Term> &term) {

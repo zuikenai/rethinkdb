@@ -140,7 +140,7 @@ public:
     coerce_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<val_t> val = args->arg(env, 0);
         val_t::type_t opaque_start_type = val->get_type();
         int start_supertype = opaque_start_type.raw_type;
@@ -263,11 +263,11 @@ private:
                            get_name(start_type).c_str(), get_name(end_type).c_str());
     }
 
-    const char *name() const FINAL { return "coerce_to"; }
+    virtual const char *name() const { return "coerce_to"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -277,7 +277,7 @@ public:
     ungroup_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         const counted_t<grouped_data_t> groups
             = args->arg(env, 0)->as_promiscuous_grouped_data(env->env);
         std::vector<counted_t<const datum_t> > v;
@@ -290,13 +290,13 @@ private:
         }
         return new_val(make_counted<const datum_t>(std::move(v), env->env->limits));
     }
-    const char *name() const FINAL { return "ungroup"; }
-    bool can_be_grouped() const FINAL { return false; }
+    virtual const char *name() const { return "ungroup"; }
+    virtual bool can_be_grouped() const { return false; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
     // RSI: Well... I have no clue if this is the right thing.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -318,7 +318,7 @@ public:
     typeof_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<val_t> v = args->arg(env, 0);
         if (v->get_type().raw_type == val_t::type_t::DATUM) {
             counted_t<const datum_t> d = v->as_datum();
@@ -331,11 +331,11 @@ private:
                 make_counted<const datum_t>(get_name(val_type(v))));
         }
     }
-    const char *name() const FINAL { return "typeof"; }
-    bool can_be_grouped() const FINAL { return false; }
+    virtual const char *name() const { return "typeof"; }
+    virtual bool can_be_grouped() const { return false; }
 
-    bool op_is_deterministic() const FINAL { return true; }
-    int parallelization_level() const FINAL {
+    virtual bool op_is_deterministic() const { return true; }
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -345,7 +345,7 @@ public:
     info_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         return new_val(val_info(env, args->arg(env, 0)));
     }
 
@@ -413,12 +413,12 @@ private:
         return std::move(info).to_counted();
     }
 
-    const char *name() const FINAL { return "info"; }
-    bool can_be_grouped() const FINAL { return false; }
+    virtual const char *name() const { return "info"; }
+    virtual bool can_be_grouped() const { return false; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };

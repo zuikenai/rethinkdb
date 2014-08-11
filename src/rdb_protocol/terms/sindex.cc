@@ -18,7 +18,7 @@ public:
     sindex_create_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2, 3), optargspec_t({"multi"})) { }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         counted_t<const datum_t> name_datum = args->arg(env, 1)->as_datum();
         std::string name = name_datum->as_str().to_std();
@@ -62,15 +62,15 @@ public:
         }
     }
 
-    const char *name() const FINAL { return "sindex_create"; }
+    virtual const char *name() const { return "sindex_create"; }
 
 
     // Mutation operations should already be disallowed by term_walker in places
     // where we care about determinism, but this is false for what it's worth.
-    bool op_is_deterministic() const FINAL { return false; }
+    virtual bool op_is_deterministic() const { return false; }
 
     // RSI: Not really sure what to do here.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -80,7 +80,7 @@ public:
     sindex_drop_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(2)) { }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         std::string name = args->arg(env, 1)->as_datum()->as_str().to_std();
         bool success = table->sindex_drop(env->env, name);
@@ -94,14 +94,14 @@ public:
         }
     }
 
-    const char *name() const FINAL { return "sindex_drop"; }
+    virtual const char *name() const { return "sindex_drop"; }
 
     // Mutation operations should already be disallowed by term_walker in places
     // where we care about determinism, but this is false for what it's worth.
-    bool op_is_deterministic() const FINAL { return false; }
+    virtual bool op_is_deterministic() const { return false; }
 
     // RSI: Not really sure what to do here.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -111,18 +111,18 @@ public:
     sindex_list_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
 
         return new_val(table->sindex_list(env->env));
     }
 
-    const char *name() const FINAL { return "sindex_list"; }
+    virtual const char *name() const { return "sindex_list"; }
 
-    bool op_is_deterministic() const FINAL { return false; }
+    virtual bool op_is_deterministic() const { return false; }
 
     // RSI: Not really sure what to do here.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -132,7 +132,7 @@ public:
     sindex_status_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, -1)) { }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         std::set<std::string> sindexes;
         for (size_t i = 1; i < args->num_args(); ++i) {
@@ -141,12 +141,12 @@ public:
         return new_val(table->sindex_status(env->env, sindexes));
     }
 
-    const char *name() const FINAL { return "sindex_status"; }
+    virtual const char *name() const { return "sindex_status"; }
 
-    bool op_is_deterministic() const FINAL { return false; }
+    virtual bool op_is_deterministic() const { return false; }
 
     // RSI: Not really sure what to do here.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -169,7 +169,7 @@ public:
     sindex_wait_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, -1)) { }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
         std::set<std::string> sindexes;
         for (size_t i = 1; i < args->num_args(); ++i) {
@@ -190,12 +190,12 @@ public:
         }
     }
 
-    const char *name() const FINAL { return "sindex_wait"; }
+    virtual const char *name() const { return "sindex_wait"; }
 
-    bool op_is_deterministic() const FINAL { return false; }
+    virtual bool op_is_deterministic() const { return false; }
 
     // RSI: Not really sure what to do here.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };

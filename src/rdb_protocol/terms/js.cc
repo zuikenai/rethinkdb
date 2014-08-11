@@ -17,9 +17,9 @@ public:
         : op_term_t(env, term, argspec_t(1), optargspec_t({ "timeout" })) { }
 
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env,
-                               args_t *args,
-                               eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env,
+                                       args_t *args,
+                                       eval_flags_t) const {
         // Optarg seems designed to take a default value as the second argument
         // but nowhere else is this actually used.
         uint64_t timeout_ms = 5000;
@@ -52,15 +52,15 @@ private:
                   source.c_str(), timeout_ms / 1000, timeout_ms % 1000);
         }
     }
-    const char *name() const FINAL { return "javascript"; }
+    virtual const char *name() const { return "javascript"; }
 
-    bool op_is_deterministic() const FINAL {
+    virtual bool op_is_deterministic() const {
         return false;
     }
 
     // RSI: Can js terms be parallelized?  We already have multiple hash-shards
     // though.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };

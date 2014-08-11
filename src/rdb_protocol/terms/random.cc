@@ -68,15 +68,15 @@ public:
         return t.has() ? new_val(new_ds, t) : new_val(env->env, new_ds);
     }
 
-    bool op_is_deterministic() const FINAL {
+    virtual bool op_is_deterministic() const {
         return false;
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    const char *name() const FINAL { return "sample"; }
+    virtual const char *name() const { return "sample"; }
 };
 
 class random_term_t : public op_term_t {
@@ -85,11 +85,11 @@ public:
         op_term_t(env, term, argspec_t(0, 2), optargspec_t({"float"})) {
     }
 private:
-    bool op_is_deterministic() const FINAL {
+    virtual bool op_is_deterministic() const {
         return false;
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
@@ -107,7 +107,7 @@ private:
         return res;
     }
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<val_t> use_float_arg = args->optarg(env, "float");
         bool use_float = use_float_arg ? use_float_arg->as_bool() : args->num_args() == 0;
 
@@ -189,7 +189,7 @@ private:
         }
     }
 
-    const char *name() const FINAL { return "random"; }
+    virtual const char *name() const { return "random"; }
 };
 
 counted_t<term_t> make_sample_term(compile_env_t *env, const protob_t<const Term> &term) {

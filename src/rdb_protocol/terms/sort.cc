@@ -30,14 +30,14 @@ public:
     asc_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         return args->arg(env, 0);
     }
-    const char *name() const FINAL { return "asc"; }
+    virtual const char *name() const { return "asc"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -47,14 +47,14 @@ public:
     desc_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         return args->arg(env, 0);
     }
-    const char *name() const FINAL { return "desc"; }
+    virtual const char *name() const { return "desc"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -121,7 +121,7 @@ private:
             comparisons;
     };
 
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         std::vector<std::pair<order_direction_t, counted_t<func_t> > > comparisons;
         for (size_t i = 1; i < args->num_args(); ++i) {
             if (get_src()->args(i).type() == Term::DESC) {
@@ -208,16 +208,16 @@ private:
         return tbl.has() ? new_val(seq, tbl) : new_val(env->env, seq);
     }
 
-    const char *name() const FINAL { return "orderby"; }
+    virtual const char *name() const { return "orderby"; }
 
     // Queries that are deterministic produce things like arrays, which we treat
     // deterministically (with stable_sort).
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
     // RSI: A sorting or whatnot operation doesn't result in the possibility for
     // parallel evalution, does it?  The function you're sorting on -- could it be
     // parallelizable?  Does the code currently do the "Shwartzian" transform?
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
@@ -230,8 +230,8 @@ public:
     distinct_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1), optargspec_t({"index"})) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args,
-                               eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args,
+                                       eval_flags_t) const {
         counted_t<val_t> v = args->arg(env, 0);
         counted_t<val_t> idx = args->optarg(env, "index");
         if (v->get_type().is_convertible(val_t::type_t::TABLE)) {
@@ -282,12 +282,12 @@ private:
                                                        env->env->limits));
         }
     }
-    const char *name() const FINAL { return "distinct"; }
+    virtual const char *name() const { return "distinct"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
     // We don't do any sort of fancy function call.
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };

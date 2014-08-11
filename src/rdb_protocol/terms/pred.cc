@@ -41,7 +41,7 @@ public:
         guarantee(namestr && pred);
     }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<const datum_t> lhs = args->arg(env, 0)->as_datum();
         for (size_t i = 1; i < args->num_args(); ++i) {
             counted_t<const datum_t> rhs = args->arg(env, i)->as_datum();
@@ -53,13 +53,13 @@ private:
         return new_val_bool(static_cast<bool>(true ^ invert));
     }
     const char *namestr;
-    const char *name() const FINAL { return namestr; }
+    virtual const char *name() const { return namestr; }
     bool invert;
     bool (datum_t::*pred)(const datum_t &rhs) const;
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
@@ -68,14 +68,14 @@ class not_term_t : public op_term_t {
 public:
     not_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         return new_val_bool(!args->arg(env, 0)->as_bool());
     }
-    const char *name() const FINAL { return "not"; }
+    virtual const char *name() const { return "not"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };

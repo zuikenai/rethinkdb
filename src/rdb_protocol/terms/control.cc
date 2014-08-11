@@ -18,7 +18,7 @@ public:
     all_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, -1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         for (size_t i = 0; i < args->num_args(); ++i) {
             counted_t<val_t> v = args->arg(env, i);
             if (!v->as_bool() || i == args->num_args() - 1) {
@@ -28,13 +28,13 @@ private:
         unreachable();
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "all"; }
+    virtual const char *name() const { return "all"; }
 };
 
 class any_term_t : public op_term_t {
@@ -42,7 +42,7 @@ public:
     any_term_t(compile_env_t *env, const protob_t<const Term> &term)
         : op_term_t(env, term, argspec_t(1, -1)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         for (size_t i = 0; i < args->num_args(); ++i) {
             counted_t<val_t> v = args->arg(env, i);
             if (v->as_bool()) {
@@ -52,11 +52,11 @@ private:
         return new_val_bool(false);
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
     const char *name() const FINAL{ return "any"; }
 };
@@ -65,18 +65,18 @@ class branch_term_t : public op_term_t {
 public:
     branch_term_t(compile_env_t *env, const protob_t<const Term> &term) : op_term_t(env, term, argspec_t(3)) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         bool b = args->arg(env, 0)->as_bool();
         return b ? args->arg(env, 1) : args->arg(env, 2);
     }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    const char *name() const FINAL { return "branch"; }
+    virtual const char *name() const { return "branch"; }
 };
 
 
@@ -86,7 +86,7 @@ public:
         : op_term_t(env, term, argspec_t(1, -1),
           optargspec_t({"_SHORTCUT_", "_EVAL_FLAGS_"})) { }
 private:
-    counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const FINAL {
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         function_shortcut_t shortcut = CONSTANT_SHORTCUT;
         eval_flags_t flags = NO_FLAGS;
         if (counted_t<val_t> v = args->optarg(env, "_SHORTCUT_")) {
@@ -141,11 +141,11 @@ private:
             }
         }
     }
-    const char *name() const FINAL { return "funcall"; }
+    virtual const char *name() const { return "funcall"; }
 
-    bool op_is_deterministic() const FINAL { return true; }
+    virtual bool op_is_deterministic() const { return true; }
 
-    int parallelization_level() const FINAL {
+    virtual int parallelization_level() const {
         return params_parallelization_level();
     }
 };
