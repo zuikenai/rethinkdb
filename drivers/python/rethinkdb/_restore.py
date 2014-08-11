@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-import sys, os, datetime, time, shutil, tempfile, subprocess
+from __future__ import print_function
+
+import sys, os, datetime, time, shutil, tempfile, subprocess, os.path
 from optparse import OptionParser
 from ._backup import *
 
@@ -7,44 +9,47 @@ info = "'rethinkdb restore' loads data into a RethinkDB cluster from an archive"
 usage = "rethinkdb restore FILE [-c HOST:PORT] [-a AUTH_KEY] [--clients NUM] [--force] [-i (DB | DB.TABLE)]..."
 
 def print_restore_help():
-    print info
-    print usage
-    print ""
-    print "  FILE                             the archive file to restore data from"
-    print "  -h [ --help ]                    print this help"
-    print "  -c [ --connect ] HOST:PORT       host and client port of a rethinkdb node to connect"
-    print "                                   to (defaults to localhost:28015)"
-    print "  -a [ --auth ] AUTH_KEY           authorization key for rethinkdb clients"
-    print "  -i [ --import ] (DB | DB.TABLE)  limit restore to the given database or table (may"
-    print "                                   be specified multiple times)"
-    print "  --clients NUM_CLIENTS            the number of client connections to use (defaults"
-    print "                                   to 8)"
-    print "  --hard-durability                use hard durability writes (slower, but less memory"
-    print "                                   consumption on the server)"
-    print "  --force                          import data even if a table already exists"
-    print ""
-    print "EXAMPLES:"
-    print ""
-    print "rethinkdb restore rdb_dump.tar.gz -c mnemosyne:39500"
-    print "  Import data into a cluster running on host 'mnemosyne' with a client port at 39500 using"
-    print "  the named archive file."
-    print ""
-    print "rethinkdb restore rdb_dump.tar.gz -i test"
-    print "  Import data into a local cluster from only the 'test' database in the named archive file."
-    print ""
-    print "rethinkdb restore rdb_dump.tar.gz -i test.subscribers -c hades -a hunter2"
-    print "  Import data into a cluster running on host 'hades' which requires authorization from only"
-    print "  a specific table from the named archive file."
-    print ""
-    print "rethinkdb restore rdb_dump.tar.gz --clients 4 --force"
-    print "  Import data to a local cluster from the named archive file using only 4 client connections"
-    print "  and overwriting any existing rows with the same primary key."
+    print(info)
+    print(usage)
+    print("")
+    print("  FILE                             the archive file to restore data from")
+    print("  -h [ --help ]                    print this help")
+    print("  -c [ --connect ] HOST:PORT       host and client port of a rethinkdb node to connect")
+    print("                                   to (defaults to localhost:28015)")
+    print("  -a [ --auth ] AUTH_KEY           authorization key for rethinkdb clients")
+    print("  -i [ --import ] (DB | DB.TABLE)  limit restore to the given database or table (may")
+    print("                                   be specified multiple times)")
+    print("  --clients NUM_CLIENTS            the number of client connections to use (defaults")
+    print("                                   to 8)")
+    print("  --temp-dir DIRECTORY             the directory to use for intermediary results")
+    print("  --hard-durability                use hard durability writes (slower, but less memory")
+    print("                                   consumption on the server)")
+    print("  --force                          import data even if a table already exists")
+    print("")
+    print("EXAMPLES:")
+    print("")
+    print("rethinkdb restore rdb_dump.tar.gz -c mnemosyne:39500")
+    print("  Import data into a cluster running on host 'mnemosyne' with a client port at 39500 using")
+    print("  the named archive file.")
+    print("")
+    print("rethinkdb restore rdb_dump.tar.gz -i test")
+    print("  Import data into a local cluster from only the 'test' database in the named archive file.")
+    print("")
+    print("rethinkdb restore rdb_dump.tar.gz -i test.subscribers -c hades -a hunter2")
+    print("  Import data into a cluster running on host 'hades' which requires authorization from only")
+    print("  a specific table from the named archive file.")
+    print("")
+    print("rethinkdb restore rdb_dump.tar.gz --clients 4 --force")
+    print("  Import data to a local cluster from the named archive file using only 4 client connections")
+    print("  and overwriting any existing rows with the same primary key.")
 
 def parse_options():
     parser = OptionParser(add_help_option=False, usage=usage)
     parser.add_option("-c", "--connect", dest="host", metavar="HOST:PORT", default="localhost:28015", type="string")
     parser.add_option("-a", "--auth", dest="auth_key", metavar="KEY", default="", type="string")
     parser.add_option("-i", "--import", dest="tables", metavar="DB | DB.TABLE", default=[], action="append", type="string")
+
+    parser.add_option("--temp-dir", dest="temp_dir", metavar="directory", default=None, type="string")
     parser.add_option("--clients", dest="clients", metavar="NUM_CLIENTS", default=8, type="int")
     parser.add_option("--hard-durability", dest="hard", action="store_true", default=False)
     parser.add_option("--force", dest="force", action="store_true", default=False)
@@ -62,7 +67,7 @@ def parse_options():
     elif len(args) != 1:
         raise RuntimeError("Error: Only one positional argument supported")
 
-    res = { }
+    res = {}
 
     # Verify valid host:port --connect option
     (res["host"], res["port"]) = parse_connect_option(options.host)
@@ -76,6 +81,15 @@ def parse_options():
     # Verify valid --import options
     res["tables"] = parse_db_table_options(options.tables)
 
+    # Make sure the temporary directory exists and is accessible
+    res["temp_dir"] = options.temp_dir
+
+    if res["temp_dir"] is not None:
+        if not os.path.isdir(res["temp_dir"]):
+            raise RuntimeError("Error: Temporary directory doesn't exist or is not a directory: %s" % res["temp_dir"])
+        if not os.access(res["temp_dir"], os.W_OK):
+            raise RuntimeError("Error: Temporary directory inaccessible: %s" % res["temp_dir"])
+
     res["auth_key"] = options.auth_key
     res["clients"] = options.clients
     res["hard"] = options.hard
@@ -84,7 +98,7 @@ def parse_options():
     return res
 
 def do_unzip(temp_dir, options):
-    print "Unzipping archive file..."
+    print("Unzipping archive file...")
     start_time = time.time()
     tar_args = ["tar", "xzf", options["in_file"], "--strip-components=1"]
     tar_args.extend(["-C", temp_dir])
@@ -108,10 +122,10 @@ def do_unzip(temp_dir, options):
     if res != 0:
         raise RuntimeError("Error: untar of archive '%s' failed" % options["in_file"])
 
-    print "  Done (%d seconds)" % (time.time() - start_time)
+    print("  Done (%d seconds)" % (time.time() - start_time))
 
 def do_import(temp_dir, options):
-    print "Importing from directory..."
+    print("Importing from directory...")
 
     import_args = ["rethinkdb-import"]
     import_args.extend(["--connect", "%s:%s" % (options["host"], options["port"])])
@@ -132,7 +146,6 @@ def do_import(temp_dir, options):
     if options["debug"]:
         export_args.extend(["--debug"])
 
-    print "importing with args: %s" % str(import_args)
     res = subprocess.call(import_args)
     if res != 0:
         raise RuntimeError("Error: rethinkdb-import failed")
@@ -141,7 +154,7 @@ def do_import(temp_dir, options):
 
 def run_rethinkdb_import(options):
     # Create a temporary directory to store the extracted data
-    temp_dir = tempfile.mkdtemp()
+    temp_dir = tempfile.mkdtemp(dir=options["temp_dir"])
     res = -1
 
     try:
@@ -157,15 +170,15 @@ def main():
     try:
         options = parse_options()
     except RuntimeError as ex:
-        print >> sys.stderr, "Usage: %s" % usage
-        print >> sys.stderr, ex
+        print("Usage: %s" % usage, file=sys.stderr)
+        print(ex, file=sys.stderr)
         return 1
 
     try:
         start_time = time.time()
         run_rethinkdb_import(options)
     except RuntimeError as ex:
-        print >> sys.stderr, ex
+        print(ex, file=sys.stderr)
         return 1
     return 0
 

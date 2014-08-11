@@ -19,6 +19,8 @@
 #include "btree/erase_range.hpp"
 #include "btree/secondary_operations.hpp"
 #include "concurrency/cond_var.hpp"
+#include "rdb_protocol/geo/ellipsoid.hpp"
+#include "rdb_protocol/geo/lat_lon_types.hpp"
 #include "perfmon/perfmon.hpp"
 #include "protocol_api.hpp"
 #include "rdb_protocol/changefeed.hpp"
@@ -69,6 +71,15 @@ ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(
         point_delete_result_t, int8_t,
         point_delete_result_t::DELETED, point_delete_result_t::MISSING);
 
+enum class sindex_rename_result_t {
+    OLD_NAME_DOESNT_EXIST,
+    NEW_NAME_EXISTS,
+    SUCCESS
+};
+ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(
+        sindex_rename_result_t, int8_t,
+        sindex_rename_result_t::OLD_NAME_DOESNT_EXIST, sindex_rename_result_t::SUCCESS);
+
 #define RDB_DECLARE_PROTOB_SERIALIZABLE(pb_t) \
     void serialize_protobuf(write_message_t *wm, const pb_t &p); \
     MUST_USE archive_result_t deserialize_protobuf(read_stream_t *s, pb_t *p)
@@ -80,7 +91,7 @@ RDB_DECLARE_PROTOB_SERIALIZABLE(Backtrace);
 class key_le_t {
 public:
     explicit key_le_t(sorting_t _sorting) : sorting(_sorting) { }
-    bool operator()(const store_key_t &key1, const store_key_t &key2) const {
+    bool is_le(const store_key_t &key1, const store_key_t &key2) const {
         return (!reversed(sorting) && key1 <= key2)
             || (reversed(sorting) && key2 <= key1);
     }
@@ -108,7 +119,7 @@ public:
     explicit datum_range_t(counted_t<const ql::datum_t> val);
     static datum_range_t universe();
 
-    bool contains(counted_t<const ql::datum_t> val) const;
+    bool contains(reql_version_t reql_version, counted_t<const ql::datum_t> val) const;
     bool is_universe() const;
 
     RDB_DECLARE_ME_SERIALIZABLE;
@@ -147,6 +158,13 @@ struct backfill_atom_t {
 
 RDB_DECLARE_SERIALIZABLE(backfill_atom_t);
 
+enum class sindex_multi_bool_t { SINGLE = 0, MULTI = 1};
+enum class sindex_geo_bool_t { REGULAR = 0, GEO = 1};
+
+ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(sindex_multi_bool_t, int8_t,
+        sindex_multi_bool_t::SINGLE, sindex_multi_bool_t::MULTI);
+ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(sindex_geo_bool_t, int8_t,
+        sindex_geo_bool_t::REGULAR, sindex_geo_bool_t::GEO);
 
 namespace rdb_protocol {
 
@@ -159,23 +177,23 @@ void bring_sindexes_up_to_date(
 struct single_sindex_status_t {
     single_sindex_status_t()
         : blocks_processed(0),
-          blocks_total(0), ready(true)
+          blocks_total(0), ready(true), outdated(false),
+          geo(sindex_geo_bool_t::REGULAR), multi(sindex_multi_bool_t::SINGLE)
     { }
     single_sindex_status_t(size_t _blocks_processed, size_t _blocks_total, bool _ready)
         : blocks_processed(_blocks_processed),
           blocks_total(_blocks_total), ready(_ready) { }
     size_t blocks_processed, blocks_total;
     bool ready;
+    bool outdated;
+    sindex_geo_bool_t geo;
+    sindex_multi_bool_t multi;
+    std::string func;
 };
 
 } // namespace rdb_protocol
 
 RDB_DECLARE_SERIALIZABLE(rdb_protocol::single_sindex_status_t);
-
-enum class sindex_multi_bool_t { SINGLE = 0, MULTI = 1};
-
-ARCHIVE_PRIM_MAKE_RANGED_SERIALIZABLE(sindex_multi_bool_t, int8_t,
-        sindex_multi_bool_t::SINGLE, sindex_multi_bool_t::MULTI);
 
 struct point_read_response_t {
     counted_t<const ql::datum_t> data;
@@ -193,14 +211,41 @@ struct rget_read_response_t {
     store_key_t last_key;
 
     rget_read_response_t() : truncated(false) { }
-    rget_read_response_t(
-            const key_range_t &_key_range, const ql::result_t &_result,
-            bool _truncated, const store_key_t &_last_key)
-        : key_range(_key_range), result(_result),
-          truncated(_truncated), last_key(_last_key) { }
 };
 
 RDB_DECLARE_SERIALIZABLE(rget_read_response_t);
+
+struct intersecting_geo_read_response_t {
+    boost::variant<counted_t<const ql::datum_t>, ql::exc_t> results_or_error;
+
+    intersecting_geo_read_response_t() { }
+    intersecting_geo_read_response_t(
+            const counted_t<const ql::datum_t> &_results)
+        : results_or_error(_results) { }
+    intersecting_geo_read_response_t(
+            const ql::exc_t &_error)
+        : results_or_error(_error) { }
+};
+
+RDB_DECLARE_SERIALIZABLE(intersecting_geo_read_response_t);
+
+struct nearest_geo_read_response_t {
+    typedef std::pair<double, counted_t<const ql::datum_t> > dist_pair_t;
+    typedef std::vector<dist_pair_t> result_t;
+    boost::variant<result_t, ql::exc_t> results_or_error;
+
+    nearest_geo_read_response_t() { }
+    explicit nearest_geo_read_response_t(result_t &&_results) {
+        // Implement "move" on _results through std::vector<...>::swap to avoid
+        // problems with boost::variant not supporting move assignment.
+        results_or_error = result_t();
+        boost::get<result_t>(&results_or_error)->swap(_results);
+    }
+    explicit nearest_geo_read_response_t(const ql::exc_t &_error)
+        : results_or_error(_error) { }
+};
+
+RDB_DECLARE_SERIALIZABLE(nearest_geo_read_response_t);
 
 void scale_down_distribution(size_t result_limit, std::map<store_key_t, int64_t> *key_counts);
 
@@ -263,6 +308,8 @@ RDB_SERIALIZE_OUTSIDE(changefeed_point_stamp_response_t);
 struct read_response_t {
     typedef boost::variant<point_read_response_t,
                            rget_read_response_t,
+                           intersecting_geo_read_response_t,
+                           nearest_geo_read_response_t,
                            changefeed_subscribe_response_t,
                            changefeed_stamp_response_t,
                            changefeed_point_stamp_response_t,
@@ -312,7 +359,7 @@ public:
 
     rget_read_t(const region_t &_region,
                 const std::map<std::string, ql::wire_func_t> &_optargs,
-                const std::string _table_name,
+                const std::string &_table_name,
                 const ql::batchspec_t &_batchspec,
                 const std::vector<ql::transform_variant_t> &_transforms,
                 boost::optional<ql::terminal_variant_t> &&_terminal,
@@ -320,7 +367,7 @@ public:
                 sorting_t _sorting)
         : region(_region),
           optargs(_optargs),
-          table_name(std::move(_table_name)),
+          table_name(_table_name),
           batchspec(_batchspec),
           transforms(_transforms),
           terminal(std::move(_terminal)),
@@ -345,6 +392,58 @@ public:
 };
 RDB_DECLARE_SERIALIZABLE(rget_read_t);
 
+class intersecting_geo_read_t {
+public:
+    intersecting_geo_read_t() { }
+
+    intersecting_geo_read_t(
+            const counted_t<const ql::datum_t> &_query_geometry,
+            const std::string &_table_name, const std::string &_sindex_id,
+            const std::map<std::string, ql::wire_func_t> &_optargs)
+        : optargs(_optargs),
+          query_geometry(_query_geometry),
+          region(region_t::universe()),
+          table_name(_table_name),
+          sindex_id(_sindex_id) { }
+
+    std::map<std::string, ql::wire_func_t> optargs;
+
+    counted_t<const ql::datum_t> query_geometry; // Tested for intersection
+
+    region_t region; // We need this even for sindex reads due to sharding.
+    std::string table_name;
+
+    std::string sindex_id;
+};
+RDB_DECLARE_SERIALIZABLE(intersecting_geo_read_t);
+
+class nearest_geo_read_t {
+public:
+    nearest_geo_read_t() { }
+
+    nearest_geo_read_t(
+            lat_lon_point_t _center, double _max_dist, uint64_t _max_results,
+            const ellipsoid_spec_t &_geo_system, const std::string &_table_name,
+            const std::string &_sindex_id,
+            const std::map<std::string, ql::wire_func_t> &_optargs)
+        : optargs(_optargs), center(_center), max_dist(_max_dist),
+          max_results(_max_results), geo_system(_geo_system),
+          region(region_t::universe()), table_name(_table_name),
+          sindex_id(_sindex_id) { }
+
+    std::map<std::string, ql::wire_func_t> optargs;
+
+    lat_lon_point_t center;
+    double max_dist;
+    uint64_t max_results;
+    ellipsoid_spec_t geo_system;
+
+    region_t region; // We need this even for sindex reads due to sharding.
+    std::string table_name;
+
+    std::string sindex_id;
+};
+RDB_DECLARE_SERIALIZABLE(nearest_geo_read_t);
 
 class distribution_read_t {
 public:
@@ -417,6 +516,8 @@ public:
 struct read_t {
     typedef boost::variant<point_read_t,
                            rget_read_t,
+                           intersecting_geo_read_t,
+                           nearest_geo_read_t,
                            changefeed_subscribe_t,
                            changefeed_stamp_t,
                            changefeed_point_stamp_t,
@@ -489,6 +590,12 @@ struct sindex_drop_response_t {
 
 RDB_DECLARE_SERIALIZABLE(sindex_drop_response_t);
 
+struct sindex_rename_response_t {
+    sindex_rename_result_t result;
+};
+
+RDB_DECLARE_SERIALIZABLE(sindex_rename_response_t);
+
 struct sync_response_t {
     // sync always succeeds
 };
@@ -504,6 +611,7 @@ struct write_response_t {
                    point_delete_response_t,
                    sindex_create_response_t,
                    sindex_drop_response_t,
+                   sindex_rename_response_t,
                    sync_response_t> response;
 
     profile::event_log_t event_log;
@@ -604,14 +712,16 @@ class sindex_create_t {
 public:
     sindex_create_t() { }
     sindex_create_t(const std::string &_id, const ql::map_wire_func_t &_mapping,
-                    sindex_multi_bool_t _multi)
-        : id(_id), mapping(_mapping), region(region_t::universe()), multi(_multi)
+                    sindex_multi_bool_t _multi, sindex_geo_bool_t _geo)
+        : id(_id), mapping(_mapping), region(region_t::universe()),
+          multi(_multi), geo(_geo)
     { }
 
     std::string id;
     ql::map_wire_func_t mapping;
     region_t region;
     sindex_multi_bool_t multi;
+    sindex_geo_bool_t geo;
 };
 
 RDB_DECLARE_SERIALIZABLE(sindex_create_t);
@@ -628,6 +738,25 @@ public:
 };
 
 RDB_DECLARE_SERIALIZABLE(sindex_drop_t);
+
+class sindex_rename_t {
+public:
+    sindex_rename_t() { }
+    sindex_rename_t(const std::string &_old_name,
+                    const std::string &_new_name,
+                    bool _overwrite) :
+        old_name(_old_name),
+        new_name(_new_name),
+        overwrite(_overwrite),
+        region(region_t::universe()) { }
+
+    std::string old_name;
+    std::string new_name;
+    bool overwrite;
+    region_t region;
+};
+
+RDB_DECLARE_SERIALIZABLE(sindex_rename_t);
 
 class sync_t {
 public:
@@ -647,6 +776,7 @@ struct write_t {
                            point_delete_t,
                            sindex_create_t,
                            sindex_drop_t,
+                           sindex_rename_t,
                            sync_t> variant_t;
     variant_t write;
 

@@ -8,6 +8,9 @@
 #include <vector>
 
 #include "rdb_protocol/context.hpp"
+#include "rdb_protocol/protocol.hpp"
+
+const char *const sindex_blob_prefix = "$reql_index_function$";
 
 class datum_range_t;
 namespace ql { namespace changefeed {
@@ -81,6 +84,25 @@ public:
         ql::env_t *env,
         const ql::protob_t<const Backtrace> &bt,
         const std::string &table_name);
+    counted_t<ql::datum_stream_t> read_intersecting(
+        ql::env_t *env,
+        const std::string &sindex,
+        const ql::protob_t<const Backtrace> &bt,
+        const std::string &table_name,
+        bool use_outdated,
+        const counted_t<const ql::datum_t> &query_geometry);
+    counted_t<ql::datum_stream_t> read_nearest(
+        ql::env_t *env,
+        const std::string &sindex,
+        const ql::protob_t<const Backtrace> &bt,
+        const std::string &table_name,
+        bool use_outdated,
+        lat_lon_point_t center,
+        double max_dist,
+        uint64_t max_results,
+        const ellipsoid_spec_t &geo_system,
+        dist_unit_t dist_unit,
+        const ql::configured_limits_t &limits);
 
     counted_t<const ql::datum_t> write_batched_replace(ql::env_t *env,
         const std::vector<counted_t<const ql::datum_t> > &keys,
@@ -93,9 +115,17 @@ public:
     bool write_sync_depending_on_durability(ql::env_t *env,
         durability_requirement_t durability);
 
-    bool sindex_create(ql::env_t *env, const std::string &id,
-        counted_t<ql::func_t> index_func, sindex_multi_bool_t multi);
-    bool sindex_drop(ql::env_t *env, const std::string &id);
+    bool sindex_create(ql::env_t *env,
+        const std::string &id,
+        counted_t<ql::func_t> index_func,
+        sindex_multi_bool_t multi,
+        sindex_geo_bool_t geo);
+    bool sindex_drop(ql::env_t *env,
+        const std::string &id);
+    sindex_rename_result_t sindex_rename(ql::env_t *env,
+        const std::string &old_name,
+        const std::string &new_name,
+        bool overwrite);
     std::vector<std::string> sindex_list(ql::env_t *env);
     std::map<std::string, counted_t<const ql::datum_t> > sindex_status(ql::env_t *env,
         const std::set<std::string> &sindexes);

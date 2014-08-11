@@ -128,7 +128,8 @@ TPTEST(BTreeSindex, BtreeStoreAPI) {
             &get_global_perfmon_collection(),
             NULL,
             &io_backender,
-            base_path_t("."));
+            base_path_t("."),
+            NULL);
 
     cond_t dummy_interruptor;
 
@@ -227,14 +228,17 @@ TPTEST(BTreeSindex, BtreeStoreAPI) {
 
             store_key_t key("foo");
 
-            bool sindex_exists = store.acquire_sindex_superblock_for_read(
-                    name,
-                    "",
-                    main_sb.get(),
-                    &sindex_super_block,
-                    static_cast<std::vector<char>*>(NULL),
-                    &sindex_uuid);
-            ASSERT_TRUE(sindex_exists);
+            {
+                std::vector<char> opaque_definition;
+                bool sindex_exists = store.acquire_sindex_superblock_for_read(
+                        name,
+                        "",
+                        main_sb.get(),
+                        &sindex_super_block,
+                        &opaque_definition,
+                        &sindex_uuid);
+                ASSERT_TRUE(sindex_exists);
+            }
 
             point_read_response_t response;
 
@@ -261,7 +265,7 @@ TPTEST(BTreeSindex, BtreeStoreAPI) {
             = store.acquire_sindex_block_for_write(super_block->expose_buf(),
                                                    super_block->get_sindex_block_id());
 
-        store.drop_sindex(*it, std::move(sindex_block));
+        store.drop_sindex(*it, &sindex_block);
     }
 }
 

@@ -109,6 +109,7 @@ counted_t<const term_t> compile_term(compile_env_t *env, protob_t<const Term> t)
     case Term::INDEX_LIST:         return make_sindex_list_term(env, t);
     case Term::INDEX_STATUS:       return make_sindex_status_term(env, t);
     case Term::INDEX_WAIT:         return make_sindex_wait_term(env, t);
+    case Term::INDEX_RENAME:       return make_sindex_rename_term(env, t);
     case Term::FUNCALL:            return make_funcall_term(env, t);
     case Term::BRANCH:             return make_branch_term(env, t);
     case Term::ANY:                return make_any_term(env, t);
@@ -171,6 +172,18 @@ counted_t<const term_t> compile_term(compile_env_t *env, protob_t<const Term> t)
     case Term::NOVEMBER:           return make_constant_term(env, t, 11, "november");
     case Term::DECEMBER:           return make_constant_term(env, t, 12, "december");
     case Term::SLEEP:              return make_sleep_term(env, t);
+    case Term::GEOJSON:            return make_geojson_term(env, t);
+    case Term::TO_GEOJSON:         return make_to_geojson_term(env, t);
+    case Term::POINT:              return make_point_term(env, t);
+    case Term::LINE:               return make_line_term(env, t);
+    case Term::POLYGON:            return make_polygon_term(env, t);
+    case Term::DISTANCE:           return make_distance_term(env, t);
+    case Term::INTERSECTS:         return make_intersects_term(env, t);
+    case Term::INCLUDES:           return make_includes_term(env, t);
+    case Term::CIRCLE:             return make_circle_term(env, t);
+    case Term::GET_INTERSECTING:   return make_get_intersecting_term(env, t);
+    case Term::FILL:               return make_fill_term(env, t);
+    case Term::GET_NEAREST:        return make_get_nearest_term(env, t);
     default: unreachable();
     }
     unreachable();
@@ -239,7 +252,10 @@ void run(protob_t<Query> q,
             } else if (const counted_t<grouped_data_t> gd
                        = val->maybe_as_promiscuous_grouped_data(scope_env.env)) {
                 res->set_type(Response::SUCCESS_ATOM);
-                counted_t<const datum_t> d = to_datum(std::move(*gd), env.limits);
+                counted_t<const datum_t> d
+                    = to_datum_for_client_serialization(std::move(*gd),
+                                                        env.reql_version,
+                                                        env.limits);
                 d->write_to_protobuf(res->add_response(), use_json);
                 if (env.trace != nullptr) {
                     env.trace->as_datum()->write_to_protobuf(

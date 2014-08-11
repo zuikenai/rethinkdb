@@ -9,9 +9,12 @@
 
 #include "containers/counted.hpp"
 #include "containers/wire_string.hpp"
+#include "rdb_protocol/geo/distances.hpp"
+#include "rdb_protocol/geo/lat_lon_types.hpp"
 #include "rdb_protocol/datum_stream.hpp"
 #include "rdb_protocol/ql2.pb.h"
 
+class ellipsoid_spec_t;
 namespace ql {
 class datum_t;
 class env_t;
@@ -38,11 +41,27 @@ public:
             const std::string &sindex_id,
             const protob_t<const Backtrace> &bt);
     void add_sorting(
-        const std::string &sindex_id, sorting_t sorting,
-        const rcheckable_t *parent);
-    void add_bounds(datum_range_t &&new_bounds,
-                    const std::string &new_sindex_id,
-                    const rcheckable_t *parent);
+            const std::string &sindex_id, sorting_t sorting,
+            const rcheckable_t *parent);
+    void add_bounds(
+            datum_range_t &&new_bounds,
+            const std::string &new_sindex_id,
+            const rcheckable_t *parent);
+    counted_t<datum_stream_t> get_intersecting(
+            env_t *env,
+            const counted_t<const datum_t> &query_geometry,
+            const std::string &new_sindex_id,
+            const pb_rcheckable_t *parent);
+    counted_t<datum_stream_t> get_nearest(
+            env_t *env,
+            lat_lon_point_t center,
+            double max_dist,
+            uint64_t max_results,
+            const ellipsoid_spec_t &geo_system,
+            dist_unit_t dist_unit,
+            const std::string &new_sindex_id,
+            const pb_rcheckable_t *parent,
+            const configured_limits_t &limits);
 
     counted_t<const datum_t> make_error_datum(const base_exc_t &exception);
 
@@ -64,8 +83,12 @@ public:
 
     MUST_USE bool sindex_create(
         env_t *env, const std::string &name,
-        counted_t<func_t> index_func, sindex_multi_bool_t multi);
+        counted_t<func_t> index_func, sindex_multi_bool_t multi,
+        sindex_geo_bool_t geo);
     MUST_USE bool sindex_drop(env_t *env, const std::string &name);
+    MUST_USE sindex_rename_result_t sindex_rename(
+        env_t *env, const std::string &old_name,
+        const std::string &new_name, bool overwrite);
     counted_t<const datum_t> sindex_list(env_t *env);
     counted_t<const datum_t> sindex_status(env_t *env,
         std::set<std::string> sindex);

@@ -3,8 +3,10 @@
 
 #include <limits>
 
+#include "rdb_protocol/geo/exceptions.hpp"
 #include "rdb_protocol/op.hpp"
 #include "rdb_protocol/pseudo_time.hpp"
+#include "rdb_protocol/pseudo_geometry.hpp"
 
 namespace ql {
 
@@ -78,9 +80,15 @@ private:
 
     counted_t<const datum_t> sub(counted_t<const datum_t> lhs,
                                  counted_t<const datum_t> rhs,
-                                 UNUSED const configured_limits_t &limits) const {
+                                 const configured_limits_t &limits) const {
         if (lhs->is_ptype(pseudo::time_string)) {
             return pseudo::time_sub(lhs, rhs);
+        } else if (lhs->is_ptype(pseudo::geometry_string)) {
+            try {
+                return pseudo::geo_sub(lhs, rhs, limits);
+            } catch (const geo_exception_t &e) {
+                rfail(base_exc_t::GENERIC, "%s", e.what());
+            }
         } else {
             lhs->check_type(datum_t::R_NUM);
             rhs->check_type(datum_t::R_NUM);

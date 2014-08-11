@@ -108,13 +108,21 @@ counted_t<const datum_t> table_t::batched_insert(
 MUST_USE bool table_t::sindex_create(env_t *env,
                                      const std::string &id,
                                      counted_t<func_t> index_func,
-                                     sindex_multi_bool_t multi) {
+                                     sindex_multi_bool_t multi,
+                                     sindex_geo_bool_t geo) {
     index_func->assert_deterministic("Index functions must be deterministic.");
-    return table->sindex_create(env, id, index_func, multi);
+    return table->sindex_create(env, id, index_func, multi, geo);
 }
 
 MUST_USE bool table_t::sindex_drop(env_t *env, const std::string &id) {
     return table->sindex_drop(env, id);
+}
+
+MUST_USE sindex_rename_result_t table_t::sindex_rename(env_t *env,
+                                                       const std::string &old_name,
+                                                       const std::string &new_name,
+                                                       bool overwrite) {
+    return table->sindex_rename(env, old_name, new_name, overwrite);
 }
 
 counted_t<const datum_t> table_t::sindex_list(env_t *env) {
@@ -233,6 +241,60 @@ counted_t<datum_stream_t> table_t::as_datum_stream(env_t *env,
         bounds,
         sorting,
         use_outdated);
+}
+
+counted_t<datum_stream_t> table_t::get_intersecting(
+        env_t *env,
+        const counted_t<const datum_t> &query_geometry,
+        const std::string &new_sindex_id,
+        const pb_rcheckable_t *parent) {
+    rcheck_target(parent, base_exc_t::GENERIC, !sindex_id,
+                  "Cannot chain get_intersecting with other indexed operations.");
+    rcheck_target(parent, base_exc_t::GENERIC, new_sindex_id != get_pkey(),
+                  "get_intersecting cannot use the primary index.");
+    sindex_id = new_sindex_id;
+    r_sanity_check(sorting == sorting_t::UNORDERED);
+    r_sanity_check(bounds.is_universe());
+
+    return table->read_intersecting(
+        env,
+        *sindex_id,
+        parent->backtrace(),
+        display_name(),
+        use_outdated,
+        query_geometry);
+}
+
+counted_t<datum_stream_t> table_t::get_nearest(
+        env_t *env,
+        lat_lon_point_t center,
+        double max_dist,
+        uint64_t max_results,
+        const ellipsoid_spec_t &geo_system,
+        dist_unit_t dist_unit,
+        const std::string &new_sindex_id,
+        const pb_rcheckable_t *parent,
+        const configured_limits_t &limits) {
+    rcheck_target(parent, base_exc_t::GENERIC, !sindex_id,
+                  "Cannot chain get_nearest with other indexed operations.");
+    rcheck_target(parent, base_exc_t::GENERIC, new_sindex_id != get_pkey(),
+                  "get_nearest cannot use the primary index.");
+    sindex_id = new_sindex_id;
+    r_sanity_check(sorting == sorting_t::UNORDERED);
+    r_sanity_check(bounds.is_universe());
+
+    return table->read_nearest(
+        env,
+        *sindex_id,
+        parent->backtrace(),
+        display_name(),
+        use_outdated,
+        center,
+        max_dist,
+        max_results,
+        geo_system,
+        dist_unit,
+        limits);
 }
 
 val_t::type_t::type_t(val_t::type_t::raw_type_t _raw_type) : raw_type(_raw_type) { }
@@ -530,11 +592,11 @@ std::string val_t::print() const {
     } else if (get_type().is_convertible(type_t::TABLE)) {
         return strprintf("table(\"%s\")", table->name.c_str());
     } else if (get_type().is_convertible(type_t::SELECTION)) {
-        return strprintf("OPAQUE SELECTION ON table(%s)",
+        return strprintf("SELECTION ON table(%s)",
                          table->name.c_str());
     } else {
         // TODO: Do something smarter here?
-        return strprintf("OPAQUE VALUE %s", get_type().name());
+        return strprintf("VALUE %s", get_type().name());
     }
 }
 

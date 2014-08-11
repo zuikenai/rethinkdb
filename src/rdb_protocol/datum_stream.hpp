@@ -39,7 +39,6 @@ public:
 
     // stream -> stream (always eager)
     counted_t<datum_stream_t> slice(size_t l, size_t r);
-    counted_t<datum_stream_t> zip();
     counted_t<datum_stream_t> indexes_of(counted_t<func_t> f);
     counted_t<datum_stream_t> ordered_distinct();
 
@@ -176,15 +175,6 @@ private:
     virtual bool is_exhausted() const;
     virtual bool is_cfeed() const;
     uint64_t index, left, right;
-};
-
-// This could _not_ exist, we could just use a map transform.
-class zip_datum_stream_t FINAL : public wrapper_datum_stream_t {
-public:
-    explicit zip_datum_stream_t(counted_t<datum_stream_t> src);
-private:
-    virtual std::vector<counted_t<const datum_t> >
-    next_raw_batch(env_t *env, const batchspec_t &batchspec);
 };
 
 class indexed_sort_datum_stream_t FINAL : public wrapper_datum_stream_t {
@@ -370,7 +360,8 @@ private:
     // Returns `true` if there's data in `items`.
     bool load_items(env_t *env, const batchspec_t &batchspec);
     rget_read_response_t do_read(env_t *env, const read_t &read);
-    std::vector<rget_item_t> do_range_read(env_t *env, const read_t &read);
+    std::vector<rget_item_t> do_range_read(
+            env_t *env, const read_t &read);
 
     real_table_t table;
     const bool use_outdated;

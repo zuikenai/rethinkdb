@@ -6,10 +6,12 @@
 #include "buffer_cache/alt/blob.hpp"
 #include "buffer_cache/alt/serialize_onto_blob.hpp"
 #include "containers/archive/vector_stream.hpp"
+#include "containers/archive/versioned.hpp"
 
 RDB_IMPL_SERIALIZABLE_5_SINCE_v1_13(
         secondary_index_t, superblock, opaque_definition,
         post_construction_complete, being_deleted, id);
+
 
 RDB_IMPL_SERIALIZABLE_2_SINCE_v1_13(sindex_name_t, name, being_deleted);
 
@@ -31,16 +33,23 @@ btree_sindex_block_magic_t<cluster_version_t::v1_13>::value
     = { { 's', 'i', 'n', 'd' } };
 template <>
 const block_magic_t
-btree_sindex_block_magic_t<cluster_version_t::v1_14_is_latest_disk>::value
+btree_sindex_block_magic_t<cluster_version_t::v1_14>::value
     = { { 's', 'i', 'n', 'e' } };
+template <>
+const block_magic_t
+btree_sindex_block_magic_t<cluster_version_t::v1_15_is_latest_disk>::value
+    = { { 's', 'i', 'n', 'f' } };
 
 cluster_version_t sindex_block_version(const btree_sindex_block_t *data) {
     if (data->magic
         == btree_sindex_block_magic_t<cluster_version_t::v1_13>::value) {
         return cluster_version_t::v1_13;
     } else if (data->magic
-               == btree_sindex_block_magic_t<cluster_version_t::v1_14_is_latest_disk>::value) {
-        return cluster_version_t::v1_14_is_latest_disk;
+               == btree_sindex_block_magic_t<cluster_version_t::v1_14>::value) {
+        return cluster_version_t::v1_14;
+    } else if (data->magic
+               == btree_sindex_block_magic_t<cluster_version_t::v1_15_is_latest_disk>::value) {
+        return cluster_version_t::v1_15_is_latest_disk;
     } else {
         crash("Unexpected magic in btree_sindex_block_t.");
     }

@@ -282,12 +282,17 @@ private:
             = args->arg(env, 0)->as_promiscuous_grouped_data(env->env);
         std::vector<counted_t<const datum_t> > v;
         v.reserve(groups->size());
-        for (auto it = groups->begin(); it != groups->end(); ++it) {
-            r_sanity_check(it->first.has() && it->second.has());
-            std::map<std::string, counted_t<const datum_t> > m =
-                {{"group", std::move(it->first)}, {"reduction", std::move(it->second)}};
-            v.push_back(make_counted<const datum_t>(std::move(m)));
-        }
+
+        iterate_ordered_by_version(
+            env->env->reql_version,
+            *groups,
+            [&v](const counted_t<const datum_t> &key, counted_t<const datum_t> &value) {
+                r_sanity_check(key.has() && value.has());
+                std::map<std::string, counted_t<const datum_t> > m =
+                    {{"group", key},
+                     {"reduction", std::move(value)}};
+                v.push_back(make_counted<const datum_t>(std::move(m)));
+            });
         return new_val(make_counted<const datum_t>(std::move(v), env->env->limits));
     }
     virtual const char *name() const { return "ungroup"; }

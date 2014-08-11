@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "rdb_protocol/real_table.hpp"
+#include "rdb_protocol/btree.hpp"
 #include "rdb_protocol/error.hpp"
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/op.hpp"
@@ -16,7 +18,7 @@ namespace ql {
 class sindex_create_term_t : public op_term_t {
 public:
     sindex_create_term_t(compile_env_t *env, const protob_t<const Term> &term)
-        : op_term_t(env, term, argspec_t(2, 3), optargspec_t({"multi"})) { }
+        : op_term_t(env, term, argspec_t(2, 3), optargspec_t({"multi", "geo"})) { }
 
     virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<table_t> table = args->arg(env, 0)->as_table();
@@ -26,9 +28,49 @@ public:
                base_exc_t::GENERIC,
                strprintf("Index name conflict: `%s` is the name of the primary key.",
                          name.c_str()));
+
+        /* Check if we're doing a multi index or a normal index. */
+        sindex_multi_bool_t multi = sindex_multi_bool_t::SINGLE;
+        sindex_geo_bool_t geo = sindex_geo_bool_t::REGULAR;
         counted_t<func_t> index_func;
         if (args->num_args() == 3) {
-            index_func = args->arg(env, 2)->as_func();
+            counted_t<val_t> v = args->arg(env, 2);
+            if (v->get_type().is_convertible(val_t::type_t::DATUM)) {
+                counted_t<const datum_t> d = v->as_datum();
+                if (d->get_type() == datum_t::R_BINARY) {
+                    const char *data = d->as_binary().data();
+                    size_t sz = d->as_binary().size();
+                    size_t prefix_sz = strlen(sindex_blob_prefix);
+                    bool bad_prefix = (sz < prefix_sz);
+                    for (size_t i = 0; !bad_prefix && i < prefix_sz; ++i) {
+                        bad_prefix |= (data[i] != sindex_blob_prefix[i]);
+                    }
+                    rcheck(!bad_prefix,
+                           base_exc_t::GENERIC,
+                           "Cannot create an sindex except from a reql_index_function "
+                           "returned from `index_status` in the field `function`.");
+                    std::vector<char> vec(data + prefix_sz, data + sz);
+                    sindex_disk_info_t sindex_info;
+                    try {
+                        deserialize_sindex_info(vec, &sindex_info);
+                        multi = sindex_info.multi;
+                        geo = sindex_info.geo;
+                    } catch (const archive_exc_t &e) {
+                        rfail(base_exc_t::GENERIC,
+                              "Binary blob passed to index create could not "
+                              "be interpreted as a reql_index_function (%s).",
+                              e.what());
+                    }
+                    index_func = sindex_info.mapping.compile_wire_func();
+                    // We ignore the `reql_version`, but in the future we may
+                    // have to do some conversions for compatibility.
+                }
+            }
+            // We do it this way so that if someone passes a string, we produce
+            // a type error asking for a function rather than BINARY.
+            if (!index_func.has()) {
+                index_func = v->as_func();
+            }
         } else {
 
             pb::dummy_var_t x = pb::dummy_var_t::SINDEXCREATE_X;
@@ -45,13 +87,20 @@ public:
         r_sanity_check(index_func.has());
 
         /* Check if we're doing a multi index or a normal index. */
-        counted_t<val_t> multi_val = args->optarg(env, "multi");
-        sindex_multi_bool_t multi =
-            (multi_val && multi_val->as_datum()->as_bool()
-             ? sindex_multi_bool_t::MULTI
-             : sindex_multi_bool_t::SINGLE);
+        if (counted_t<val_t> multi_val = args->optarg(env, "multi")) {
+            multi = multi_val->as_bool()
+                ? sindex_multi_bool_t::MULTI
+                : sindex_multi_bool_t::SINGLE;
+        }
+        /* Do we want to create a geo index? */
+        if (counted_t<val_t> geo_val = args->optarg(env, "geo")) {
+            geo = geo_val->as_bool()
+                ? sindex_geo_bool_t::GEO
+                : sindex_geo_bool_t::REGULAR;
+        }
 
-        bool success = table->sindex_create(env->env, name, index_func, multi);
+        bool success = table->sindex_create(env->env, name, index_func, multi, geo);
+
         if (success) {
             datum_object_builder_t res;
             UNUSED bool b = res.add("created", make_counted<datum_t>(1.0));
@@ -200,6 +249,65 @@ public:
     }
 };
 
+class sindex_rename_term_t : public op_term_t {
+public:
+    sindex_rename_term_t(compile_env_t *env, const protob_t<const Term> &term)
+        : op_term_t(env, term, argspec_t(3, 3), optargspec_t({"overwrite"})) { }
+
+    virtual counted_t<val_t> eval_impl(scope_env_t *env, args_t *args, eval_flags_t) const {
+        counted_t<table_t> table = args->arg(env, 0)->as_table();
+        counted_t<val_t> old_name_val = args->arg(env, 1);
+        counted_t<val_t> new_name_val = args->arg(env, 2);
+        std::string old_name = old_name_val->as_str().to_std();
+        std::string new_name = new_name_val->as_str().to_std();
+        rcheck(old_name != table->get_pkey(),
+               base_exc_t::GENERIC,
+               strprintf("Index name conflict: `%s` is the name of the primary key.",
+                         old_name.c_str()));
+        rcheck(new_name != table->get_pkey(),
+               base_exc_t::GENERIC,
+               strprintf("Index name conflict: `%s` is the name of the primary key.",
+                         new_name.c_str()));
+
+        counted_t<val_t> overwrite_val = args->optarg(env, "overwrite");
+        bool overwrite = overwrite_val ? overwrite_val->as_bool() : false;
+
+        sindex_rename_result_t result = table->sindex_rename(env->env, old_name,
+                                                             new_name, overwrite);
+
+        switch (result) {
+        case sindex_rename_result_t::SUCCESS: {
+                datum_object_builder_t retval;
+                UNUSED bool b = retval.add("renamed",
+                                           make_counted<datum_t>(old_name == new_name ?
+                                                                 0.0 : 1.0));
+                return new_val(std::move(retval).to_counted());
+            }
+        case sindex_rename_result_t::OLD_NAME_DOESNT_EXIST:
+            rfail_target(old_name_val, base_exc_t::GENERIC,
+                         "Index `%s` does not exist on table `%s`.",
+                         old_name.c_str(), table->display_name().c_str());
+        case sindex_rename_result_t::NEW_NAME_EXISTS:
+            rfail_target(new_name_val, base_exc_t::GENERIC,
+                         "Index `%s` already exists on table `%s`.",
+                         new_name.c_str(), table->display_name().c_str());
+        default:
+            unreachable();
+        }
+    }
+
+    virtual int parallelization_level() const {
+        // RSI: Check what the other stuff where this is nonsense is doing now.
+        return params_parallelization_level();
+    }
+
+    virtual bool op_is_deterministic() const {
+        return false;
+    }
+
+    virtual const char *name() const { return "sindex_rename"; }
+};
+
 counted_t<term_t> make_sindex_create_term(compile_env_t *env, const protob_t<const Term> &term) {
     return make_counted<sindex_create_term_t>(env, term);
 }
@@ -214,6 +322,9 @@ counted_t<term_t> make_sindex_status_term(compile_env_t *env, const protob_t<con
 }
 counted_t<term_t> make_sindex_wait_term(compile_env_t *env, const protob_t<const Term> &term) {
     return make_counted<sindex_wait_term_t>(env, term);
+}
+counted_t<term_t> make_sindex_rename_term(compile_env_t *env, const protob_t<const Term> &term) {
+    return make_counted<sindex_rename_term_t>(env, term);
 }
 
 

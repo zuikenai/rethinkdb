@@ -112,6 +112,7 @@ private:
         case Term::INDEX_CREATE:
         case Term::INDEX_DROP:
         case Term::INDEX_WAIT:
+        case Term::INDEX_RENAME:
             return true;
 
         case Term::DATUM:
@@ -248,6 +249,18 @@ private:
         case Term::INDEX_LIST:
         case Term::INDEX_STATUS:
         case Term::SLEEP:
+        case Term::GEOJSON:
+        case Term::TO_GEOJSON:
+        case Term::POINT:
+        case Term::LINE:
+        case Term::POLYGON:
+        case Term::DISTANCE:
+        case Term::INTERSECTS:
+        case Term::INCLUDES:
+        case Term::CIRCLE:
+        case Term::GET_INTERSECTING:
+        case Term::FILL:
+        case Term::GET_NEAREST:
             return false;
         default: unreachable();
         }
@@ -357,6 +370,7 @@ private:
         case Term::INDEX_LIST:
         case Term::INDEX_STATUS:
         case Term::INDEX_WAIT:
+        case Term::INDEX_RENAME:
         case Term::FUNCALL:
         case Term::BRANCH:
         case Term::ANY:
@@ -417,6 +431,18 @@ private:
         case Term::NOVEMBER:
         case Term::DECEMBER:
         case Term::SLEEP:
+        case Term::GEOJSON:
+        case Term::TO_GEOJSON:
+        case Term::POINT:
+        case Term::LINE:
+        case Term::POLYGON:
+        case Term::DISTANCE:
+        case Term::INTERSECTS:
+        case Term::INCLUDES:
+        case Term::CIRCLE:
+        case Term::GET_INTERSECTING:
+        case Term::FILL:
+        case Term::GET_NEAREST:
             return false;
         default: unreachable();
         }
