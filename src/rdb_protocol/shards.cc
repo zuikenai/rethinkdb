@@ -651,8 +651,11 @@ private:
     // ordered.
     bool must_be_ordered() const { return false; }
     par_level_t par_level() const FINAL {
-        // RSI: Nope.
-        return par_level_t::ONE();
+        par_level_t ret = par_level_t::NONE();
+        for (auto f = funcs.begin(); f != funcs.end(); ++f) {
+            ret = par_join(ret, (*f)->par_level());
+        }
+        return ret;
     }
 
     void apply_op(env_t *env, groups_t *groups,
@@ -661,6 +664,8 @@ private:
             return;
         }
         r_sanity_check(groups->size() == 1 && !groups->begin()->first.has());
+        // TODO(2014-10): Maybe parallelization should happen _in here_ instead of
+        // outside?
         datums_t *ds = &groups->begin()->second;
         for (auto el = ds->begin(); el != ds->end(); ++el) {
             std::vector<counted_t<const datum_t> > arr;
@@ -766,12 +771,13 @@ public:
 private:
     bool must_be_ordered() const { return false; }
     par_level_t par_level() const FINAL {
-        // RSI: Nope.
-        return par_level_t::ONE();
+        return f->par_level();
     }
 
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
+        // TODO(2014-10): Maybe parallelization should happen _in here_ instead of
+        // outside?
         try {
             for (auto it = list->begin(); it != list->end(); ++it) {
                 *it = f->call(env, *it)->as_datum();
@@ -787,7 +793,6 @@ private:
 // for duplicates to survive, either because they're on different shards or
 // because they span batch boundaries.  `ordered_distinct_datum_stream_t` in
 // `datum_stream.cc` removes any duplicates that survive this `lst_transform`.
-// RSI: This seems new, look at its parallelization opportunities.
 class distinct_trans_t : public ungrouped_op_t {
 public:
     explicit distinct_trans_t(const distinct_wire_func_t &f) : use_index(f.use_index) { }
@@ -798,8 +803,9 @@ private:
     bool must_be_ordered() const { return true; }
 
     par_level_t par_level() const FINAL {
-        // RSI: Garbage.
-        return par_level_t::ONE();
+        // We can't parallelize distinct_trans_t because it has state and expects to
+        // operate from left to right.
+        return par_level_t::MANY();
     }
 
     // sindex_val may be NULL
@@ -836,7 +842,7 @@ private:
     bool must_be_ordered() const { return false; }
 
     par_level_t par_level() const FINAL {
-        return par_level_t::ONE();  // RSI: Garbage.
+        return par_join(f->par_level(), default_val->par_level());
     }
 
     void transform_list(env_t *env, datums_t *list,
@@ -844,6 +850,8 @@ private:
         auto it = list->begin();
         auto loc = it;
         try {
+            // TODO(2014-10): Maybe parallelization should happen in here instead of
+            // outside.
             for (it = list->begin(); it != list->end(); ++it) {
                 if (f->filter_call(env, *it, default_val)) {
                     loc->swap(*it);
@@ -867,7 +875,7 @@ private:
     bool must_be_ordered() const { return false; }
 
     par_level_t par_level() const FINAL {
-        return par_level_t::ONE();  // RSI: Garbage.
+        return f->par_level();
     }
 
     void transform_list(env_t *env, datums_t *list,
@@ -876,6 +884,8 @@ private:
         batchspec_t bs = batchspec_t::user(batch_type_t::TERMINAL, env);
         profile::sampler_t sampler("Evaluating CONCAT_MAP elements.", env->trace);
         try {
+            // TODO(2014-10): Maybe parallelization should happen in here instead of
+            // outside.
             for (auto it = list->begin(); it != list->end(); ++it) {
                 auto ds = f->call(env, *it)->as_seq(env);
                 for (;;) {
@@ -901,7 +911,7 @@ private:
     bool must_be_ordered() const { return false; }
 
     par_level_t par_level() const FINAL {
-        // A zip-transformation (left-,right- merge) is deterministic.
+        // A zip-transformation (left-,right- merge) is deterministic, non-blocking.
         return par_level_t::NONE();
     }
 
