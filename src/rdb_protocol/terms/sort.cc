@@ -215,10 +215,13 @@ private:
     // deterministically (with stable_sort).
     virtual bool op_is_deterministic() const { return true; }
 
-    // RSI: A sorting or whatnot operation doesn't result in the possibility for
-    // parallel evalution, does it?  The function you're sorting on -- could it be
-    // parallelizable?  Does the code currently do the "Shwartzian" transform?
     virtual par_level_t par_level() const {
+        // TODO(2014-10): If the function we're sorting over isn't deterministic (and
+        // non-blocking) then maybe we could parallelize the behavior with a
+        // "Schwartzian" transform.
+
+        // TODO(2014-08): Uh... if the function is non-deterministic, is this code
+        // broken/crashing?
         return params_par_level();
     }
 
