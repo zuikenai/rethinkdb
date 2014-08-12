@@ -189,9 +189,10 @@ private:
     // operation is deterministic).
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        // Let's just say insert operations are not parallelizable.  (They could be a
+        // large batch insert.)
+        return par_level_t::MANY();
     }
 };
 
@@ -281,8 +282,11 @@ private:
     // operation is deterministic).
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
+        // This inherits the parallelizability from its left-hand and right-hand
+        // arguments -- if the left-hand is a single-value-selection and the
+        // right-hand is NONE or ONE, then this operation would be parallellizable
+        // (even if that never happens because it's a write).
         return params_par_level();
     }
 };
@@ -335,9 +339,10 @@ private:
     // This is a write operation and we shouldn't be calling this.
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        // Let's just say foreach operations should never be run at the same time as
+        // others.
+        return par_level_t::MANY();
     }
 };
 
