@@ -340,10 +340,7 @@ public:
                           // sindex_val may be NULL
                           const counted_t<const datum_t> &sindex_val) = 0;
 
-    par_level_t par_level() const {
-        // RSI: Uhh... this should be abstract.
-        return par_level_t::ONE();
-    }
+    virtual par_level_t par_level() const = 0;
 };
 
 class accumulator_t {

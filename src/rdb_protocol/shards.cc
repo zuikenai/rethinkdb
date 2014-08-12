@@ -650,6 +650,10 @@ private:
     // doesn't have any mutable state, which means it must be ok for this not to be
     // ordered.
     bool must_be_ordered() const { return false; }
+    par_level_t par_level() const FINAL {
+        // RSI: Nope.
+        return par_level_t::ONE();
+    }
 
     void apply_op(env_t *env, groups_t *groups,
                   const counted_t<const datum_t> &sindex_val) FINAL {
@@ -761,6 +765,10 @@ public:
         : f(_f.compile_wire_func()) { }
 private:
     bool must_be_ordered() const { return false; }
+    par_level_t par_level() const FINAL {
+        // RSI: Nope.
+        return par_level_t::ONE();
+    }
 
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
@@ -788,6 +796,11 @@ private:
     // order?  Or, it means you SHOULD apply it to a stream in order (since this only
     // exists to save network traffic).
     bool must_be_ordered() const { return true; }
+
+    par_level_t par_level() const FINAL {
+        // RSI: Garbage.
+        return par_level_t::ONE();
+    }
 
     // sindex_val may be NULL
     void transform_list(env_t *, datums_t *list,
@@ -822,6 +835,10 @@ public:
 private:
     bool must_be_ordered() const { return false; }
 
+    par_level_t par_level() const FINAL {
+        return par_level_t::ONE();  // RSI: Garbage.
+    }
+
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
         auto it = list->begin();
@@ -848,6 +865,10 @@ public:
         : f(_f.compile_wire_func()) { }
 private:
     bool must_be_ordered() const { return false; }
+
+    par_level_t par_level() const FINAL {
+        return par_level_t::ONE();  // RSI: Garbage.
+    }
 
     void transform_list(env_t *env, datums_t *list,
                         const counted_t<const datum_t> &) FINAL {
@@ -878,6 +899,11 @@ public:
     explicit zip_trans_t(const zip_wire_func_t &) {}
 private:
     bool must_be_ordered() const { return false; }
+
+    par_level_t par_level() const FINAL {
+        // A zip-transformation (left-,right- merge) is deterministic.
+        return par_level_t::NONE();
+    }
 
     virtual void transform_list(env_t *, datums_t *lst,
                                 const counted_t<const datum_t> &) {
