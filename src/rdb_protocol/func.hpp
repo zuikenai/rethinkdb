@@ -35,6 +35,8 @@ public:
 
     virtual bool is_deterministic() const = 0;
 
+    virtual par_level_t par_level() const = 0;
+
     // Used by info_term_t.
     virtual std::string print_source() const = 0;
 
@@ -78,6 +80,7 @@ public:
         const std::vector<counted_t<const datum_t> > &args,
         eval_flags_t eval_flags) const;
     bool is_deterministic() const;
+    par_level_t par_level() const FINAL;
 
     std::string print_source() const;
 
@@ -113,6 +116,7 @@ public:
                           eval_flags_t eval_flags) const;
 
     bool is_deterministic() const;
+    par_level_t par_level() const FINAL;
 
     std::string print_source() const;
 

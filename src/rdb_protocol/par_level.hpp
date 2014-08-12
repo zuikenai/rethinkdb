@@ -28,4 +28,9 @@ inline par_level_t par_join(par_level_t a, par_level_t b) {
     return a.value < b.value ? b : a;
 }
 
+// The parallelizability of javascript evaluation.  We say that js terms can be
+// parallelized, because they're run in an external process and they can probably run
+// simultaneously a little bit.
+inline par_level_t js_evaluation_par_level() { return par_level_t::ONE(); }
+
 #endif  // RDB_PROTOCOL_PAR_LEVEL_HPP_

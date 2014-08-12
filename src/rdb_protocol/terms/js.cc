@@ -58,10 +58,8 @@ private:
         return false;
     }
 
-    // RSI: Can js terms be parallelized?  We already have multiple hash-shards
-    // though.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(js_evaluation_par_level(), params_par_level());
     }
 };
 

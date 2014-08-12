@@ -79,6 +79,10 @@ bool reql_func_t::is_deterministic() const {
     return body->is_deterministic();
 }
 
+par_level_t reql_func_t::par_level() const {
+    return body->par_level();
+}
+
 js_func_t::js_func_t(const std::string &_js_source,
                      uint64_t timeout_ms,
                      protob_t<const Backtrace> backtrace)
@@ -122,6 +126,12 @@ counted_t<val_t> js_func_t::call(
 
 bool js_func_t::is_deterministic() const {
     return false;
+}
+
+par_level_t js_func_t::par_level() const {
+    // We'll say that javascript funcs are parallelizable because they run in an
+    // external process.
+    return js_evaluation_par_level();
 }
 
 void reql_func_t::visit(func_visitor_t *visitor) const {
