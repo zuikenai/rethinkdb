@@ -1,4 +1,4 @@
-// Copyright 2010-2013 RethinkDB, all rights reserved.
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #include "rdb_protocol/terms/terms.hpp"
 
 #include <string>
@@ -118,9 +118,8 @@ public:
     // where we care about determinism, but this is false for what it's worth.
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -149,9 +148,8 @@ public:
     // where we care about determinism, but this is false for what it's worth.
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -170,9 +168,8 @@ public:
 
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -194,9 +191,8 @@ public:
 
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -243,9 +239,8 @@ public:
 
     virtual bool op_is_deterministic() const { return false; }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -296,9 +291,8 @@ public:
         }
     }
 
-    // RSI: Not really sure what to do here.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 
     virtual bool op_is_deterministic() const {
