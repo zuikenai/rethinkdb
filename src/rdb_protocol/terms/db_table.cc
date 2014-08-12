@@ -349,9 +349,7 @@ private:
 
     // Getting a result set or a row from a table can block.
     virtual par_level_t par_level() const {
-        // RSI: Do .get() right and such, I don't know, see commenta bout ickiness
-        // above.
-        return par_join(par_level_t::ONE(), params_par_level());
+        return par_table_with_params(params_par_level());
     }
 };
 
@@ -370,8 +368,18 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     virtual par_level_t par_level() const {
-        // We inherit the parallelization level from the left-hand table expression.
-        return params_par_level();
+        par_level_t table_par_level;
+        par_level_t pkey_par_level;
+        const bool resolvable = arg_par_level(0, &table_par_level)
+            && arg_par_level(1, &pkey_par_level);
+
+        // If we can't figure out the parallelization level thanks to an r.args term,
+        // just say it's not parallelizable.
+        if (!resolvable) {
+            return par_level_t::MANY();
+        }
+
+        return par_get_on_table(table_par_level, pkey_par_level);
     }
 };
 
