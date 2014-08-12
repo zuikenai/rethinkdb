@@ -64,7 +64,7 @@ function eq_test(one, two) {
     } else if (Array.isArray(one)) {
         
         // short circut on length
-        if (one.length != two.length) return false;
+        if (one.length !== two.length) return false;
 
         // Recurse on each element of array
         for (var i = 0; i < one.length; i++) {
@@ -86,13 +86,15 @@ function eq_test(one, two) {
         
         // Recurse on each property of object
         for (var key in one) {
-            if (!eq_test(one[key], two[key])) return false;
+            if (one.hasOwnProperty(key)) {
+                if (!eq_test(one[key], two[key])) return false;
+            }
         }
         return true;
 
     } else {
         // Primitive comparison
-        return (typeof one === typeof two) && (one === two)
+        return ((typeof one === typeof two) && (one === two)) || (isNaN(one) && isNaN(two))
     }
 }
 
