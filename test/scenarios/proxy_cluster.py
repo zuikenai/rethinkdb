@@ -25,7 +25,7 @@ with driver.Metacluster() as metacluster:
         if option == '--cache-size':
             position = serve_options.index(option)
             serve_options.pop(position)
-            if len(extra_options) > position: # we have at least one more option... the cache size
+            if len(serve_options) > position: # we have at least one more option... the cache size
                 serve_options.pop(position)
             break # we can only handle one
         elif option.startswith('--cache-size='):
