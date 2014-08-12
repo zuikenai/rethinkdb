@@ -36,8 +36,8 @@ private:
     virtual bool is_deterministic() const {
         return real->is_deterministic();
     }
-    virtual int parallelization_level() const {
-        return real->parallelization_level();
+    virtual par_level_t par_level() const {
+        return real->par_level();
     }
 
     virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const {

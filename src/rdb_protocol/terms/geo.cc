@@ -37,8 +37,8 @@ private:
     }
 
     // RSI: Remove this, and implement for subclasses.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     // RSI: Remove this, and implement for subclasses.

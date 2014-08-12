@@ -72,8 +72,8 @@ private:
 
     // An r.db('aaa') term doesn't do any blocking... but the subsequent table term
     // might.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -94,9 +94,9 @@ private:
     }
     virtual const char *name() const { return "db_create"; }
 
-    virtual int parallelization_level() const {
-        // Creating a db blocks, so it has (at least) a parallelization level of 1.
-        return std::max(1, params_parallelization_level());
+    virtual par_level_t par_level() const {
+        // Creating a db blocks.
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -159,8 +159,8 @@ private:
     virtual const char *name() const { return "table_create"; }
 
     // Creating a table blocks.
-    int parallelization_level() const {
-        return std::max(1, params_parallelization_level());
+    par_level_t par_level() const {
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -183,8 +183,8 @@ private:
     virtual const char *name() const { return "db_drop"; }
 
     // Dropping a db blocks.
-    virtual int parallelization_level() const {
-        return std::max(1, params_parallelization_level());
+    virtual par_level_t par_level() const {
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -217,8 +217,8 @@ private:
     virtual const char *name() const { return "table_drop"; }
 
     // Dropping a table blocks.
-    virtual int parallelization_level() const {
-        return std::max(1, params_parallelization_level());
+    virtual par_level_t par_level() const {
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -245,8 +245,8 @@ private:
     }
     virtual const char *name() const { return "db_list"; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -281,8 +281,8 @@ private:
     }
     virtual const char *name() const { return "table_list"; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -300,9 +300,9 @@ private:
     }
     virtual const char *name() const { return "sync"; }
 
-    virtual int parallelization_level() const {
+    virtual par_level_t par_level() const {
         // This inherits the parallelization level from its left-hand table argument.
-        return params_parallelization_level();
+        return params_par_level();
     }
 };
 
@@ -348,8 +348,10 @@ private:
     // by an info_term_t or a get_term_t if those can only operate on tables.)
 
     // Getting a result set or a row from a table can block.
-    virtual int parallelization_level() const {
-        return std::max(1, params_parallelization_level());
+    virtual par_level_t par_level() const {
+        // RSI: Do .get() right and such, I don't know, see commenta bout ickiness
+        // above.
+        return par_join(par_level_t::ONE(), params_par_level());
     }
 };
 
@@ -367,9 +369,9 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
+    virtual par_level_t par_level() const {
         // We inherit the parallelization level from the left-hand table expression.
-        return params_parallelization_level();
+        return params_par_level();
     }
 };
 
@@ -421,11 +423,11 @@ private:
         return false;
     }
 
-    virtual int parallelization_level() const {
+    virtual par_level_t par_level() const {
         // This inherits the parallelization level from the left-hand table
         // expression (or from its argument expression, if one of those is crazily
         // parallelizable).
-        return params_parallelization_level();
+        return params_par_level();
     }
 };
 

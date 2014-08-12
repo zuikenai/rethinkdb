@@ -24,8 +24,8 @@ private:
     }
     virtual const char *name() const { return "iso8601"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -41,8 +41,8 @@ private:
     }
     virtual const char *name() const { return "to_iso8601"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -57,8 +57,8 @@ private:
     }
     virtual const char *name() const { return "epoch_time"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -74,8 +74,8 @@ private:
     }
     virtual const char *name() const { return "to_epoch_time"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -90,8 +90,8 @@ private:
     }
     virtual const char *name() const { return "in_timezone"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -111,8 +111,8 @@ private:
     }
     virtual const char *name() const { return "during"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -126,8 +126,8 @@ private:
     }
     virtual const char *name() const { return "date"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -141,8 +141,8 @@ private:
     }
     virtual const char *name() const { return "time_of_day"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -156,8 +156,8 @@ private:
     }
     virtual const char *name() const { return "timezone"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -184,8 +184,8 @@ private:
         default: unreachable();
         }
     }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
     virtual bool op_is_deterministic() const { return true; }
 
@@ -226,8 +226,8 @@ private:
     }
     virtual const char *name() const { return "time"; }
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -245,8 +245,8 @@ private:
     }
 
     virtual const char *name() const { return "sleep"; }
-    virtual int parallelization_level() const {
-        return std::max(1, params_parallelization_level());
+    virtual par_level_t par_level() const {
+        return par_join(par_level_t::ONE(), params_par_level());
     }
     virtual bool op_is_deterministic() const { return true; }
 };

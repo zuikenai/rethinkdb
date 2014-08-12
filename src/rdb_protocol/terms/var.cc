@@ -45,8 +45,8 @@ private:
         return true;
     }
 
-    virtual int parallelization_level() const {
-        return 0;
+    virtual par_level_t par_level() const {
+        return par_level_t::NONE();
     }
 
     virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const {
@@ -79,8 +79,8 @@ private:
         return true;
     }
 
-    virtual int parallelization_level() const {
-        return 0;
+    virtual par_level_t par_level() const {
+        return par_level_t::NONE();
     }
 
     virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const {

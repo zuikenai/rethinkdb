@@ -267,8 +267,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -301,8 +301,8 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     // RSI: Well... I have no clue if this is the right thing.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -340,8 +340,8 @@ private:
     virtual bool can_be_grouped() const { return false; }
 
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -423,8 +423,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 

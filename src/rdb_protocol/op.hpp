@@ -99,7 +99,7 @@ bool all_are_deterministic(
         const std::map<std::string, counted_t<const term_t> > &optargs);
 
 // Returns the max of the optargs' parallelization levels.
-int max_parallelization_level(
+par_level_t max_par_level(
         const std::map<std::string, counted_t<const term_t> > &optargs);
 
 // Calls accumulate_captures on the map entries.
@@ -132,11 +132,11 @@ protected:
     // Computes the parallelization level of the operation's arg(i) arg term.
     // Returns false if the analysis cannot be done (because of an r.args term, or if
     // the index is out of range).
-    bool arg_parallelization_level(size_t i, int *level_out) const;
+    MUST_USE bool arg_par_level(size_t i, par_level_t *level_out) const;
 
     // Computes the (maximum) parallelization level of the operation's arg terms and
     // optarg terms.
-    int params_parallelization_level() const;
+    par_level_t params_par_level() const;
 
 private:
     friend class args_t;

@@ -76,8 +76,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     const char *namestr;
@@ -97,8 +97,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 

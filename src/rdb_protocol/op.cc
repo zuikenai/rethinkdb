@@ -306,44 +306,44 @@ void op_term_t::maybe_grouped_data(scope_env_t *env,
     }
 }
 
-int max_parallelization_level(
+par_level_t max_par_level(
         const std::map<std::string, counted_t<const term_t> > &optargs) {
-    int max_level = 0;
+    par_level_t max_level = par_level_t::NONE();
     for (auto const &pair : optargs) {
-        max_level = std::max(max_level, pair.second->parallelization_level());
+        max_level = par_join(max_level, pair.second->par_level());
     }
     return max_level;
 }
 
-bool op_term_t::arg_parallelization_level(size_t index, int *level_out) const {
+bool op_term_t::arg_par_level(size_t index, par_level_t *level_out) const {
     const std::vector<counted_t<const term_t> > &orig = arg_terms->get_original_args();
     if (index >= orig.size()) {
-        *level_out = valgrind_undefined(0);
+        *level_out = valgrind_undefined(par_level_t::NONE());
         return false;
     }
     // RSI: There really should be a pre-computed field "first-r.args-index".
     for (size_t i = 0; i < index; ++i) {
         // RSI: So much dupe logic with this ARGS check.
         if (orig[i]->get_src()->type() == Term::ARGS) {
-            *level_out = valgrind_undefined(0);
+            *level_out = valgrind_undefined(par_level_t::NONE());
             return false;
         }
     }
     if (orig[index]->get_src()->type() == Term::ARGS) {
-        *level_out = valgrind_undefined(0);
+        *level_out = valgrind_undefined(par_level_t::NONE());
         return false;
     }
-    *level_out = orig[index]->parallelization_level();
+    *level_out = orig[index]->par_level();
     return true;
 }
 
-int op_term_t::params_parallelization_level() const {
-    int max_level = 0;
+par_level_t op_term_t::params_par_level() const {
+    par_level_t max_level = par_level_t::NONE();
     for (const counted_t<const term_t> &arg : arg_terms->get_original_args()) {
-        max_level = std::max(max_level, arg->parallelization_level());
+        max_level = par_join(max_level, arg->par_level());
     }
 
-    max_level = std::max(max_level, max_parallelization_level(optargs));
+    max_level = par_join(max_level, max_par_level(optargs));
     return max_level;
 }
 

@@ -28,8 +28,8 @@ private:
         unreachable();
     }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }
@@ -52,8 +52,8 @@ private:
         return new_val_bool(false);
     }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }
@@ -70,8 +70,8 @@ private:
         return b ? args->arg(env, 1) : args->arg(env, 2);
     }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }
@@ -149,8 +149,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 

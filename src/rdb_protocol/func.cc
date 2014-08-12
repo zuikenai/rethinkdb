@@ -219,8 +219,8 @@ bool func_term_t::is_deterministic() const {
     return body->is_deterministic();
 }
 
-int func_term_t::parallelization_level() const {
-    return body->parallelization_level();
+par_level_t func_term_t::par_level() const {
+    return body->par_level();
 }
 
 /* The predicate here is the datum which defines the predicate and the value is

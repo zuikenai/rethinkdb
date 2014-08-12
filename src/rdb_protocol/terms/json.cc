@@ -22,8 +22,8 @@ public:
         return new_val(to_datum(cjson.get(), env->env->limits));
     }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }

@@ -24,8 +24,8 @@ private:
         return new_val(make_counted<const datum_t>(std::move(arr), env->env->limits));
     }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }
@@ -58,8 +58,8 @@ private:
         return new_val(std::move(obj).to_counted());
     }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }

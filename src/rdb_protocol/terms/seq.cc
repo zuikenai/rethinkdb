@@ -28,8 +28,8 @@ private:
 
     // RSI: Yeah, this'll need to change, once we parallelize terminals.  The
     // function (arg 1, if it exists) could have a non-zero parallelization level.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -114,8 +114,8 @@ private:
 
     // A count of a stream has the same parallelizability as returning its
     // rows... though it might be cheaper, someday.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }
@@ -137,8 +137,8 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     // RSI: This'll need to change once we parallelize transformations.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -158,8 +158,8 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     // RSI: This'll need to change once we parallelize transformations.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -214,8 +214,8 @@ private:
 
     // RSI: This'll need to change once we parallelize transformations?  How exactly
     // does grouping affect life?
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -254,8 +254,8 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     // RSI: This'll need to change once we parallelize transformations.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     counted_t<func_term_t> default_filter_term;
@@ -276,8 +276,8 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     // RSI: This'll need to change once we parallelize transformations/terminals.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -317,8 +317,8 @@ private:
 
     // RSI: Um.  Maybe the API should be changed because with some expressions,
     // parallelizing them is a bit nonsensical.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -371,8 +371,8 @@ private:
 
     // A .between on a stream or anything doesn't change the parallelizability of the
     // operation.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -396,9 +396,9 @@ private:
     virtual bool op_is_deterministic() const { return false; }
 
     // RSI: Once we parallelize union_datum_stream_t, this'll need to change.
-    // RSI: Probably, we will want 1 + params_parallelization_level() to make sure we don't parallelize too early.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    // RSI: Probably, we will want 1 + params_par_level() to make sure we don't parallelize too early.
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -420,8 +420,8 @@ private:
 
     // This maps a non-blocking operation on a stream, so its parallelizability is
     // the same as that of its parameter.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 

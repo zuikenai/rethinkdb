@@ -37,8 +37,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -54,8 +54,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -218,8 +218,8 @@ private:
     // RSI: A sorting or whatnot operation doesn't result in the possibility for
     // parallel evalution, does it?  The function you're sorting on -- could it be
     // parallelizable?  Does the code currently do the "Shwartzian" transform?
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
 private:
@@ -291,8 +291,8 @@ private:
     virtual bool op_is_deterministic() const { return true; }
 
     // We don't do any sort of fancy function call.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 

@@ -14,7 +14,7 @@ public:
 private:
     virtual void accumulate_captures(var_captures_t *) const { /* do nothing */ }
     virtual bool is_deterministic() const { return true; }
-    virtual int parallelization_level() const { return 0; }
+    virtual par_level_t par_level() const { return par_level_t::NONE(); }
     virtual counted_t<val_t> term_eval(scope_env_t *, eval_flags_t) const {
         return raw_val;
     }
@@ -34,8 +34,8 @@ private:
     }
     virtual const char *name() const { return name_; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     virtual bool op_is_deterministic() const { return true; }
@@ -65,8 +65,8 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
@@ -106,8 +106,8 @@ public:
         return new_val(std::move(acc).to_counted());
     }
 
-    virtual int parallelization_level() const {
-        return max_parallelization_level(optargs);
+    virtual par_level_t par_level() const {
+        return max_par_level(optargs);
     }
 
     virtual bool is_deterministic() const {

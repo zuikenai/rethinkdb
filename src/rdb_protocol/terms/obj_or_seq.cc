@@ -110,8 +110,8 @@ private:
     }
 
     // All the operations (that we apply to streams) are primitives that don't block.
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 
     poly_type_t poly_type;
@@ -189,8 +189,8 @@ private:
     virtual bool can_be_grouped() const { return false; }
 
     virtual bool op_is_deterministic() const { return true; }
-    virtual int parallelization_level() const {
-        return params_parallelization_level();
+    virtual par_level_t par_level() const {
+        return params_par_level();
     }
 };
 
