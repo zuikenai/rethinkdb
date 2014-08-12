@@ -70,13 +70,42 @@ public:
     const std::vector<counted_t<const term_t> > &get_original_args() const {
         return original_args;
     }
+
+    // Returns true if the i'th arg's term is known without evaluating, i.e. if there
+    // isn't an r.args term in play that makes us unsure before run-time.  Sets
+    // `*out` to be the i'th term or null.
+    MUST_USE bool get_nonoriginal_arg(size_t i, counted_t<const term_t> *out) const {
+        if (i < end_of_non_ARGS_terms) {
+            *out = original_args[i];
+            return true;
+        } else {
+            *out = counted_t<const term_t>();
+            return false;
+        }
+    }
+
 private:
     const protob_t<const Term> src;
     const argspec_t argspec;
     const std::vector<counted_t<const term_t> > original_args;
 
+    // The offset of the first ARGS term in original_args -- or original_args.size(),
+    // if there are no ARGS terms.  (So that we don't have to recompute the value
+    // over and over again.)
+    const size_t end_of_non_ARGS_terms;
+
     DISABLE_COPYING(arg_terms_t);
 };
+
+size_t compute_end_of_non_ARGS_terms(
+        const std::vector<counted_t<const term_t> > &original_args) {
+    for (size_t i = 0, e = original_args.size(); i < e; ++i) {
+        if (original_args[i]->get_src()->type() == Term::ARGS) {
+            return i;
+        }
+    }
+    return original_args.size();
+}
 
 arg_terms_t::arg_terms_t(protob_t<const Term> _src,
                          argspec_t _argspec,
@@ -84,18 +113,19 @@ arg_terms_t::arg_terms_t(protob_t<const Term> _src,
     : pb_rcheckable_t(get_backtrace(_src)),
       src(std::move(_src)),
       argspec(std::move(_argspec)),
-      original_args(std::move(_original_args)) {
-    for (auto it = original_args.begin(); it != original_args.end(); ++it) {
-        if ((*it)->get_src()->type() == Term::ARGS) {
-            return;
-        }
-    }
+      original_args(std::move(_original_args)),
+      end_of_non_ARGS_terms(compute_end_of_non_ARGS_terms(original_args)) {
+
     // We check this here *and* in `start_eval` because if `r.args` isn't in
     // play we want to give a compile-time error.
-    rcheck(argspec.contains(original_args.size()),
-           base_exc_t::GENERIC,
-           strprintf("Expected %s but found %zu.",
-                     argspec.print().c_str(), original_args.size()));
+    if (end_of_non_ARGS_terms == original_args.size()) {
+        // TODO(2014-08): We could also check here that `end_of_non_ARGS_terms <=
+        // argspec.max`.
+        rcheck(argspec.contains(original_args.size()),
+               base_exc_t::GENERIC,
+               strprintf("Expected %s but found %zu.",
+                         argspec.print().c_str(), original_args.size()));
+    }
 }
 
 argvec_t arg_terms_t::start_eval(scope_env_t *env, eval_flags_t flags) const {
@@ -317,25 +347,14 @@ par_level_t max_par_level(
 
 // RSI: Nothing uses arg_par_level.
 bool op_term_t::arg_par_level(size_t index, par_level_t *level_out) const {
-    const std::vector<counted_t<const term_t> > &orig = arg_terms->get_original_args();
-    if (index >= orig.size()) {
+    counted_t<const term_t> arg;
+    if (arg_terms->get_nonoriginal_arg(index, &arg)) {
+        *level_out = arg->par_level();
+        return true;
+    } else {
         *level_out = valgrind_undefined(par_level_t::NONE());
         return false;
     }
-    // RSI: There really should be a pre-computed field "first-r.args-index".
-    for (size_t i = 0; i < index; ++i) {
-        // RSI: So much dupe logic with this ARGS check.
-        if (orig[i]->get_src()->type() == Term::ARGS) {
-            *level_out = valgrind_undefined(par_level_t::NONE());
-            return false;
-        }
-    }
-    if (orig[index]->get_src()->type() == Term::ARGS) {
-        *level_out = valgrind_undefined(par_level_t::NONE());
-        return false;
-    }
-    *level_out = orig[index]->par_level();
-    return true;
 }
 
 par_level_t op_term_t::params_par_level() const {
