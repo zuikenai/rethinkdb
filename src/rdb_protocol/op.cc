@@ -315,6 +315,7 @@ par_level_t max_par_level(
     return max_level;
 }
 
+// RSI: Nothing uses arg_par_level.
 bool op_term_t::arg_par_level(size_t index, par_level_t *level_out) const {
     const std::vector<counted_t<const term_t> > &orig = arg_terms->get_original_args();
     if (index >= orig.size()) {

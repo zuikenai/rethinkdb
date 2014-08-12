@@ -36,12 +36,11 @@ private:
         }
     }
 
-    // RSI: Remove this, and implement for subclasses.
-    virtual par_level_t par_level() const {
+    par_level_t par_level() const FINAL {
+        // These are all deterministic, non-blocking.
         return params_par_level();
     }
 
-    // RSI: Remove this, and implement for subclasses.
     virtual bool op_is_deterministic() const {
         return true;
     }
