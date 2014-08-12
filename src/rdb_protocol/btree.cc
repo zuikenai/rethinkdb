@@ -860,8 +860,8 @@ private:
     fifo_enforcer_source_t serial_accumulation_fifo_source;
     fifo_enforcer_sink_t serial_accumulation_fifo_sink;
 
-    // RSI: Something involving this job_data_t or io_data_t is where the
-    // parallelization might happen.
+    new_semaphore_t transform_parallelization_semaphore;
+
     const rget_io_data_t io;
     job_data_t job;
     // Relevant sindex info, maybe.
@@ -875,7 +875,8 @@ rget_cb_t::rget_cb_t(rget_io_data_t &&_io,
                      job_data_t &&_job,
                      boost::optional<rget_sindex_data_t> &&_sindex,
                      const key_range_t &range)
-    : io(std::move(_io)),
+    : transform_parallelization_semaphore(NUM_PARALLELIZATION_JOBS),
+      io(std::move(_io)),
       job(std::move(_job)),
       sindex(std::move(_sindex)) {
     io.response->last_key = !reversed(job.sorting)
@@ -971,6 +972,8 @@ done_traversing_t rget_cb_t::handle_pair(
 
         // RSI: This logic might be bad with respect to
         // concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible.  (edit: Idk what this even means.)
+
+        // TODO(2014-09): It's pretty lame that we recompute this stuff for every row.
         bool must_be_ordered = false;
         par_level_t par_level = par_level_t::NONE();
         for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
@@ -978,7 +981,14 @@ done_traversing_t rget_cb_t::handle_pair(
             par_level = par_join(par_level, op->par_level());
         }
 
-        // RSI: We don't have any semaphore limiting parallelization here.
+        new_semaphore_acq_t semaphore_acq(&transform_parallelization_semaphore, 1);
+
+        // We acquire the semaphore acq _before_ releasing the waiter, so that we
+        // don't just keep traversing the tree and loading values.
+
+        // RSI: Use wait_interruptible?
+        semaphore_acq.acquisition_signal()->wait();
+
         if (!must_be_ordered && par_level.may_be_parallelized()) {
             debugf("about to run parallel\n");
             waiter.end();

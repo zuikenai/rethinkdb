@@ -33,4 +33,8 @@ inline par_level_t par_join(par_level_t a, par_level_t b) {
 // simultaneously a little bit.
 inline par_level_t js_evaluation_par_level() { return par_level_t::ONE(); }
 
+// This is a made-up number.  It would be better if the number was set more
+// dynamically.
+static const int NUM_PARALLELIZATION_JOBS = 10;
+
 #endif  // RDB_PROTOCOL_PAR_LEVEL_HPP_
