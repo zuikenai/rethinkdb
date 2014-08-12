@@ -15,6 +15,7 @@
 #include "rdb_protocol/batching.hpp"
 #include "rdb_protocol/configured_limits.hpp"
 #include "rdb_protocol/datum.hpp"
+#include "rdb_protocol/par_level.hpp"
 #include "rdb_protocol/profile.hpp"
 #include "rdb_protocol/rdb_protocol_json.hpp"
 #include "rdb_protocol/wire_func.hpp"
@@ -338,6 +339,11 @@ public:
                           groups_t *groups,
                           // sindex_val may be NULL
                           const counted_t<const datum_t> &sindex_val) = 0;
+
+    par_level_t par_level() const {
+        // RSI: Uhh... this should be abstract.
+        return par_level_t::ONE();
+    }
 };
 
 class accumulator_t {

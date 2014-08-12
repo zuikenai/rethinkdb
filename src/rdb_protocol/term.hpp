@@ -4,6 +4,7 @@
 
 #include "containers/counted.hpp"
 #include "rdb_protocol/error.hpp"
+#include "rdb_protocol/par_level.hpp"
 #include "rdb_protocol/ql2.pb.h"
 
 namespace ql {
@@ -56,29 +57,6 @@ protected:
 private:
     virtual counted_t<val_t> term_eval(scope_env_t *env, eval_flags_t) const = 0;
 };
-
-// The parallelizability of a term.  It's a struct and not an enum class so that you
-// can't use std::max or other comparisons.  Also because descriptions of
-// parallelizability might become more intricate.
-struct par_level_t {
-    par_level_t() : value(valgrind_undefined(0)) { }
-
-    static par_level_t NONE() { return par_level_t{ 0 }; }
-    static par_level_t ONE() { return par_level_t{ 1 }; }
-    static par_level_t MANY() { return par_level_t{ 2 }; }
-
-private:
-    par_level_t(int _value) : value(_value) { }
-
-    friend par_level_t par_join(par_level_t a, par_level_t b);
-    int value;
-};
-
-// Returns the parallelization level of the combination of two operations run at the
-// same time or sequentially.
-inline par_level_t par_join(par_level_t a, par_level_t b) {
-    return a.value < b.value ? b : a;
-}
 
 class term_t : public runtime_term_t {
 public:

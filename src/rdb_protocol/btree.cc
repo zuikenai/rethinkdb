@@ -30,6 +30,7 @@
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/geo_traversal.hpp"
 #include "rdb_protocol/lazy_json.hpp"
+#include "rdb_protocol/par_level.hpp"
 #include "rdb_protocol/pseudo_geometry.hpp"
 #include "rdb_protocol/serialize_datum_onto_blob.hpp"
 #include "rdb_protocol/shards.hpp"
@@ -968,22 +969,21 @@ done_traversing_t rget_cb_t::handle_pair(
                 &serial_accumulation_fifo_sink,
                 serial_accumulation_fifo_source.enter_write());
 
-        // RSI: Support more fine-grained parallelization of transformers.
-        // RSI: This could be parallelizing things with a parallelization level of 2 right now.
-
         // RSI: This logic might be bad with respect to
-        // concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible.
+        // concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible.  (edit: Idk what this even means.)
         bool must_be_ordered = false;
+        par_level_t par_level = par_level_t::NONE();
         for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
             must_be_ordered |= op->must_be_ordered();
+            par_level = par_join(par_level, op->par_level());
         }
 
-        if (!must_be_ordered) {
+        // RSI: We don't have any semaphore limiting parallelization here.
+        if (!must_be_ordered && par_level.may_be_parallelized()) {
             debugf("about to run parallel\n");
             waiter.end();
         }
 
-        // RSI: Parallelize better here?
         for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
             op->apply_op(job.env, &data, sindex_val);
             //                           ^^^^^^^^^^ NULL if no sindex
