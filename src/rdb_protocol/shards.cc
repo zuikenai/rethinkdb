@@ -387,12 +387,12 @@ private:
 
 class acc_func_t {
 public:
-    explicit acc_func_t(const counted_t<func_t> &_f) : f(_f) { }
+    explicit acc_func_t(const counted_t<const func_t> &_f) : f(_f) { }
     counted_t<const datum_t> operator()(env_t *env, const counted_t<const datum_t> &el) const {
         return f.has() ? f->call(env, el)->as_datum() : el;
     }
 private:
-    counted_t<func_t> f;
+    counted_t<const func_t> f;
 };
 
 template<class T>
@@ -581,7 +581,7 @@ private:
         if (el->has()) accumulate(env, *el, out);
     }
 
-    counted_t<func_t> f;
+    counted_t<const func_t> f;
 };
 
 template<class T>
@@ -753,7 +753,7 @@ private:
         }
     }
 
-    const std::vector<counted_t<func_t> > funcs;
+    const std::vector<counted_t<const func_t> > funcs;
     const bool append_index;
     const bool multi;
     const protob_t<const Backtrace> bt;
@@ -780,7 +780,7 @@ private:
             throw exc_t(e, f->backtrace().get(), 1);
         }
     }
-    const counted_t<func_t> f;
+    const counted_t<const func_t> f;
 };
 
 // Note: this removes duplicates ONLY TO SAVE NETWORK TRAFFIC.  It's possible
@@ -831,7 +831,7 @@ public:
         : f(_f.filter_func.compile_wire_func()),
           default_val(_f.default_filter_val
                       ? _f.default_filter_val->compile_wire_func()
-                      : counted_t<func_t>()) { }
+                      : counted_t<const func_t>()) { }
 private:
     bool must_be_ordered() const { return false; }
 
@@ -855,8 +855,8 @@ private:
         }
         list->erase(loc, list->end());
     }
-    const counted_t<func_t> f;
-    const counted_t<func_t> default_val;
+    const counted_t<const func_t> f;
+    const counted_t<const func_t> default_val;
 };
 
 class concatmap_trans_t : public ungrouped_op_t {
@@ -891,7 +891,7 @@ private:
         }
         list->swap(new_list);
     }
-    const counted_t<func_t> f;
+    const counted_t<const func_t> f;
 };
 
 class zip_trans_t : public ungrouped_op_t {
