@@ -856,9 +856,8 @@ public:
 private:
     // At this moment in time, we support evaluating transforms in parallel but
     // require that accumulators run serially, so to speak.
-    // RSI: Rename to serial_accumulation.
-    fifo_enforcer_source_t serial_recombination_fifo_source;
-    fifo_enforcer_sink_t serial_recombination_fifo_sink;
+    fifo_enforcer_source_t serial_accumulation_fifo_source;
+    fifo_enforcer_sink_t serial_accumulation_fifo_sink;
 
     // RSI: Something involving this job_data_t or io_data_t is where the
     // parallelization might happen.
@@ -966,8 +965,8 @@ done_traversing_t rget_cb_t::handle_pair(
 
         // Get in line for serial recombination.
         fifo_enforcer_sink_t::exit_write_t exiter(
-                &serial_recombination_fifo_sink,
-                serial_recombination_fifo_source.enter_write());
+                &serial_accumulation_fifo_sink,
+                serial_accumulation_fifo_source.enter_write());
 
         // RSI: Support more fine-grained parallelization of transformers.
         // RSI: This could be parallelizing things with a parallelization level of 2 right now.
