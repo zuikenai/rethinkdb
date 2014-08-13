@@ -33,9 +33,6 @@ private:
     }
 };
 
-// RSI: Does the code actually add up the entries in the sequence in a well-defined
-// order?  We can't have floating point divergence.
-
 class sum_term_t : public map_acc_term_t<sum_wire_func_t> {
 public:
     template<class... Args> sum_term_t(Args... args)
