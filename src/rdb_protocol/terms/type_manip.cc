@@ -300,7 +300,6 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    // RSI: Well... I have no clue if this is the right thing.
     virtual par_level_t par_level() const {
         return params_par_level();
     }
