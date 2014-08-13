@@ -45,7 +45,7 @@ def run(command_line, ports, timeout):
     ports.add_to_environ(new_environ)
 
     proc = subprocess.Popen(command_line, shell=True, env=new_environ, preexec_fn=os.setpgrp)
-    killManagedProcessGroupIDs.append(self.proc.pid)
+    killManagedProcessGroupIDs.append(proc.pid)
     
     try:
         while time.time() < end_time:
@@ -58,7 +58,7 @@ def run(command_line, ports, timeout):
             else:
                 print("Failed (%d seconds)" % (time.time() - start_time))
                 sys.stderr.write("workload '%s' failed with error code %d\n" % (command_line, result))
-                exit(1)
+                sys.exit(1)
         sys.stderr.write("\nWorkload timed out after %d seconds (%s)\n" % (time.time() - start_time, command_line))
     finally:
         try:
@@ -68,7 +68,7 @@ def run(command_line, ports, timeout):
         except OSError:
             if self.proc.pid in killManagedProcessGroupIDs:
                 killManagedProcessGroupIDs.remove(proc.pid)
-    exit(1)
+    sys.exit(1)
 
 class ContinuousWorkload(object):
     def __init__(self, command_line, ports):
@@ -170,7 +170,7 @@ class SplitOrContinuousWorkload(object):
     def _spin_continuous_workloads(self, seconds):
         assert self.opts["workload-during"]
         if seconds != 0:
-            print("Letting %s run for %d seconds..." % " and ".join(repr(x) for x in self.opts["workload-during"]), seconds)
+            print("Letting %s run for %d seconds..." % (" and ".join(repr(x) for x in self.opts["workload-during"]), seconds))
             for i in xrange(seconds):
                 time.sleep(1)
                 self.check()

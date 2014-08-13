@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-import sys, os, time, signal, random, traceback, errno
-import multiprocessing, multiprocessing.queues
-from optparse import OptionParser
+
+from __future__ import print_function
+
+import errno, multiprocessing, optparse, os, random, signal, sys, time, traceback
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import utils
@@ -53,17 +54,14 @@ def spawn_clients(options, start_event, exit_event, stat_queue):
     if random_seed is None:
         random_seed = random.random()
 
-    print >> sys.stderr, "Random seed used: %f" % random_seed
+    sys.stderr.write("Random seed used: %f\n" % random_seed)
     random.seed(random_seed)
 
     for i in xrange(num_clients):
-        client_procs.append(multiprocessing.Process(target=stress_client_proc,
-                                                    args=(options,
-                                                          start_event,
-                                                          exit_event,
-                                                          stat_queue,
-                                                          host_offset,
-                                                          random.random())))
+        client_procs.append(multiprocessing.Process(
+            target=stress_client_proc,
+            args=(options, start_event, exit_event, stat_queue, host_offset, random.random())
+        ))
         client_procs[-1].start()
         host_offset += 1
 
@@ -84,9 +82,23 @@ def stop_clients(exit_event, child_procs_list, num_clients, timeout):
     kill_time = end_time + timeout
 
     failed_procs = []
-
-    for proc in child_procs:
-        proc.terminate()
+    
+    # try to join the processes that have completed
+    runningProcesses = False
+    for proc in child_procs.copy():
+        proc.join(.1)
+        if not proc.is_alive():
+            child_procs.remove(proc)
+        else:
+            # send SIGINT to any remaining
+            os.kill(proce.pid, signal.SIGINT)
+            runningProcesses = True
+    
+    # terminate those that have not finished
+    if runningProcesses is True:
+        time.sleep(2)
+        for proc in child_procs:
+            proc.terminate()
 
     while True:
         for proc in child_procs.copy():
@@ -106,7 +118,7 @@ def stop_clients(exit_event, child_procs_list, num_clients, timeout):
                    (" failed with code " + str(proc.exitcode)
                     if proc.exitcode else " timed out")
                    for proc in failed_procs]
-        print "Sub-processes failed: " + ", ".join(reasons)
+        print("Sub-processes failed: %s" % ", ".join(reasons))
         sys.exit(1)
 
     return end_time
@@ -115,11 +127,10 @@ def stop_clients(exit_event, child_procs_list, num_clients, timeout):
 def print_stats(stats, start_time, end_time, num_clients):
     duration = end_time - start_time
 
-    print >> sys.stderr, "Duration: %0.3f seconds" % duration
+    sys.stderr.write("Duration: %0.3f seconds\n" % duration)
 
     # Print stats table
-    print >> sys.stderr, ""
-    print >> sys.stderr, "Operations data: "
+    sys.stderr.write("\nOperations data: \n")
 
     table = [["total", "per sec", "per sec client avg", "avg latency"]]
 
@@ -145,17 +156,16 @@ def print_stats(stats, start_time, end_time, num_clients):
 
     rql_time_spent = stats["latency"]
     total_client_time = duration * num_clients
-    print >> sys.stderr, "Percent time clients spent in ReQL space: %.2f" % (100 * rql_time_spent / total_client_time)
+    sys.stderr.write("Percent time clients spent in ReQL space: %.2f\n" % (100 * rql_time_spent / total_client_time))
 
     for row in table:
-        print >> sys.stderr, format_str.format(*row)
+        sys.stderr.write(format_str.format(*row) + "\n")
 
     # Print errors
     if len(stats["errors"]) != 0:
-        print >> sys.stderr, ""
-        print >> sys.stderr, "Errors encountered:"
+        sys.stderr.write("\nErrors encountered:\n")
         for error, count in stats["errors"].iteritems():
-            print >> sys.stderr, "%s: %s" % (error, count)
+            sys.stderr.write("%s: %s\n" % (error, count))
 
 def interrupt_handler(signal, frame, exit_event, parent_pid):
     if os.getpid() == parent_pid:
@@ -209,7 +219,7 @@ class QueryThrottler:
 
 # Main loop for the main stress process
 def stress_controller(options):
-    stat_queue = multiprocessing.queues.SimpleQueue()
+    stat_queue = multiprocessing.Queue()
     start_event = multiprocessing.Event()
     exit_event = multiprocessing.Event()
     child_procs = []
@@ -234,14 +244,14 @@ def stress_controller(options):
 
                 # Print new stat
                 if not options["quiet"]:
-                    print "%0.3f: %0.6f" % (stat["timestamp"], stat["latency"])
+                    print("%0.3f: %0.6f" % (stat["timestamp"], stat["latency"]))
                     sys.stdout.flush()
 
                 stats["count"] += 1
                 stats["latency"] += stat["latency"]
                 for error in stat.get("errors", []):
                     if not options["ignore_errors"]:
-                        print "  - %s" % error
+                        print("  - %s" % error)
                     stats["errors"][error] = stats["errors"].get(error, 0) + 1
 
                 if op_count != 0 and stats["count"] >= op_count:
@@ -271,7 +281,7 @@ def stress_controller(options):
         print_stats(stats, start_time, end_time, options["clients"])
 
 if __name__ == "__main__":
-    parser = OptionParser()
+    parser = optparse.OptionParser()
     parser.add_option("--seed", dest="seed", metavar="FLOAT", default=None, type="float")
     parser.add_option("--table", dest="db_table", metavar="DB.TABLE", default='test.stress', type="string")
     parser.add_option("--ops-per-sec", dest="ops_per_sec", metavar="NUMBER", default=100, type="float")
@@ -296,8 +306,7 @@ if __name__ == "__main__":
     }
 
     if len(args) != 0:
-        print "no positional arguments supported"
-        exit(1)
+        sys.exit("no positional arguments supported")
 
     # Parse out host/port pairs
     for host_port in parsed_options.hosts:
@@ -307,13 +316,11 @@ if __name__ == "__main__":
         options["hosts"].append(("localhost", 28015))
 
     if parsed_options.workload is None:
-        print "no workload specified"
-        exit(1)
+        sys.exit("no workload specified")
 
     # Get table name, and make sure it exists on the server
     if parsed_options.db_table is None:
-        print "no table specified"
-        exit(1)
+        sys.exit("no table specified")
 
     (options["db"], options["table"]) = parsed_options.db_table.split(".")
 

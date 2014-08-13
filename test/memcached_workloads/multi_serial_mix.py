@@ -3,10 +3,9 @@
 
 from __future__ import print_function
 
-import sys, os
+import multiprocessing, os, pickle, sys, signal, time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
-import multiprocessing, time, pickle
 import memcached_workload_common, serial_mix
 from vcoptparse import *
 
@@ -55,7 +54,7 @@ try:
         opts2 = dict(opts)
         opts2["keysuffix"] = "_%d" % id   # Prevent collisions between tests
 
-        process = multiprocessing.Process(target = child, args = (opts2, log_path, load_path, save_path))
+        process = multiprocessing.Process(target=child, args=(opts2, log_path, load_path, save_path))
         process.start()
 
         processes.append((process, id))
@@ -93,6 +92,8 @@ try:
 
 finally:
     for (process, id) in processes:
+        os.kill(processes.pid, signal.SIGINT)
+        process.join(1)
         if process.is_alive():
             process.terminate()
 
