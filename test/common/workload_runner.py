@@ -83,7 +83,7 @@ class ContinuousWorkload(object):
     def start(self):
         global killManagedProcessGroupIDs
         assert not self.running
-        print "Starting workload %r..." % (self.command_line,)
+        print("Starting workload %r..." % self.command_line)
 
         # Set up environment
         new_environ = os.environ.copy()
