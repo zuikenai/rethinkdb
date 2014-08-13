@@ -985,7 +985,7 @@ done_traversing_t rget_cb_t::handle_pair(
 
         wait_interruptible(semaphore_acq.acquisition_signal(), waiter.interruptor());
 
-        if (!must_be_ordered && par_level.may_be_parallelized()) {
+        if (!must_be_ordered && par_level.should_be_parallelized()) {
             waiter.end();
         }
 

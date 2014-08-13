@@ -16,8 +16,7 @@ struct par_level_t {
     // This "collapses" to MANY, but if you attach a .get() to it, you can get ONE.
     static par_level_t TABLE() { return par_level_t(3); }
 
-    // RSI: Rename to should_be_parallelized.
-    bool may_be_parallelized() const { return value == 1; }
+    bool should_be_parallelized() const { return value == 1; }
 
 private:
     par_level_t(int _value) : value(_value) { }
