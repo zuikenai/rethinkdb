@@ -9,14 +9,19 @@
 struct par_level_t {
     par_level_t() : value(valgrind_undefined(0)) { }
 
+    // Non-blocking terms are NONE.
     static par_level_t NONE() { return par_level_t(0); }
+    // Blocking terms that do a "constant" amount of work are ONE.
     static par_level_t ONE() { return par_level_t(1); }
+    // Blocking terms that do a lot of work are MANY.
     static par_level_t MANY() { return par_level_t(2); }
 
     // This "collapses" to MANY, but if you attach a .get() to it, you can get ONE.
     static par_level_t TABLE() { return par_level_t(3); }
 
     bool should_be_parallelized() const { return value == 1; }
+
+    bool is_NONE() const { return value == 0; }
 
 private:
     par_level_t(int _value) : value(_value) { }

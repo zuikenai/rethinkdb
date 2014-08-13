@@ -133,9 +133,24 @@ private:
 
     virtual bool op_is_deterministic() const { return true; }
 
-    // RSI: This'll need to change once we parallelize transformations.
     virtual par_level_t par_level() const {
-        return params_par_level();
+        // The stream could be ONE or NONE, if it's an array.  If the function is
+        // non-blocking, we inherit the parallelizability from arg 0.  Otherwise, we
+        // do "many" blocking operations, so we return MANY.
+
+        par_level_t stream;
+        par_level_t func;
+        bool resolved = arg_par_level(0, &stream) && arg_par_level(1, &func);
+
+        if (!resolved) {
+            return par_level_t::MANY();
+        }
+
+        if (func.is_NONE()) {
+            return stream;
+        }
+
+        return par_level_t::MANY();
     }
 };
 

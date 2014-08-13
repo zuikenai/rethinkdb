@@ -327,21 +327,32 @@ typedef boost::variant<count_wire_func_t,
                        reduce_wire_func_t
                        > terminal_variant_t;
 
+struct op_par_info_t {
+    // True if the op_t should be run on a stream from left to right.  (I.e. if the
+    // op_t has _internal state_ that expects to be used from left to right, for
+    // performance reasons.  See distinct_trans_t.)
+    bool should_be_ordered;
+    // The parallelizability of calling apply_op.
+    par_level_t par_level;
+
+    op_par_info_t(bool _should_be_ordered, par_level_t _par_level)
+        : should_be_ordered(_should_be_ordered), par_level(_par_level) { }
+};
+
 class op_t {
 public:
     op_t() = default;
     virtual ~op_t() { }
-    // Returns true if the op_t must run on a stream from left to right.  (I.e. if
-    // the op_t has internal state that expects to be used from left to right.)
-    virtual bool must_be_ordered() const = 0;
 
     virtual void apply_op(env_t *env,
                           groups_t *groups,
                           // sindex_val may be NULL
                           const counted_t<const datum_t> &sindex_val) = 0;
 
-    virtual par_level_t par_level() const = 0;
+    virtual op_par_info_t par_info() const = 0;
 };
+
+op_par_info_t combined_par_info(const std::vector<scoped_ptr_t<op_t> > &ops);
 
 class accumulator_t {
 public:

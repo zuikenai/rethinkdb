@@ -941,7 +941,6 @@ done_traversing_t rget_cb_t::handle_pair(
     waiter.wait_interruptible();
 
     try {
-
         // Check whether we're out of sindex range.
         counted_t<const ql::datum_t> sindex_val; // NULL if no sindex.
         if (sindex) {
@@ -971,12 +970,7 @@ done_traversing_t rget_cb_t::handle_pair(
                 serial_accumulation_fifo_source.enter_write());
 
         // TODO(2014-09): It's pretty lame that we recompute this stuff for every row.
-        bool must_be_ordered = false;
-        par_level_t par_level = par_level_t::NONE();
-        for (const scoped_ptr_t<ql::op_t> &op : job.transformers) {
-            must_be_ordered |= op->must_be_ordered();
-            par_level = par_join(par_level, op->par_level());
-        }
+        ql::op_par_info_t par_info = combined_par_info(job.transformers);
 
         new_semaphore_acq_t semaphore_acq(&transform_parallelization_semaphore, 1);
 
@@ -985,7 +979,8 @@ done_traversing_t rget_cb_t::handle_pair(
 
         wait_interruptible(semaphore_acq.acquisition_signal(), waiter.interruptor());
 
-        if (!must_be_ordered && par_level.should_be_parallelized()) {
+        if (!par_info.should_be_ordered
+            && par_info.par_level.should_be_parallelized()) {
             waiter.end();
         }
 
@@ -994,7 +989,7 @@ done_traversing_t rget_cb_t::handle_pair(
             //                           ^^^^^^^^^^ NULL if no sindex
         }
 
-        if (must_be_ordered) {
+        if (par_info.should_be_ordered) {
             waiter.end();
         }
 

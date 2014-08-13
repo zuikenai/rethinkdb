@@ -617,6 +617,17 @@ scoped_ptr_t<eager_acc_t> make_eager_terminal(const terminal_variant_t &t) {
             boost::apply_visitor(terminal_visitor_t<eager_acc_t>(), t));
 }
 
+op_par_info_t combined_par_info(const std::vector<scoped_ptr_t<op_t> > &ops) {
+    bool should_be_ordered = false;
+    par_level_t par_level = par_level_t::NONE();
+    for (const scoped_ptr_t<op_t> &op : ops) {
+        op_par_info_t op_info = op->par_info();
+        should_be_ordered |= op_info.should_be_ordered;
+        par_level = par_join(par_level, op_info.par_level);
+    }
+    return op_par_info_t(should_be_ordered, par_level);
+}
+
 class ungrouped_op_t : public op_t {
 protected:
 private:
@@ -646,16 +657,12 @@ public:
         r_sanity_check((funcs.size() + append_index) != 0);
     }
 private:
-    // I don't know what group_trans_t does, this code is really complicated.  But it
-    // doesn't have any mutable state, which means it must be ok for this not to be
-    // ordered.
-    bool must_be_ordered() const { return false; }
-    par_level_t par_level() const FINAL {
+    op_par_info_t par_info() const FINAL {
         par_level_t ret = par_level_t::NONE();
         for (auto f = funcs.begin(); f != funcs.end(); ++f) {
             ret = par_join(ret, (*f)->par_level());
         }
-        return ret;
+        return op_par_info_t(false, ret);
     }
 
     void apply_op(env_t *env, groups_t *groups,
@@ -769,9 +776,8 @@ public:
     explicit map_trans_t(const map_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    bool must_be_ordered() const { return false; }
-    par_level_t par_level() const FINAL {
-        return f->par_level();
+    op_par_info_t par_info() const FINAL {
+        return op_par_info_t(false, f->par_level());
     }
 
     void transform_list(env_t *env, datums_t *list,
@@ -797,15 +803,11 @@ class distinct_trans_t : public ungrouped_op_t {
 public:
     explicit distinct_trans_t(const distinct_wire_func_t &f) : use_index(f.use_index) { }
 private:
-    // This carries left-to-right state, which means you MUST apply it to a stream in
-    // order?  Or, it means you SHOULD apply it to a stream in order (since this only
-    // exists to save network traffic).
-    bool must_be_ordered() const { return true; }
-
-    par_level_t par_level() const FINAL {
+    op_par_info_t par_info() const FINAL {
         // We can't parallelize distinct_trans_t because it has state and expects to
-        // operate from left to right.
-        return par_level_t::MANY();
+        // operate from left to right.  (We could improve things with more effort
+        // though.)
+        return op_par_info_t(true, par_level_t::MANY());
     }
 
     // sindex_val may be NULL
@@ -839,10 +841,8 @@ public:
                       ? _f.default_filter_val->compile_wire_func()
                       : counted_t<const func_t>()) { }
 private:
-    bool must_be_ordered() const { return false; }
-
-    par_level_t par_level() const FINAL {
-        return par_join(f->par_level(), default_val->par_level());
+    op_par_info_t par_info() const FINAL {
+        return op_par_info_t(false, par_join(f->par_level(), default_val->par_level()));
     }
 
     void transform_list(env_t *env, datums_t *list,
@@ -872,10 +872,8 @@ public:
     explicit concatmap_trans_t(const concatmap_wire_func_t &_f)
         : f(_f.compile_wire_func()) { }
 private:
-    bool must_be_ordered() const { return false; }
-
-    par_level_t par_level() const FINAL {
-        return f->par_level();
+    op_par_info_t par_info() const FINAL {
+        return op_par_info_t(false, f->par_level());
     }
 
     void transform_list(env_t *env, datums_t *list,
@@ -908,11 +906,9 @@ class zip_trans_t : public ungrouped_op_t {
 public:
     explicit zip_trans_t(const zip_wire_func_t &) {}
 private:
-    bool must_be_ordered() const { return false; }
-
-    par_level_t par_level() const FINAL {
+    op_par_info_t par_info() const FINAL {
         // A zip-transformation (left-,right- merge) is deterministic, non-blocking.
-        return par_level_t::NONE();
+        return op_par_info_t(false, par_level_t::NONE());
     }
 
     virtual void transform_list(env_t *, datums_t *lst,
