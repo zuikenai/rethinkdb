@@ -345,7 +345,6 @@ par_level_t max_par_level(
     return max_level;
 }
 
-// RSI: Nothing uses arg_par_level.
 bool op_term_t::arg_par_level(size_t index, par_level_t *level_out) const {
     counted_t<const term_t> arg;
     if (arg_terms->get_nonoriginal_arg(index, &arg)) {
