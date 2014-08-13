@@ -335,6 +335,11 @@ struct op_par_info_t {
     // The parallelizability of calling apply_op.
     par_level_t par_level;
 
+    // Can we just parallelize _all_ the ops?
+    bool should_parallelize_ops() const {
+        return !should_be_ordered && par_level.should_be_parallelized();
+    }
+
     op_par_info_t(bool _should_be_ordered, par_level_t _par_level)
         : should_be_ordered(_should_be_ordered), par_level(_par_level) { }
 };

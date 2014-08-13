@@ -979,8 +979,7 @@ done_traversing_t rget_cb_t::handle_pair(
 
         wait_interruptible(semaphore_acq.acquisition_signal(), waiter.interruptor());
 
-        if (!par_info.should_be_ordered
-            && par_info.par_level.should_be_parallelized()) {
+        if (par_info.should_parallelize_ops()) {
             waiter.end();
         }
 
@@ -989,7 +988,7 @@ done_traversing_t rget_cb_t::handle_pair(
             //                           ^^^^^^^^^^ NULL if no sindex
         }
 
-        if (par_info.should_be_ordered) {
+        if (!par_info.should_parallelize_ops()) {
             waiter.end();
         }
 
