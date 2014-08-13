@@ -95,6 +95,7 @@ private:
 
 counted_t<const term_t> compile_term(compile_env_t *env, protob_t<const Term> t);
 
+
 } // namespace ql
 
 #endif // RDB_PROTOCOL_TERM_HPP_

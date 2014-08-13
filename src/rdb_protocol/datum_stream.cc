@@ -13,6 +13,32 @@
 
 namespace ql {
 
+
+struct eval_result_t {
+    explicit eval_result_t(counted_t<val_t> _value)
+        : value(std::move(_value)) { }
+    explicit eval_result_t(std::exception_ptr _exception)
+        : exception(std::move(_exception)) { }
+    // Exactly one of these is null.
+    counted_t<val_t> value;
+    std::exception_ptr exception;
+};
+
+eval_result_t eval_term(const term_t *term, scope_env_t *env, eval_flags_t flags) {
+    try {
+        return eval_result_t(term->eval(env, flags));
+    } catch (const ql::exc_t &e) {
+        return eval_result_t(std::current_exception());
+    } catch (const ql::datum_exc_t &e) {
+        return eval_result_t(std::current_exception());
+    } catch (const interrupted_exc_t &e) {
+        return eval_result_t(std::current_exception());
+    } catch (const std::exception &e) {
+        return eval_result_t(std::current_exception());
+    }
+}
+
+
 template<class T>
 T groups_to_batch(std::map<counted_t<const datum_t>, T, counted_datum_less_t> *g) {
     if (g->size() == 0) {
