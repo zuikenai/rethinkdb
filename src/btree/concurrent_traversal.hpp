@@ -13,6 +13,8 @@ class concurrent_traversal_fifo_enforcer_signal_t {
 public:
     void wait_interruptible() THROWS_ONLY(interrupted_exc_t);
 
+    signal_t *interruptor();
+
     void end();
 
 private:

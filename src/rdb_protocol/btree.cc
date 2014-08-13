@@ -970,9 +970,6 @@ done_traversing_t rget_cb_t::handle_pair(
                 &serial_accumulation_fifo_sink,
                 serial_accumulation_fifo_source.enter_write());
 
-        // RSI: This logic might be bad with respect to
-        // concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible.  (edit: Idk what this even means.)
-
         // TODO(2014-09): It's pretty lame that we recompute this stuff for every row.
         bool must_be_ordered = false;
         par_level_t par_level = par_level_t::NONE();
@@ -986,11 +983,9 @@ done_traversing_t rget_cb_t::handle_pair(
         // We acquire the semaphore acq _before_ releasing the waiter, so that we
         // don't just keep traversing the tree and loading values.
 
-        // RSI: Use wait_interruptible?
-        semaphore_acq.acquisition_signal()->wait();
+        wait_interruptible(semaphore_acq.acquisition_signal(), waiter.interruptor());
 
         if (!must_be_ordered && par_level.may_be_parallelized()) {
-            debugf("about to run parallel\n");
             waiter.end();
         }
 
@@ -1000,13 +995,10 @@ done_traversing_t rget_cb_t::handle_pair(
         }
 
         if (must_be_ordered) {
-            debugf("did not run parallel\n");
             waiter.end();
         }
 
-        // RSI: Should this be wait_interruptible?
-        exiter.wait();
-        debugf("waited for recombination\n");
+        wait_interruptible(&exiter, waiter.interruptor());
 
         // We need lots of extra data for the accumulation because we might be
         // accumulating `rget_item_t`s for a batch.
@@ -1252,7 +1244,6 @@ rdb_modification_report_cb_t::~rdb_modification_report_cb_t() { }
 
 void rdb_modification_report_cb_t::on_mod_report(
     const rdb_modification_report_t &mod_report) {
-    // debugf("%" PRIu64 "\n", timestamp.longtime);
     if (mod_report.info.deleted.first.has() || mod_report.info.added.first.has()) {
         // We spawn the sindex update in its own coroutine because we don't want to
         // hold the sindex update for the changefeed update or vice-versa.

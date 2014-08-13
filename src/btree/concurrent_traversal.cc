@@ -129,7 +129,7 @@ void concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible()
     if (parent_->sink_waiters_ >= 2) {
         // If we have two or more things waiting for the signal (including ourselves)
         // we're probably looking too far ahead.  Lower the capacity by 1.  This might
-        // seem abrupt (especially considering that our semapoher_.get_capacity()
+        // seem abrupt (especially considering that our semaphore_.get_capacity()
         // concurrent reads can finish in any order), but we have the trickle fraction
         // set to 0.5, so there's smoothing.
         parent_->semaphore_.set_capacity(
@@ -144,6 +144,10 @@ void concurrent_traversal_fifo_enforcer_signal_t::wait_interruptible()
     }
 
     ::wait_interruptible(eval_exclusivity_signal_, parent_->failure_cond_);
+}
+
+signal_t *concurrent_traversal_fifo_enforcer_signal_t::interruptor() {
+    return parent_->failure_cond_;
 }
 
 void concurrent_traversal_fifo_enforcer_signal_t::end() {
