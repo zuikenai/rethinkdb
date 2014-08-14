@@ -31,7 +31,7 @@ with driver.Metacluster() as metacluster:
         elif option.startswith('--cache-size='):
             serve_options.remove(option)
     
-    proxy_process = driver.ProxyProcess(cluster, 'proxy-logfile', log_path='proxy-output',
+    proxy_process = driver.ProxyProcess(cluster, logfile_path='proxy-logfile', log_path='proxy-output',
         executable_path=executable_path, command_prefix=command_prefix, extra_options=serve_options)
     processes = [serve_process, proxy_process]
     for process in processes:

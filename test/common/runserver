@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+# Copyright 2014 RethinkDB, all rights reserved.
+
+'''
+	Return json describing one or more running servers then closes STDOUT.
+	Can reuse servers that are passed on the ENV variable RDB_SERVERS_JSON (same format as output).
+	Defaults to creating/cleaning out the 'test' database.
+	
+	Format:
+	
+	[
+		{
+			"host":"localhost", # defaults to localhost
+			"data_folder":"/path/to/data/folder/", # defaults to new folder in temp location
+			"cluster_port":1234,
+			"driver_port":1234,
+			"http_port":1234,
+			"rethinkdb_binary":"/path/to/rethinkdb" # defaults to utils.rethinkdb_binary_path()
+		}
+	]
+'''
+
+import collections, json, os
+
+import driver
+
+Settings = collections.namedtuple('Settings', ['servers_requested', 'servers', 'shutdown_at_close', 'clean_test_database'])
+ServerData = collections.namedtuple('ServerData', ['host', 'driver_port', ''])
+
+def parseEnvVariable():
+	'''Parse the RDB_SERVERS_JSON variable, returning collection of Settings objects'''
+	
+	if not 'RDB_SERVERS_JSON' in os.environ or os.environ['RDB_SERVERS_JSON'].strip() == '':
+		return []
+	
+	# -- pull the data from RDB_SERVERS_JSON
+	
+	parsedData = []
+	
+	try:
+		parsedData = json.loads(os.environ['RDB_SERVERS_JSON'])
+	except ValueError:
+		raise RuntimeWarning('RDB_SERVERS_JSON ENV variable was not parseable as JSON!') # ToDo: think about making this a fatal error
+		return []
+	
+	if not hasattr(parsedData, 'index'):
+		raise RuntimeWarning('RDB_SERVERS_JSON ENV variable was not an array!') # ToDo: think about making this a fatal error
+		return []
+	
+	# -- translate it into Settings objects
+	
+	for serverData in parsedData:
+		if not hasattr(serverData, 'has_key'):
+			raise RuntimeWarning('RDB_SERVERS_JSON ENV had a non dict item!') # ToDo: think about making this a fatal error
+			return []
+		
+	
+
+
+def parseInput():
+	'''Parse command line input, returning collection of Settings objects'''
+	
+	# -- defaults
+	
+	returnSettings = Settings('servers_requested'=1, 'servers'=[], 'shutdown_at_close'=True, 'clean_test_database'=True)
+	
+	# -- setup command line parsing
+	
+	parser = optparse.OptionParser()
+	
+	parser.add_option('--keep-data', dest='keepData', action='store_true', default=False, help='keep data on close')
+	parser.add_option('--new-servers', dest='newServers', action='store_true', default=False, help='return only new servers')
+	
+	options, args = parser.parse_args()
+	
+	# -- set values
+	
+	# - import existing servers from ENV variable RDB_RUNNING_SERVERS
+	
+	if options.newServers is False:
+		
+		
+	
+	# -- reset servers if all-new servers are requestsed
