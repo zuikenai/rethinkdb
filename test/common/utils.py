@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, subprocess, sys, tempfile, threading, time
+import os, random, socket, subprocess, sys, tempfile, threading, time
 
 import test_exceptions
 
@@ -264,3 +264,17 @@ def supportsTerminalColors():
         return False
     return True
 
+def findOpenPort(interface='localhost', timeout=10):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        useSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        useSocket.settimeout(.1)
+        try:
+            port = random.randint(49152, 65535)
+            useSocket.connect((interface, port))
+            useSocket.close()
+        except socket.timeout:
+            pass
+        except socket.error:
+            return port
+    raise Exception('Timed out looking for an open port')
