@@ -10,6 +10,9 @@ import datetime, inspect, os, re, socket, sys, threading, unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 import test_util
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, 'common'))
+import utils
+
 try:
     xrange
 except NameError:
@@ -76,24 +79,6 @@ class TestCaseCompatible(unittest.TestCase):
 
 class TestNoConnection(TestCaseCompatible):
     
-    @staticmethod
-    def findOpenPort():
-        deadline = time.time() + 10
-        while time.time() < deadline:
-            useSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            useSocket.settimeout(.5)
-            try:
-                import random # importing here to avoid issue #2343
-                port = random.randint(49152, 65535)
-                useSocket.connect(('localhost', port))
-                useSocket.close()
-            except socket.timeout:
-                pass
-            except socket.error:
-                return port
-        raise Exception('Timed out looking for an open port')
-        
-    
     # No servers started yet so this should fail
     def test_connect(self):
         if not use_default_port:
@@ -104,7 +89,7 @@ class TestNoConnection(TestCaseCompatible):
             r.connect)
 
     def test_connect_port(self):
-        port = self.findOpenPort()
+        port = utils.findOpenPort()
         self.assertRaisesRegexp(RqlDriverError, "Could not connect to localhost:%d." % port, r.connect, port=port)
 
     def test_connect_host(self):
@@ -118,7 +103,7 @@ class TestNoConnection(TestCaseCompatible):
     def test_connnect_timeout(self):
         '''Test that we get a ReQL error if we connect to a non-responsive port'''
         useSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        port = self.findOpenPort()
+        port = utils.findOpenPort()
         useSocket.bind(('localhost', port))
         useSocket.listen(0)
         try:
@@ -127,7 +112,7 @@ class TestNoConnection(TestCaseCompatible):
             useSocket.close()
     
     def test_connect_host(self):
-        port = self.findOpenPort()
+        port = utils.findOpenPort()
         self.assertRaisesRegexp(RqlDriverError, "Could not connect to 0.0.0.0:%d." % port, r.connect, host="0.0.0.0", port=port)
 
     def test_empty_run(self):
