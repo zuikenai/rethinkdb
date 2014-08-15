@@ -4,7 +4,12 @@ namespace ql {
 
 namespace r {
 
-reql_t::reql_t(scoped_ptr_t<Term> &&term_) : term(std::move(term_)) { }
+reql_t::reql_t(protob_t<Term> &&term_) : term(std::move(term_)) { }
+
+reql_t::reql_t(const protob_t<Term> &t) : term(t) { }
+
+// TODO!
+reql_t::reql_t(const protob_t<const Term> &t) : term(*reinterpret_cast<const protob_t<Term> *>(&t)) { }
 
 reql_t::reql_t(const double val) { set_datum(datum_t(val)); }
 
@@ -14,27 +19,25 @@ reql_t::reql_t(const datum_t &d) { set_datum(d); }
 
 reql_t::reql_t(const counted_t<const datum_t> &d) { set_datum(*d.get()); }
 
-reql_t::reql_t(const Datum &d) : term(make_scoped<Term>()) {
+reql_t::reql_t(const Datum &d) : term(make_counted_term()) {
     term->set_type(Term::DATUM);
     *term->mutable_datum() = d;
 }
 
-reql_t::reql_t(const Term &t) : term(make_scoped<Term>(t)) { }
-
-reql_t::reql_t(std::vector<reql_t> &&val) : term(make_scoped<Term>()) {
+reql_t::reql_t(std::vector<reql_t> &&val) : term(make_counted_term()) {
     term->set_type(Term::MAKE_ARRAY);
     for (auto i = val.begin(); i != val.end(); i++) {
         add_arg(std::move(*i));
     }
 }
 
-reql_t reql_t::copy() const { return reql_t(make_scoped<Term>(get())); }
+reql_t reql_t::copy() const { return reql_t(make_counted_term_copy(get())); }
 
 reql_t::reql_t(reql_t &&other) : term(std::move(other.term)) {
     guarantee(term.has());
 }
 
-reql_t::reql_t(pb::dummy_var_t var) : term(make_scoped<Term>()) {
+reql_t::reql_t(pb::dummy_var_t var) : term(make_counted_term()) {
     term->set_type(Term::VAR);
     add_arg(static_cast<double>(dummy_var_to_sym(var).value));
 }
@@ -46,14 +49,19 @@ reql_t boolean(bool b) {
 void reql_t::copy_optargs_from_term(const Term &from){
     for (int i = 0; i < from.optargs_size(); ++i) {
         const Term_AssocPair &o = from.optargs(i);
-        add_arg(r::optarg(o.key(), o.val()));
+        add_arg(r::optarg(o.key(), make_counted_term_copy(o.val())));
     }
 }
 
-void reql_t::copy_args_from_term(const Term &from, size_t start_index){
-    for (int i = start_index; i < from.args_size(); ++i) {
-        add_arg(from.args(i));
+void reql_t::copy_args_from_term(const protob_t<Term> &from, size_t start_index){
+    for (int i = start_index; i < from->args_size(); ++i) {
+        add_arg(from.make_child(&from->args(i)));
     }
+}
+
+// TODO!
+void reql_t::copy_args_from_term(const protob_t<const Term> &from, size_t start_index) {
+    copy_args_from_term(*reinterpret_cast<const protob_t<Term> *>(&from), start_index);
 }
 
 reql_t &reql_t::operator=(reql_t &&other) {
@@ -79,20 +87,16 @@ reql_t fun(pb::dummy_var_t a, pb::dummy_var_t b, reql_t&& body) {
 }
 
 reql_t null() {
-    auto t = make_scoped<Term>();
+    auto t = make_counted_term();
     t->set_type(Term::DATUM);
     t->mutable_datum()->set_type(Datum::R_NULL);
     return reql_t(std::move(t));
 }
 
-Term *reql_t::release() {
-    guarantee(term.has());
-    return term.release();
-}
-
 Term &reql_t::get() {
     guarantee(term.has());
-    return *term;
+    // TODO!
+    return *const_cast<Term *>(term.get());
 }
 
 const Term &reql_t::get() const {
@@ -100,12 +104,9 @@ const Term &reql_t::get() const {
     return *term;
 }
 
-protob_t<Term> reql_t::release_counted() {
+protob_t<Term> reql_t::get_counted() {
     guarantee(term.has());
-    protob_t<Term> ret = make_counted_term();
-    auto t = scoped_ptr_t<Term>(term.release());
-    ret->Swap(t.get());
-    return ret;
+    return term;
 }
 
 void reql_t::swap(Term &t) {
@@ -121,7 +122,7 @@ reql_t reql_t::do_(pb::dummy_var_t arg, reql_t &&body) RVALUE_THIS {
 }
 
 void reql_t::set_datum(const datum_t &d) {
-    term = make_scoped<Term>();
+    term = make_counted_term();
     term->set_type(Term::DATUM);
     d.write_to_protobuf(term->mutable_datum(), use_json_t::NO);
 }

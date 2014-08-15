@@ -326,7 +326,7 @@ bool func_t::filter_call(env_t *env, counted_t<const datum_t> arg, counted_t<fun
 
 counted_t<func_t> new_constant_func(counted_t<const datum_t> obj,
                                     const protob_t<const Backtrace> &bt_src) {
-    protob_t<Term> twrap = r::fun(r::expr(obj)).release_counted();
+    protob_t<Term> twrap = r::fun(r::expr(obj)).get_counted();
     propagate_backtrace(twrap.get(), bt_src.get());
 
     compile_env_t empty_compile_env((var_visibility_t()));
@@ -338,7 +338,7 @@ counted_t<func_t> new_constant_func(counted_t<const datum_t> obj,
 counted_t<func_t> new_get_field_func(counted_t<const datum_t> key,
                                      const protob_t<const Backtrace> &bt_src) {
     pb::dummy_var_t obj = pb::dummy_var_t::FUNC_GETFIELD;
-    protob_t<Term> twrap = r::fun(obj, r::var(obj)[key]).release_counted();
+    protob_t<Term> twrap = r::fun(obj, r::var(obj)[key]).get_counted();
 
     propagate_backtrace(twrap.get(), bt_src.get());
 
@@ -351,7 +351,7 @@ counted_t<func_t> new_get_field_func(counted_t<const datum_t> key,
 counted_t<func_t> new_pluck_func(counted_t<const datum_t> obj,
                                  const protob_t<const Backtrace> &bt_src) {
     pb::dummy_var_t var = pb::dummy_var_t::FUNC_PLUCK;
-    protob_t<Term> twrap = r::fun(var, r::var(var).pluck(obj)).release_counted();
+    protob_t<Term> twrap = r::fun(var, r::var(var).pluck(obj)).get_counted();
     propagate_backtrace(twrap.get(), bt_src.get());
 
     compile_env_t empty_compile_env((var_visibility_t()));
@@ -363,7 +363,7 @@ counted_t<func_t> new_pluck_func(counted_t<const datum_t> obj,
 counted_t<func_t> new_eq_comparison_func(counted_t<const datum_t> obj,
                                          const protob_t<const Backtrace> &bt_src) {
     pb::dummy_var_t var = pb::dummy_var_t::FUNC_EQCOMPARISON;
-    protob_t<Term> twrap = r::fun(var, r::var(var) == obj).release_counted();
+    protob_t<Term> twrap = r::fun(var, r::var(var) == obj).get_counted();
     propagate_backtrace(twrap.get(), bt_src.get());
 
     compile_env_t empty_compile_env((var_visibility_t()));
@@ -382,7 +382,7 @@ counted_t<func_t> new_page_func(counted_t<const datum_t> method,
                 r::fun(info,
                        r::var(info)["header"]["link"]["rel=\"next\""]
                            .default_(r::null()))
-                .release_counted();
+                .get_counted();
 
             propagate_backtrace(twrap.get(), bt_src.get());
 

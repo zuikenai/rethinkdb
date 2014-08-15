@@ -55,9 +55,9 @@ public:
     static r::reql_t rewrite(protob_t<const Term> in,
                              UNUSED const pb_rcheckable_t *bt_src,
                              protob_t<const Term> optargs_in) {
-        const Term &left = in->args(0);
-        const Term &right = in->args(1);
-        const Term &func = in->args(2);
+        protob_t<const Term> left(in.make_child(&in->args(0)));
+        protob_t<const Term> right(in.make_child(&in->args(1)));
+        protob_t<const Term> func(in.make_child(&in->args(2)));
         auto n = pb::dummy_var_t::INNERJOIN_N;
         auto m = pb::dummy_var_t::INNERJOIN_M;
 
@@ -87,9 +87,9 @@ public:
     static r::reql_t rewrite(protob_t<const Term> in,
                              UNUSED const pb_rcheckable_t *bt_src,
                              protob_t<const Term> optargs_in) {
-        const Term &left = in->args(0);
-        const Term &right = in->args(1);
-        const Term &func = in->args(2);
+        protob_t<const Term> left(in.make_child(&in->args(0)));
+        protob_t<const Term> right(in.make_child(&in->args(1)));
+        protob_t<const Term> func(in.make_child(&in->args(2)));
         auto n = pb::dummy_var_t::OUTERJOIN_N;
         auto m = pb::dummy_var_t::OUTERJOIN_M;
         auto lst = pb::dummy_var_t::OUTERJOIN_LST;
@@ -127,9 +127,9 @@ private:
     static r::reql_t rewrite(protob_t<const Term> in,
                              UNUSED const pb_rcheckable_t *bt_src,
                              protob_t<const Term> optargs_in) {
-        const Term &left = in->args(0);
-        const Term &left_attr = in->args(1);
-        const Term &right = in->args(2);
+        protob_t<const Term> left(in.make_child(&in->args(0)));
+        protob_t<const Term> left_attr(in.make_child(&in->args(1)));
+        protob_t<const Term> right(in.make_child(&in->args(2)));
 
         auto row = pb::dummy_var_t::EQJOIN_ROW;
         auto v = pb::dummy_var_t::EQJOIN_V;
@@ -162,7 +162,7 @@ private:
                              protob_t<const Term> optargs_in) {
         auto x = pb::dummy_var_t::IGNORED;
 
-        r::reql_t term = r::expr(in->args(0)).replace(r::fun(x, r::null()));
+        r::reql_t term = r::expr(in.make_child(&in->args(0))).replace(r::fun(x, r::null()));
 
         term.copy_optargs_from_term(*optargs_in);
         return term;
@@ -182,7 +182,7 @@ private:
         auto new_row = pb::dummy_var_t::UPDATE_NEWROW;
 
         r::reql_t term =
-            r::expr(in->args(0)).replace(
+            r::expr(in.make_child(&in->args(0))).replace(
                 r::fun(old_row,
                     r::branch(
                         r::null() == old_row,
@@ -192,7 +192,7 @@ private:
                                 r::null() == new_row,
                                 old_row,
                                 r::expr(old_row).merge(new_row)))(
-                                    r::expr(in->args(1))(old_row,
+                                    r::expr(in.make_child(&in->args(1)))(old_row,
                                         r::optarg("_EVAL_FLAGS_", LITERAL_OK)),
                                     r::optarg("_EVAL_FLAGS_", LITERAL_OK)))));
 
@@ -211,7 +211,7 @@ private:
                              UNUSED const pb_rcheckable_t *bt_src,
                              protob_t<const Term> optargs_in) {
         r::reql_t term =
-            r::expr(in->args(0)).slice(in->args(1), -1,
+            r::expr(in.make_child(&in->args(0))).slice(in.make_child(&in->args(1)), -1,
                 r::optarg("right_bound", "closed"));
 
         term.copy_optargs_from_term(*optargs_in);
@@ -231,9 +231,9 @@ private:
         auto row = pb::dummy_var_t::DIFFERENCE_ROW;
 
         r::reql_t term =
-            r::expr(in->args(0)).filter(
+            r::expr(in.make_child(&in->args(0))).filter(
                 r::fun(row,
-                    !r::expr(in->args(1)).contains(row)));
+                    !r::expr(in.make_child(&in->args(1))).contains(row)));
 
         term.copy_optargs_from_term(*optargs_in);
         return term;
@@ -251,11 +251,11 @@ private:
                              UNUSED const pb_rcheckable_t *bt_src,
                              protob_t<const Term> optargs_in) {
 
-        r::reql_t has_fields = r::expr(in->args(0)).has_fields();
-        has_fields.copy_args_from_term(*in, 1);
+        r::reql_t has_fields = r::expr(in.make_child(&in->args(0))).has_fields();
+        has_fields.copy_args_from_term(in, 1);
         has_fields.copy_optargs_from_term(*optargs_in);
         r::reql_t pluck = std::move(has_fields).pluck();
-        pluck.copy_args_from_term(*in, 1);
+        pluck.copy_args_from_term(in, 1);
 
         return pluck;
     }

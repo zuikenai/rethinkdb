@@ -181,7 +181,7 @@ std::string create_sindex(namespace_interface_t *nsi,
     std::string id = uuid_to_str(generate_uuid());
 
     const ql::sym_t arg(1);
-    ql::protob_t<const Term> mapping = ql::r::var(arg)["sid"].release_counted();
+    ql::protob_t<const Term> mapping = ql::r::var(arg)["sid"].get_counted();
 
     ql::map_wire_func_t m(mapping, make_vector(arg), get_backtrace(mapping));
 

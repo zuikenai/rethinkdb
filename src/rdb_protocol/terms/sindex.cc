@@ -73,7 +73,7 @@ public:
 
             pb::dummy_var_t x = pb::dummy_var_t::SINDEXCREATE_X;
             protob_t<Term> func_term
-                = r::fun(x, r::var(x)[name_datum]).release_counted();
+                = r::fun(x, r::var(x)[name_datum]).get_counted();
 
             prop_bt(func_term.get());
             compile_env_t empty_compile_env((var_visibility_t()));

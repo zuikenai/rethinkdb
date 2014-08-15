@@ -29,9 +29,9 @@ counted_t<const datum_t> static_optarg(const std::string &key, protob_t<Query> q
     return counted_t<const datum_t>();
 }
 
-wire_func_t construct_optarg_wire_func(const Term &val) {
-    protob_t<Term> arg = r::fun(r::expr(val)).release_counted();
-    propagate_backtrace(arg.get(), &val.GetExtension(ql2::extension::backtrace));
+wire_func_t construct_optarg_wire_func(const protob_t<Term> &val) {
+    protob_t<Term> arg = r::fun(r::expr(val)).get_counted();
+    propagate_backtrace(arg.get(), &val.get()->GetExtension(ql2::extension::backtrace));
 
     compile_env_t empty_compile_env((var_visibility_t()));
     counted_t<func_term_t> func_term
@@ -51,8 +51,8 @@ std::map<std::string, wire_func_t> global_optargs(protob_t<Query> q) {
     for (int i = 0; i < q->global_optargs_size(); ++i) {
         const Query::AssocPair &ap = q->global_optargs(i);
         auto insert_res
-            = optargs.insert(std::make_pair(ap.key(),
-                                            construct_optarg_wire_func(ap.val())));
+            = optargs.insert(std::make_pair(ap.key(), // TODO!
+                                            construct_optarg_wire_func(make_counted_term_copy(ap.val()))));
         if (!insert_res.second) {
             rfail_toplevel(
                     base_exc_t::GENERIC,
@@ -62,9 +62,9 @@ std::map<std::string, wire_func_t> global_optargs(protob_t<Query> q) {
 
     // Supply a default db of "test" if there is no "db" optarg.
     if (!optargs.count("db")) {
-        Term arg = r::db("test").get();
+        protob_t<Term> arg = r::db("test").get_counted();
         Backtrace *t_bt = t->MutableExtension(ql2::extension::backtrace);
-        propagate_backtrace(&arg, t_bt); // duplicate toplevel backtrace
+        propagate_backtrace(arg.get(), t_bt); // duplicate toplevel backtrace
         optargs["db"] = construct_optarg_wire_func(arg);
     }
 

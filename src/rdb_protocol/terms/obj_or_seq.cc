@@ -34,7 +34,7 @@ public:
         // is replaced by a new variable.
         // For example, foo.pluck('a') becomes varnum.pluck('a')
         r::reql_t body = r::var(varnum).call(term->type());
-        body.copy_args_from_term(*term, 1);
+        body.copy_args_from_term(term, 1);
         body.add_arg(r::optarg("_NO_RECURSE_", r::boolean(true)));
 
         switch (poly_type) {

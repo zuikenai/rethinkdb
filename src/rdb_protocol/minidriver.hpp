@@ -44,6 +44,7 @@ namespace r {
 
 /** reql_t
  *
+ * // TODO!
  * A thin wrapper around scoped_ptr_t<Term> that allows building Terms
  * using the ReQL syntax.
  *
@@ -68,13 +69,14 @@ namespace r {
 class reql_t {
 public:
 
-    explicit reql_t(scoped_ptr_t<Term> &&term_);
+    explicit reql_t(protob_t<Term> &&term_);
+    explicit reql_t(const protob_t<Term> &t);
+    explicit reql_t(const protob_t<const Term> &t);
     explicit reql_t(const double val);
     explicit reql_t(const std::string &val);
     explicit reql_t(const datum_t &d);
     explicit reql_t(const counted_t<const datum_t> &d);
     explicit reql_t(const Datum &d);
-    explicit reql_t(const Term &t);
     explicit reql_t(std::vector<reql_t> &&val);
     explicit reql_t(pb::dummy_var_t var);
 
@@ -84,7 +86,7 @@ public:
     reql_t copy() const;
 
     template <class... T>
-    reql_t(Term_TermType type, T &&... args) : term(make_scoped<Term>()) {
+    reql_t(Term_TermType type, T &&... args) : term(make_counted_term()) {
         term->set_type(type);
         add_args(std::forward<T>(args)...);
     }
@@ -94,18 +96,17 @@ public:
         return reql_t(type, std::move(*this), std::forward<T>(args)...);
     }
 
-    Term* release();
-
     Term &get();
 
     const Term &get() const;
 
-    protob_t<Term> release_counted();
+    protob_t<Term> get_counted();
 
     void swap(Term &t);
 
     void copy_optargs_from_term(const Term &from);
-    void copy_args_from_term(const Term &from, size_t start_index = 0);
+    void copy_args_from_term(const protob_t<Term> &from, size_t start_index = 0);
+    void copy_args_from_term(const protob_t<const Term> &from, size_t start_index = 0);
 
 #define REQL_METHOD(name, termtype)                                     \
     template<class... T>                                                \
@@ -147,15 +148,17 @@ public:
 
     template<class T>
     void add_arg(T &&a) {
+        // TODO! Figure out a way to do this without copying
         reql_t it(std::forward<T>(a));
-        term->mutable_args()->AddAllocated(it.term.release());
+        auto copy = make_scoped<Term>(*it.term.get());
+        term->mutable_args()->AddAllocated(copy.release());
     }
 
 private:
 
     void set_datum(const datum_t &d);
 
-    scoped_ptr_t<Term> term;
+    protob_t<Term> term;
 };
 
 template <>
