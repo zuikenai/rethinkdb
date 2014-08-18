@@ -1591,12 +1591,12 @@ iterator &iterator::operator--() {
     return *this;
 }
 
-bool iterator::operator==(const iterator &other) const { return cmp(other) == 0; }
-bool iterator::operator!=(const iterator &other) const { return cmp(other) != 0; }
-
-int iterator::cmp(const iterator &other) const {
+bool iterator::operator==(const iterator &other) const {
     guarantee(node_ == other.node_);
-    return index_ - other.index_;
+    return index_ == other.index_;
+}
+bool iterator::operator!=(const iterator &other) const {
+    return !operator==(other);
 }
 
 reverse_iterator::reverse_iterator() { }
@@ -1618,8 +1618,12 @@ reverse_iterator &reverse_iterator::operator--() {
     return *this;
 }
 
-bool reverse_iterator::operator==(const reverse_iterator &other) const { return inner_ == other.inner_; }
-bool reverse_iterator::operator!=(const reverse_iterator &other) const { return inner_ != other.inner_; }
+bool reverse_iterator::operator==(const reverse_iterator &other) const {
+    return inner_ == other.inner_;
+}
+bool reverse_iterator::operator!=(const reverse_iterator &other) const {
+    return !operator==(other);
+}
 
 
 leaf::iterator begin(const leaf_node_t &leaf_node) {
