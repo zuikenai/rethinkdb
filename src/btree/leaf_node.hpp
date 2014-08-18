@@ -58,21 +58,18 @@ struct leaf_node_t {
     // The pair offsets.
     uint16_t pair_offsets[];
 
-    //Iteration
-    typedef leaf::iterator iterator;
-    typedef leaf::reverse_iterator reverse_iterator;
 } __attribute__ ((__packed__));
 
 namespace leaf {
 
-leaf_node_t::iterator begin(const leaf_node_t &leaf_node);
-leaf_node_t::iterator end(const leaf_node_t &leaf_node);
+leaf::iterator begin(const leaf_node_t &leaf_node);
+leaf::iterator end(const leaf_node_t &leaf_node);
 
-leaf_node_t::reverse_iterator rbegin(const leaf_node_t &leaf_node);
-leaf_node_t::reverse_iterator rend(const leaf_node_t &leaf_node);
+leaf::reverse_iterator rbegin(const leaf_node_t &leaf_node);
+leaf::reverse_iterator rend(const leaf_node_t &leaf_node);
 
-leaf_node_t::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t &leaf_node);
-leaf_node_t::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t &leaf_node);
+leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t &leaf_node);
+leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t &leaf_node);
 
 
 

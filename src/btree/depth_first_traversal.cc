@@ -149,7 +149,7 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
                 }
             }
         } else {
-            leaf_node_t::reverse_iterator it;
+            leaf::reverse_iterator it;
             if (range.right.unbounded) {
                 it = leaf::rbegin(*lnode);
             } else {
