@@ -62,14 +62,14 @@ struct leaf_node_t {
 
 namespace leaf {
 
-leaf::iterator begin(const leaf_node_t &leaf_node);
-leaf::iterator end(const leaf_node_t &leaf_node);
+leaf::iterator begin(const leaf_node_t *leaf_node);
+leaf::iterator end(const leaf_node_t *leaf_node);
 
-leaf::reverse_iterator rbegin(const leaf_node_t &leaf_node);
-leaf::reverse_iterator rend(const leaf_node_t &leaf_node);
+leaf::reverse_iterator rbegin(const leaf_node_t *leaf_node);
+leaf::reverse_iterator rend(const leaf_node_t *leaf_node);
 
-leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t &leaf_node);
-leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t &leaf_node);
+leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
+leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
 
 
 

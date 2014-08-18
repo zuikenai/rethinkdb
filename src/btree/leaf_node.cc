@@ -1626,46 +1626,46 @@ bool reverse_iterator::operator!=(const reverse_iterator &other) const {
 }
 
 
-leaf::iterator begin(const leaf_node_t &leaf_node) {
-    return ++leaf::iterator(&leaf_node, -1);
+leaf::iterator begin(const leaf_node_t *leaf_node) {
+    return ++leaf::iterator(leaf_node, -1);
 }
 
-leaf::iterator end(const leaf_node_t &leaf_node) {
-    return leaf::iterator(&leaf_node, leaf_node.num_pairs);
+leaf::iterator end(const leaf_node_t *leaf_node) {
+    return leaf::iterator(leaf_node, leaf_node->num_pairs);
 }
 
-leaf::reverse_iterator rbegin(const leaf_node_t &leaf_node) {
-    return ++leaf::reverse_iterator(&leaf_node, leaf_node.num_pairs);
+leaf::reverse_iterator rbegin(const leaf_node_t *leaf_node) {
+    return ++leaf::reverse_iterator(leaf_node, leaf_node->num_pairs);
 }
 
-leaf::reverse_iterator rend(const leaf_node_t &leaf_node) {
-    return leaf::reverse_iterator(&leaf_node, -1);
+leaf::reverse_iterator rend(const leaf_node_t *leaf_node) {
+    return leaf::reverse_iterator(leaf_node, -1);
 }
 
-leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t &leaf_node) {
+leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
     int index;
-    leaf::find_key(&leaf_node, key, &index);
-    if (index == leaf_node.num_pairs ||
-        entry_is_live(leaf::get_entry(&leaf_node, leaf_node.pair_offsets[index]))) {
-        return leaf::iterator(&leaf_node, index);
+    leaf::find_key(leaf_node, key, &index);
+    if (index == leaf_node->num_pairs ||
+        entry_is_live(leaf::get_entry(leaf_node, leaf_node->pair_offsets[index]))) {
+        return leaf::iterator(leaf_node, index);
     } else {
-        return ++leaf::iterator(&leaf_node, index);
+        return ++leaf::iterator(leaf_node, index);
     }
 }
 
-leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t &leaf_node) {
+leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
     int index;
-    leaf::find_key(&leaf_node, key, &index);
-    if (index < leaf_node.num_pairs) {
-        const leaf::entry_t *entry = leaf::get_entry(&leaf_node, leaf_node.pair_offsets[index]);
+    leaf::find_key(leaf_node, key, &index);
+    if (index < leaf_node->num_pairs) {
+        const leaf::entry_t *entry = leaf::get_entry(leaf_node, leaf_node->pair_offsets[index]);
         const btree_key_t *ekey = leaf::entry_key(entry);
         if (entry_is_live(entry) &&
             sized_strcmp(ekey->contents, ekey->size, key->contents, key->size) == 0) {
-            return leaf::reverse_iterator(&leaf_node, index);
+            return leaf::reverse_iterator(leaf_node, index);
         }
     }
 
-    return ++leaf::reverse_iterator(&leaf_node, index);
+    return ++leaf::reverse_iterator(leaf_node, index);
 }
 
 }  // namespace leaf
