@@ -2,6 +2,7 @@
 #include <map>
 
 #include "btree/leaf_node.hpp"
+#include "btree/leaf_node_struct.hpp"
 #include "btree/node.hpp"
 #include "containers/scoped.hpp"
 #include "repli_timestamp.hpp"
