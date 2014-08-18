@@ -1593,10 +1593,6 @@ iterator &iterator::operator--() {
 
 bool iterator::operator==(const iterator &other) const { return cmp(other) == 0; }
 bool iterator::operator!=(const iterator &other) const { return cmp(other) != 0; }
-bool iterator::operator<(const iterator &other) const { return cmp(other) < 0; }
-bool iterator::operator>(const iterator &other) const { return cmp(other) > 0; }
-bool iterator::operator<=(const iterator &other) const { return cmp(other) <= 0; }
-bool iterator::operator>=(const iterator &other) const { return cmp(other) >= 0; }
 
 int iterator::cmp(const iterator &other) const {
     guarantee(node_ == other.node_);

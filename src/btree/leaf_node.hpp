@@ -176,10 +176,6 @@ public:
     iterator &operator--();
     bool operator==(const iterator &other) const;
     bool operator!=(const iterator &other) const;
-    bool operator<(const iterator &other) const;
-    bool operator>(const iterator &other) const;
-    bool operator<=(const iterator &other) const;
-    bool operator>=(const iterator &other) const;
 private:
     /* negative return => this < other */
     int cmp(const iterator &other) const;
