@@ -196,10 +196,6 @@ public:
     reverse_iterator &operator--();
     bool operator==(const reverse_iterator &other) const;
     bool operator!=(const reverse_iterator &other) const;
-    bool operator<(const reverse_iterator &other) const;
-    bool operator>(const reverse_iterator &other) const;
-    bool operator<=(const reverse_iterator &other) const;
-    bool operator>=(const reverse_iterator &other) const;
 private:
     iterator inner_;
 };
