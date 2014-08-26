@@ -115,6 +115,12 @@ build-deb: deb-src-dir
 .PHONY: install-osx
 install-osx: install-binaries install-web
 
+OSX_BAD_DYLIBS = ""
+ifeq (Darwin,$(OS))
+  OSX_BAD_DYLIBS := $(shell /usr/bin/otool -L /Users/larkost/Projects/rethinkdb/build/release_clang_notcmalloc/rethinkdb | awk '/^\t/ { sub(/ \(.+\)/, ""); print }' | while read LINE; do if [[ $$LINE == /usr/lib/* ]]; then echo $$LINE; fi; done)
+  ifneq ("",$(OSX_BAD_DYLIBS))
+endif
+
 ifneq (Darwin,$(OS))
   PRODUCT_BUILD = $(error MacOS package can only be built on that OS)
 else ifneq ("","$(findstring $(SIGNATURE_NAME),$(shell /usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]+[:graph:][:blank:]/'))")
@@ -133,6 +139,9 @@ build-osx: install-osx
 	pkgbuild --root $(OSX_PACKAGE_DIR)/pkg --identifier rethinkdb $(OSX_PACKAGE_DIR)/install/rethinkdb.pkg
 	mkdir $(OSX_PACKAGE_DIR)/dmg
 	$(PRODUCT_BUILD)
+	
+	/usr/bin/otool -L $(OSX_PACKAGE_DIR)/pkg/$(SERVER_EXEC_NAME) | awk '/^\t/ { sub(/ \(.+\)/, ""); print }' | while read LINE; do if [[ $$LINE == $(BUILD_DIR)/* ]]; then echo '***' rethinkdb binary links to non-system dylib: $$LINE; false; fi; done
+	
 # TODO: the PREFIX should not be hardcoded in the uninstall script 
 	cp $(OSX_PACKAGING_DIR)/uninstall-rethinkdb.sh $(OSX_PACKAGE_DIR)/dmg/uninstall-rethinkdb.sh
 	chmod +x $(OSX_PACKAGE_DIR)/dmg/uninstall-rethinkdb.sh
