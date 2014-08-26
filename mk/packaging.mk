@@ -134,7 +134,7 @@ build-osx: install-osx
 	mkdir $(OSX_PACKAGE_DIR)/dmg
 	$(PRODUCT_BUILD)
 	
-	/usr/bin/otool -L $(OSX_PACKAGE_DIR)/pkg/$(SERVER_EXEC_NAME) | awk '/^\t/ { sub(/ \(.+\)/, ""); print }' | while read LINE; do if [[ $$LINE == $(BUILD_DIR)/* ]]; then echo '***' rethinkdb binary links to non-system dylib: $$LINE; false; fi; done
+	set -e; /usr/bin/otool -L $(OSX_PACKAGE_DIR)/pkg/$(SERVER_EXEC_NAME) | awk '/^\t/ { sub(/ \(.+\)/, ""); print }' | while read LINE; do if [[ $$LINE == $(BUILD_DIR)/* ]]; then echo '***' rethinkdb binary links to non-system dylib: $$LINE; exit 1; fi; done
 	
 # TODO: the PREFIX should not be hardcoded in the uninstall script 
 	cp $(OSX_PACKAGING_DIR)/uninstall-rethinkdb.sh $(OSX_PACKAGE_DIR)/dmg/uninstall-rethinkdb.sh
