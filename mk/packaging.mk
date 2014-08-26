@@ -115,12 +115,6 @@ build-deb: deb-src-dir
 .PHONY: install-osx
 install-osx: install-binaries install-web
 
-OSX_BAD_DYLIBS = ""
-ifeq (Darwin,$(OS))
-  OSX_BAD_DYLIBS := $(shell /usr/bin/otool -L /Users/larkost/Projects/rethinkdb/build/release_clang_notcmalloc/rethinkdb | awk '/^\t/ { sub(/ \(.+\)/, ""); print }' | while read LINE; do if [[ $$LINE == /usr/lib/* ]]; then echo $$LINE; fi; done)
-  ifneq ("",$(OSX_BAD_DYLIBS))
-endif
-
 ifneq (Darwin,$(OS))
   PRODUCT_BUILD = $(error MacOS package can only be built on that OS)
 else ifneq ("","$(findstring $(SIGNATURE_NAME),$(shell /usr/bin/security find-identity -p macappstore -v | /usr/bin/awk '/[:blank:]+[:digit:]+[:graph:][:blank:]/'))")
