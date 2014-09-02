@@ -46,7 +46,7 @@ indexes will be issued on startup.
 Indexes can be migrated to the new format with the `rethinkdb index-rebuild`
 utility. Consult the troubleshooting document for more information:
 
-http://rethinkdb.com/docs/troubleshooting#my-secondary-index-is-outdated
+http://rethinkdb.com/docs/troubleshooting/#my-secondary-index-is-outdated
 
 ### API-breaking changes ###
 
