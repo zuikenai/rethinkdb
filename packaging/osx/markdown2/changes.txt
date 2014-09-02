@@ -1,0 +1,3 @@
+This is from the Markdown2 project: https://github.com/trentm/python-markdown2
+
+We have only taken the `markdown2.py` file from version 2.2.2 and changed the name to '__init__.py' in order to allow it to be in a folder alongside its license file. No other changes have been made.

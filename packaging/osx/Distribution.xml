@@ -8,6 +8,8 @@
 
 <options customize="never" allow-external-scripts="no" rootVolumeOnly="yes" />
 
+<background file="installer_background.png" mime-type="image/png" alignment="topleft" scaling="none" />
+
 <installation-check script="(function(){
   if(system.sysctl('hw.machine') != 'x86_64'){
     my.result.type = 'Fatal';
