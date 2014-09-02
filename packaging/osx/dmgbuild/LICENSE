@@ -1,0 +1,8 @@
+
+The dmgbuild project does not include an explicit license file, but both on the PyPi site and in the `setup.py` file both list it as being MIT licensed:
+
+https://pypi.python.org/pypi/dmgbuild
+
+A bug has been filed to get this:
+
+https://bitbucket.org/al45tair/dmgbuild/issue/3/missing-license-file
