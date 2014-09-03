@@ -6,7 +6,7 @@ src_url=http://curl.haxx.se/download/curl-$version.tar.bz2
 pkg_configure () {
     local prefix
     prefix="$(niceabspath "$install_dir")"
-    in_dir "$build_dir" ./configure --prefix="$prefix" --with-gnutls --without-ssl
+    in_dir "$build_dir" ./configure --prefix="$prefix" --without-gnutls --with-ssl --without-librtmp --disable-ldap
 }
 
 pkg_install-include () {
@@ -16,13 +16,26 @@ pkg_install-include () {
 }
 
 pkg_depends () {
-    echo libidn zlib gnutls
+    echo libidn zlib openssl
 }
 
-
 pkg_link-flags () {
+    local ret=''
+    out () { ret="$ret$@ " ; }
     local flags
     flags="`"$install_dir/bin/curl-config" --static-libs`"
-    flags=$(echo " $flags " | sed 's/ -lz \| -lidn \| -lgnutls / /')
-    echo  $flags `pkg link-flags zlib z` `pkg link-flags libidn idn` `pkg link-flags gnutls gnutls`
+    for flag in $flags; do
+        case "$flag" in
+            -lz)      out `pkg link-flags zlib z` ;;
+            -lidn)    out `pkg link-flags libidn idn` ;;
+            -lssl)    out `pkg link-flags openssl ssl` ;;
+            -lcrypto) out `pkg link-flags openssl crypto` ;;
+            -ldl)     out "$flag" ;;
+            -lrt)     out "$flag" ;;
+            -l*)      echo "Warning: '$pkg' links with '$flag'" >&2
+                      out "$flag" ;;
+            *)        out "$flag" ;;
+        esac
+    done
+    echo "$ret"
 }
