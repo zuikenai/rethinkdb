@@ -59,6 +59,24 @@ def compileUninstallApp():
 	subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=tempfile.TemporaryFile())
 	return outputPath
 
+def convertReleaseNotes():
+	notesDir = tempfile.mkdtemp()
+	notesPath = os.path.join(notesDir, 'Release Notes.html')
+	with open(os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'NOTES.md'), 'r') as sourceFile:
+		releaseNotes = markdown2.markdown(sourceFile.read().encode('utf-8'))
+				
+		# replace bug urls
+		for match in set([x for x in re.finditer(r'((?P<pre>[\s\(]+))#(?P<number>\d+)(?P<post>[, \)])', releaseNotes)]):
+			releaseNotes = releaseNotes.replace(match.group(), '%s<a href="http://github.com/rethinkdb/rethinkdb/issues/%s">#%s</a>%s' % (match.group('pre'), match.group('number'), match.group('number'), match.group('post')))
+		
+		# contributors
+		for pattern in set([x.group() for x in re.finditer(r'(@(\w+))', releaseNotes)]):
+			releaseNotes = releaseNotes.replace(pattern, '<a href="http://github.com/%s">%s</a>' % (pattern.lstrip('@'), pattern))
+		
+		with open(notesPath, 'w') as outputFile:
+			outputFile.write(releaseNotes)
+	return notesPath
+
 def buildPackage(versionString, serverRootPath, signingName=None):
 	'''Generate a .pkg with all of our customizations'''
 	global foldersToRemove
@@ -181,22 +199,7 @@ def main():
 	
 	# = release notes
 	
-	notesDir = tempfile.mkdtemp()
-	notesPath = os.path.join(notesDir, 'Release Notes.html')
-	with open(os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'NOTES.md'), 'r') as sourceFile:
-		releaseNotes = markdown2.markdown(sourceFile.read())
-		
-		# make urls clickable
-		for pattern in set([x.group() for x in re.finditer(r'((?<!href=[\'\"])http://[^\s()<>]+)', releaseNotes)]):
-			releaseNotes = releaseNotes.replace(pattern, '<a href="%s">%s</a>' % (pattern, pattern))
-				
-		# replace bug urls
-		for pattern in set([x.group() for x in re.finditer(r'(#(\d+)\b(?!\s*</a>))', releaseNotes)]):
-			releaseNotes = releaseNotes.replace(pattern, '<a href="http://github.com/rethinkdb/rethinkdb/issues/%s">%s</a>' % (pattern.lstrip('#'), pattern))
-		
-		with open(notesPath, 'w') as outputFile:
-			outputFile.write(releaseNotes)
-	dmgOptions['files'].append(notesPath)
+	dmgOptions['files'].append(convertReleaseNotes)
 	
 	# == dmg creation
 	
