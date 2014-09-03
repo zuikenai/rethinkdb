@@ -17,8 +17,7 @@ defaultOptions = {
 	'format': 'UDBZ',
 	'badge_icon': '/Users/larkost/Projects/rethinkdb/packaging/osx/Thinker.icns',
 	'files': [
-		os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'COPYRIGHT'),
-		os.path.join(thisFolder, 'Uninstall.app')
+		os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'COPYRIGHT')
 	],
 	'icon_size': 64,
 	'text_size': 14,
@@ -48,6 +47,17 @@ def removeAtExit():
 			foldersToRemove.remove(folder)
 		except Exception:
 			pass
+
+def compileUninstallApp():
+	global foldersToRemove
+	
+	outputFolderPath = tempfile.mkdtemp()
+	foldersToRemove.append(outputFolderPath)
+	
+	outputPath = os.path.join(outputFolderPath, 'Uninstall.app')
+	
+	subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=tempfile.TemporaryFile())
+	return outputPath
 
 def buildPackage(versionString, serverRootPath, signingName=None):
 	'''Generate a .pkg with all of our customizations'''
@@ -164,7 +174,12 @@ def main():
 	dmgOptions['files'].append(pkgPath)
 	dmgOptions['icon_locations'][os.path.basename(pkgPath)] = packagePosition
 	
-	# = Release Notes
+	# = uninstall script
+	
+	uninstallAppPath = compileUninstallApp()
+	dmgOptions['files'].append(uninstallAppPath)
+	
+	# = release notes
 	
 	notesDir = tempfile.mkdtemp()
 	notesPath = os.path.join(notesDir, 'Release Notes.html')
