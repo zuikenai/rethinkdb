@@ -1,9 +1,3 @@
-This has been filled in for the dmgbuild project based on the contents of the `setup.py` file. A bug has been filed to get this officially put in:
-
-https://bitbucket.org/al45tair/dmgbuild/issue/3/missing-license-file
-
-The MIT License (MIT)
-
 Copyright (c) 2014 Alastair Houghton
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
