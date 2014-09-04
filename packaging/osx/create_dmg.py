@@ -15,7 +15,7 @@ packagePosition = (565, 165)
 
 defaultOptions = {
 	'format': 'UDBZ',
-	'badge_icon': '/Users/larkost/Projects/rethinkdb/packaging/osx/Thinker.icns',
+	'badge_icon': os.path.join(thisFolder, 'Thinker.icns'),
 	'files': [
 		os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'COPYRIGHT')
 	],
@@ -199,7 +199,7 @@ def main():
 	
 	# = release notes
 	
-	dmgOptions['files'].append(convertReleaseNotes)
+	dmgOptions['files'].append(convertReleaseNotes())
 	
 	# == dmg creation
 	
