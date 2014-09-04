@@ -1084,6 +1084,7 @@ lib_pkg_name () {
         tcmalloc) echo gperftools ;;
         z) echo zlib ;;
         boost_system) echo boost ;;
+        crypto) echo openssl ;;
         *) echo "$1" ;;
     esac
 }
