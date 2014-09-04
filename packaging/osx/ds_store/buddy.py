@@ -69,7 +69,7 @@ class Block(object):
 
     def read(self, size_or_format):
         if isinstance(size_or_format, (str, unicode, bytes)):
-            size = struct.calcsize(size_or_format)
+            size = struct.calcsize(str(size_or_format))
             fmt = size_or_format
         else:
             size = size_or_format
@@ -82,7 +82,10 @@ class Block(object):
         self._pos += size
         
         if fmt is not None:
-            return struct.unpack(size_or_format, data)
+            if isinstance(data, bytearray):
+                return struct.unpack_from(fmt, bytes(data))
+            else:
+                return struct.unpack(fmt, data)
         else:
             return data
 
@@ -282,7 +285,10 @@ class Allocator(object):
             ret += b'\0' * (size - len(ret))
 
         if fmt is not None:
-            ret = struct.unpack(fmt, ret)
+            if isinstance(ret, bytearray):
+                ret = struct.unpack_from(fmt, bytes(ret))
+            else:
+                ret = struct.unpack(fmt, ret)
             
         return ret
 
