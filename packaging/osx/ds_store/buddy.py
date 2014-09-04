@@ -69,7 +69,7 @@ class Block(object):
 
     def read(self, size_or_format):
         if isinstance(size_or_format, (str, unicode, bytes)):
-            size = struct.calcsize(size_or_format)
+            size = struct.calcsize(str(size_or_format))
             fmt = size_or_format
         else:
             size = size_or_format
