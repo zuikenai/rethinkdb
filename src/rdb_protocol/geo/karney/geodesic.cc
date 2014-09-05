@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 /**
  * \file geodesic.c
  * \brief Implementation of the geodesic routines in C
@@ -376,6 +378,7 @@ real geod_genposition(const struct geod_geodesicline* l,
     return NaN;
 
   if (arcmode) {
+fprintf(stderr, "Branch: arcmode\n");
     real s12a;
     /* Interpret s12_a12 as spherical arc length */
     sig12 = s12_a12 * degree;
@@ -383,7 +386,9 @@ real geod_genposition(const struct geod_geodesicline* l,
     s12a -= 180 * floor(s12a / 180);
     ssig12 = s12a ==  0 ? 0 : sin(sig12);
     csig12 = s12a == 90 ? 0 : cos(sig12);
+fprintf(stderr, "ssig12: %a\ncsig12: %a\n", ssig12, csig12);
   } else {
+fprintf(stderr, "Branch: !arcmode\n");
     /* Interpret s12_a12 as distance */
     real
       tau12 = s12_a12 / (l->b * (1 + l->A1m1)),
@@ -427,12 +432,14 @@ real geod_genposition(const struct geod_geodesicline* l,
       sig12 = sig12 - serr / sqrt(1 + l->k2 * sq(ssig2p));
       ssig12 = sin(sig12); csig12 = cos(sig12);
       /* Update B12 below */
+fprintf(stderr, "ssig12: %a\ncsig12: %a\n", ssig12, csig12);
     }
   }
 
   /* sig2 = sig1 + sig12 */
   ssig2 = l->ssig1 * csig12 + l->csig1 * ssig12;
   csig2 = l->csig1 * csig12 - l->ssig1 * ssig12;
+fprintf(stderr, "ssig2: %a\ncsig2: %a\n", ssig2, csig2);
   dn2 = sqrt(1 + l->k2 * sq(ssig2));
   if (outmask & (GEOD_DISTANCE | GEOD_REDUCEDLENGTH | GEOD_GEODESICSCALE)) {
     if (arcmode || fabs(l->f) > 0.01)
