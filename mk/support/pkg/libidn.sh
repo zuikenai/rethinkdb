@@ -9,5 +9,16 @@ pkg_link-flags () {
         echo "pkg.sh: error: static library was not built: $lib" >&2
         exit 1
     fi
-    echo "-liconv $lib"
+    
+    TEMPFILE=$(mktemp libiconv_check.XXXXXX).c
+    if $(cc -liconv "$TEMPFILE" 2>/dev/null); then
+        echo "-liconv $lib"
+    elif $(cc "$TEMPFILE" >/dev/null); then
+        echo "$lib"
+    else
+        rm "$TEMPFILE"
+        echo "Unable to compile in libiconv" >&2
+        exit 1
+    fi
+    rm "$TEMPFILE"
 }
