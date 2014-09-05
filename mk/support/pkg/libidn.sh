@@ -10,15 +10,23 @@ pkg_link-flags () {
         exit 1
     fi
     
-    TEMPFILE=$(mktemp libiconv_check.XXXXXX).c
-    if $(cc -liconv "$TEMPFILE" 2>/dev/null); then
+    TEMPFOLDER=$(mktemp -d libiconv_check.XXXXXX)
+    INFILE=$(TEMPFOLDER)/libiconv_check.c
+    OUTFILE=$(TEMPFOLDER)/libiconv_check.out
+    printf "#include <iconv.h>\n int main(void) { iconv_t sample; sample = iconv_open(\"UTF-8\", \"ASCII\"); return 0; }" >$INFILE
+    
+    set +e
+    
+    if $(cc -liconv "$INFILE" -o "$OUTFILE" 2>/dev/null); then
         echo "-liconv $lib"
-    elif $(cc "$TEMPFILE" >/dev/null); then
+    elif $(cc "$INFILE" -o "$OUTFILE" 2>/dev/null); then
         echo "$lib"
     else
-        rm "$TEMPFILE"
-        echo "Unable to compile in libiconv" >&2
+        rm -rf "$TEMPFOLDER"
+        echo "Unable to figure out how to link libiconv" >&2
         exit 1
     fi
-    rm "$TEMPFILE"
+    
+    set -e
+    rm -rf "$TEMPFOLDER"
 }
