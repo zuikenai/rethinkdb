@@ -401,6 +401,7 @@ fprintf(stderr, "Branch: !arcmode\n");
                          l->C1pa, nC1p);
     sig12 = tau12 - (B12 - l->B11);
     ssig12 = sin(sig12); csig12 = cos(sig12);
+fprintf(stderr, "sig12: %a\nssig12: %a\ncsig12: %a\n", sig12, ssig12, csig12);
     if (fabs(l->f) > 0.01) {
       /* Reverted distance series is inaccurate for |f| > 1/100, so correct
        * sig12 with 1 Newton iteration.  The following table shows the
@@ -438,6 +439,8 @@ fprintf(stderr, "ssig12: %a\ncsig12: %a\n", ssig12, csig12);
 
   /* sig2 = sig1 + sig12 */
   ssig2 = l->ssig1 * csig12 + l->csig1 * ssig12;
+fprintf(stderr, "l->csig1: %a\ncsig12: %a\n", l->csig1, csig12);
+fprintf(stderr, "l->ssig1: %a\nssig12: %a\n", l->ssig1, ssig12);
   csig2 = l->csig1 * csig12 - l->ssig1 * ssig12;
 fprintf(stderr, "ssig2: %a\ncsig2: %a\n", ssig2, csig2);
   dn2 = sqrt(1 + l->k2 * sq(ssig2));
