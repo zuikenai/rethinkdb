@@ -116,13 +116,13 @@ class TestNoConnection(TestCaseCompatible):
             r.connect, host="0.0.0.0")
     
     def test_connnect_timeout(self):
-        '''test that we get a ReQL error if we connect to a non-reponsive port'''
+        '''Test that we get a ReQL error if we connect to a non-responsive port'''
         useSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         port = self.findOpenPort()
         useSocket.bind(('localhost', port))
         useSocket.listen(0)
         try:
-            self.assertRaisesRegexp(RqlDriverError, "Timed out connecting to localhost:%d." % port, r.connect, port=port)
+            self.assertRaisesRegexp(RqlDriverError, "Timed out during handshake with localhost:%d." % port, r.connect, port=port)
         finally:
             useSocket.close()
     
