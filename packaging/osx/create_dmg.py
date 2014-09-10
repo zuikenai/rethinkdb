@@ -64,12 +64,10 @@ def convertReleaseNotes():
 		releaseNotes = markdown2.markdown(sourceFile.read().encode('utf-8'))
 				
 		# replace bug urls
-		for match in set([x for x in re.finditer(r'((?P<pre>[\s\(]+))#(?P<number>\d+)(?P<post>[, \)])', releaseNotes)]):
-			releaseNotes = releaseNotes.replace(match.group(), '%s<a href="http://github.com/rethinkdb/rethinkdb/issues/%s">#%s</a>%s' % (match.group('pre'), match.group('number'), match.group('number'), match.group('post')))
+		releaseNotes = re.sub(r'((?P<pre>[\s\(]+))#(?P<number>\d+)(?P<post>[, \)])', '\g<pre><a href="http://github.com/rethinkdb/rethinkdb/issues/\g<number>">#\g<number></a>\g<post>', releaseNotes)
 		
 		# contributors
-		for pattern in set([x.group() for x in re.finditer(r'(@(\w+))', releaseNotes)]):
-			releaseNotes = releaseNotes.replace(pattern, '<a href="http://github.com/%s">%s</a>' % (pattern.lstrip('@'), pattern))
+		releaseNotes = re.sub(r'(\@(?P<name>\w+))', '<a href="http://github.com/\g<name>">\g<0></a>', releaseNotes)
 		
 		with open(notesPath, 'w') as outputFile:
 			outputFile.write(releaseNotes)
@@ -185,7 +183,7 @@ def main():
 		options.outputPath = os.path.join(thisFolder, 'RethinkDB ' + versionString + '.dmg')
 	elif os.path.isdir(options.outputPath):
 		options.outputPath = os.path.join(options.outputPath, 'RethinkDB ' + versionString + '.dmg')
-	elif not (os.path.isdir(os.path.dirname(options.outputPath))):
+	elif not os.path.isdir(os.path.dirname(options.outputPath)):
 		parser.error('the output path given is not valid: %s' % options.outputPath)
 	
 	# = --scratch-folder

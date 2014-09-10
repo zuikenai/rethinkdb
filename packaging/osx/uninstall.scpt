@@ -1,14 +1,14 @@
 -- check that a package version has been installed
-set packageIdenifier to ""
-repeat with canidateIdentifier in {"rethinkdb", "com.rethinkdb", "com.rethinkdb.server"}
+set packageIdentifier to ""
+repeat with candidateIdentifier in {"rethinkdb", "com.rethinkdb", "com.rethinkdb.server"}
 	try
-		do shell script "/usr/sbin/pkgutil --files " & canidateIdentifier
-		set packageIdenifier to canidateIdentifier
+		do shell script "/usr/sbin/pkgutil --files " & candidateIdentifier
+		set packageIdentifier to candidateIdentifier
 		exit repeat
 	end try
 end repeat
 
-if packageIdenifier is "" then
+if packageIdentifier is "" then
 	-- the package is not installed, check if the server is there
 	try
 		do shell script "PATH=:\"$PATH:/usr/local/bin\"; /usr/bin/which rethinkdb"
@@ -22,6 +22,6 @@ else
 	
 	-- run the uninstall
 	if the button returned of result is "Uninstall" then
-		do shell script "set -e; pkgutil --files " & packageIdenifier & " --only-files | while read LINE; do rm -f $LINE; done && pkgutil --files " & packageIdenifier & " --only-dirs | while read LINE; do rmdir $LINE; done && pkgutil --forget " & packageIdenifier with administrator privileges
+		do shell script "set -e; pkgutil --files " & packageIdentifier & " --only-files | while read LINE; do rm -f $LINE; done && pkgutil --files " & packageIdentifier & " --only-dirs | while read LINE; do rmdir $LINE; done && pkgutil --forget " & packageIdentifier with administrator privileges
 	end if
 end if
