@@ -11,8 +11,8 @@ pkg_link-flags () {
     fi
     
     TEMPFOLDER=$(mktemp -d libiconv_check.XXXXXX)
-    INFILE=$(TEMPFOLDER)/libiconv_check.c
-    OUTFILE=$(TEMPFOLDER)/libiconv_check.out
+    INFILE=$TEMPFOLDER/libiconv_check.c
+    OUTFILE=$TEMPFOLDER/libiconv_check.out
     printf "#include <iconv.h>\n int main(void) { iconv_t sample; sample = iconv_open(\"UTF-8\", \"ASCII\"); return 0; }" >$INFILE
     
     set +e
