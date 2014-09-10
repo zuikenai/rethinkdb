@@ -29,9 +29,9 @@
   <line choice="choice0"/>
 </choices-outline>
 <choice id="choice0" visible="false">
-  <pkg-ref id="rethinkdb"/>
+  <pkg-ref id="rethinkdb_server"/>
 </choice>
-<pkg-ref id="rethinkdb" version="1.0" auth="Root">rethinkdb.pkg</pkg-ref>
+<pkg-ref id="rethinkdb_server" version="1.0" auth="Root">rethinkdb_server.pkg</pkg-ref>
 
 <license language="en" mime-type="text/rtf"><![CDATA[{\rtf1\ansi\ansicpg1252\cocoartf1187\cocoasubrtf340
 {\fonttbl\f0\fnil\fcharset0 AndaleMono;}
