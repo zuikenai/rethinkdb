@@ -3,13 +3,15 @@
 
 '''Create the dmg for MacOS deployment'''
 
-import atexit, copy, os, re, struct, subprocess, sys, tempfile
+import atexit, copy, os, re, shutil, subprocess, sys, tempfile
 
 thisFolder = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(thisFolder)
 import dmgbuild, markdown2
 
 # == defaults
+
+scratchFolder = tempfile.mkdtemp()
 
 packagePosition = (565, 165)
 
@@ -34,34 +36,30 @@ defaultOptions = {
 
 # ==
 
-foldersToRemove = []
-@atexit.register
-def removeAtExit():
-	global foldersToRemove
-	for folder in copy.copy(foldersToRemove):
+def removeAtExit(removePath):
+	if os.path.exists(removePath):
 		try:
-			if os.path.isfile(folder):
-				os.unlink(folder)
-			elif os.path.isdir(folder):
-				shutil.rmtree(folder, ignore_errors=True)
-			foldersToRemove.remove(folder)
-		except Exception:
-			pass
+			if os.path.isfile(removePath):
+				os.unlink(removePath)
+			elif os.path.isdir(removePath):
+				shutil.rmtree(removePath, ignore_errors=True)
+		except Exception as e:
+			sys.stderr.write('Unable to delete item: %s -- %s\n' % (removePath, str(e)))
+atexit.register(removeAtExit, scratchFolder)
 
 def compileUninstallApp():
-	global foldersToRemove
-	
-	outputFolderPath = tempfile.mkdtemp()
-	foldersToRemove.append(outputFolderPath)
-	
-	outputPath = os.path.join(outputFolderPath, 'Uninstall.app')
-	
-	subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=tempfile.TemporaryFile())
+	outputPath = os.path.join(scratchFolder, 'Uninstall.app')
+	logFile = open(os.path.join(scratchFolder, 'uninstall-compile.log'), 'w')
+	try:
+		subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=logFile, stderr=logFile)
+	except Exception as e:
+		logFile.seek(0)
+		sys.stderr.write('Failed while compiling %s: %s\n%s' % (os.path.join(thisFolder, 'uninstall.scpt'), str(e), logFile.read()))
+		raise
 	return outputPath
 
 def convertReleaseNotes():
-	notesDir = tempfile.mkdtemp()
-	notesPath = os.path.join(notesDir, 'Release Notes.html')
+	notesPath = os.path.join(scratchFolder, 'Release Notes.html')
 	with open(os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'NOTES.md'), 'r') as sourceFile:
 		releaseNotes = markdown2.markdown(sourceFile.read().encode('utf-8'))
 				
@@ -79,9 +77,6 @@ def convertReleaseNotes():
 
 def buildPackage(versionString, serverRootPath, signingName=None):
 	'''Generate a .pkg with all of our customizations'''
-	global foldersToRemove
-	
-	buildTemp = tempfile.mkdtemp()
 	
 	# == check for the identity
 	
@@ -97,38 +92,52 @@ def buildPackage(versionString, serverRootPath, signingName=None):
 	
 	# == build the component packages
 	
-	# - create temp folder for packages
-	
-	packageFolder = tempfile.mkdtemp()
-	foldersToRemove.append(packageFolder)
-	
 	# - make the server package
 	
-	serverPackagePath = os.path.join(packageFolder, 'rethinkdb.pkg')
-	subprocess.check_call(['/usr/bin/pkgbuild', '--root', serverRootPath, '--identifier', 'com.rethinkdb.server', '--version', versionString, serverPackagePath], stdout=tempfile.TemporaryFile())
+	packageFolder = os.path.join(scratchFolder, 'packages')
+	if not os.path.isdir(packageFolder):
+		os.mkdir(packageFolder)
+	
+	serverPackagePath = os.path.join(packageFolder, 'rethinkdb_server.pkg')
+	logFile = open(os.path.join(scratchFolder, 'rethinkdb_server_pkg.log'), 'w')
+	try:
+		subprocess.check_call(['/usr/bin/pkgbuild', '--root', serverRootPath, '--identifier', 'com.rethinkdb.server', '--version', versionString, serverPackagePath], stdout=logFile, stderr=logFile)
+	except Exception as e:
+		logFile.seek(0)
+		sys.stderr.write('Failed while building server package: %s\n%s' % (str(e), logFile.read()))
+		raise
 	
 	# == assemble the archive
 	
-	outputPath = os.path.join(buildTemp, 'rethinkdb-%s.pkg' % versionString)
+	distributionPath = os.path.join(scratchFolder, 'rethinkdb-%s.pkg' % versionString)
 	
-	productBuildCommand = ['/usr/bin/productbuild', '--distribution', os.path.join(thisFolder, 'Distribution.xml'), '--package-path', packageFolder, '--resources', os.path.join(thisFolder, 'installer_resources'), outputPath]
+	productBuildCommand = ['/usr/bin/productbuild', '--distribution', os.path.join(thisFolder, 'Distribution.xml'), '--package-path', packageFolder, '--resources', os.path.join(thisFolder, 'installer_resources'), distributionPath]
 	if signingName is not None:
 		productBuildCommand += ['--sign', signingName]
 	
-	subprocess.check_call(productBuildCommand, stdout=tempfile.TemporaryFile())
-	
-	return outputPath
+	logFile = open(os.path.join(scratchFolder, 'rethinkdb_pkg.log'), 'w')
+	try:
+		subprocess.check_call(productBuildCommand, stdout=logFile, stderr=logFile)
+	except Exception as e:
+		logFile.seek(0)
+		sys.stderr.write('Failed while compiling %s: %s\n%s' % (os.path.join(thisFolder, 'uninstall.scpt'), str(e), logFile.read()))
+		raise
+	return distributionPath
 
 def main():
+	'''Parse command line input and run'''
+	
+	global scratchFolder
 	
 	# == process input
 	
 	import optparse
 	parser = optparse.OptionParser()
-	parser.add_option('-s', '--server-root',     dest='serverRoot',  default=None,        help='path to root of the server component')
-	parser.add_option('-o', '--ouptut-location', dest='outputPath',                       help='location for the output file')
-	parser.add_option(      '--rethinkdb-name',  dest='binaryName',  default='rethinkdb', help='name of the rethinkdb server binary')
-	parser.add_option(      '--signing-name',    dest='signingName', default=None,        help='signing identifier')
+	parser.add_option('-s', '--server-root',     dest='serverRoot',    default=None,        help='path to root of the server component')
+	parser.add_option('-o', '--ouptut-location', dest='outputPath',                         help='location for the output file')
+	parser.add_option(      '--rethinkdb-name',  dest='binaryName',    default='rethinkdb', help='name of the rethinkdb server binary')
+	parser.add_option(      '--signing-name',    dest='signingName',   default=None,        help='signing identifier')
+	parser.add_option(      '--scratch-folder',  dest='scratchFolder', default=None,        help='folder for intermediate products')
 	options, args = parser.parse_args()
 	
 	if len(args) > 0:
@@ -178,6 +187,13 @@ def main():
 		options.outputPath = os.path.join(options.outputPath, 'RethinkDB ' + versionString + '.dmg')
 	elif not (os.path.isdir(os.path.dirname(options.outputPath))):
 		parser.error('the output path given is not valid: %s' % options.outputPath)
+	
+	# = --scratch-folder
+	
+	if options.scratchFolder is not None:
+		if not os.path.isdir(options.scratchFolder):
+			parser.error('the --scratch-folder given is not an existing folder: %s' % options.scratchFolder)
+		scratchFolder = options.scratchFolder
 	
 	# == build the pkg	
 	
