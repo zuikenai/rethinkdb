@@ -287,8 +287,8 @@ class _Process(object):
             if os.path.exists(self.logfile_path):
                 os.unlink(self.logfile_path)
             
-            #print "Launching:"
-            #print(self.args)
+            self.log_file.write("Launching:\n%s\n" % str(self.args))
+            
             self.process = subprocess.Popen(self.args, stdout=self.log_file, stderr=self.log_file, preexec_fn=os.setpgrp)
             
             runningServers.append(self)
