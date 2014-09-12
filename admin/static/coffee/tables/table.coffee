@@ -82,8 +82,11 @@ module 'TableView', ->
                 if error?
                     # TODO: We may want to render only if we failed to open a connection
                     # TODO: Handle when the table is deleted
-                    @error = error
-                    @render()
+                    if @model?
+                        console.log error
+                    else
+                        @error = error
+                        @render()
                 else
                     @error = null
                     if result is null

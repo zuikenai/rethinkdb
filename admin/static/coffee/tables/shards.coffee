@@ -29,6 +29,29 @@ module 'TableView', ->
                 container: @
             @progress_bar = new UIComponents.OperationProgressBar @template.status
 
+        # Find a better name
+        render_data_repartition: =>
+            console.log 'update graph'
+            if not @collection_length_cached?
+                console.log 'override'
+                @collection_length_cached = @collection.length
+
+            # If a shard was removed, we reset the graph
+            # That's because ChartJS doesn't let you rename labels
+            if @collection.length isnt @collection_length_cached
+                console.log 'in'
+                if @chart?
+                    console.log 'destroy'
+                    @chart.destroy()
+                    @init_chart = false
+            else
+                console.log @collection.length
+                console.log @collection_length_cached
+
+            @collection_length_cached = @collection.length
+            @update_graph()
+
+
         # Render the status of sharding
         render_status: =>
             # If some shards are not ready, it means some replicas are also not ready
@@ -65,61 +88,49 @@ module 'TableView', ->
 
             return @
 
-        render_data_repartition: =>
+        update_graph: =>
             if not @collection?
                 return 1
-
-            if @collection.length is 1
-                pointPadding = 0.3
-            else if @collection.length is 1
-                pointPadding = 0.2
-            else
-                pointPadding = 0.1
 
             if not @chart? or @init_chart is false
                 @init_chart = true
 
-                @chart = new Highcharts.Chart
-                    chart:
-                        type: 'column'
-                        renderTo: 'data_repartition-container'
-                        height: 350
-                        backgroundColor: '#fbfbfb'
-                    credits: false
-                    title:
-                        text: null
-                    yAxis:
-                        min: 0
-                        title:
-                            text: 'Number of documents'
-                    xAxis:
-                        title: null
-                        categories: @collection.map((shard, index) -> "Shard #{index+1}")
-                    tooltip:
-                        headerFormat: '<span style="font-size:10px;display:block;text-align: center">{point.key}</span><table>'
-                        pointFormat: '<tr><td style="padding:0"><b>{point.y:,.0f} docs</b></td></tr>'
-                        footerFormat: '</table>'
-                        shared: true
-                        useHTML: true
-                    plotOptions:
-                        column:
-                            pointPadding: pointPadding
-                            groupPadding: 0
-                            borderWidth: 0
-                            color: "#9ad7f2"
-                    series: [{ name: 'Results', data: @collection.map((shard, index) -> shard.get('num_keys')) }]
-                    legend:
-                        enabled: false
+                ctx = @$('#data_repartition_canvas')[0].getContext('2d')
+                data =
+                    labels: @collection.map((shard, index) -> "Shard #{index+1}")
+                    datasets: [{
+                        label: "My Second dataset",
+                        fillColor: "rgba(154,215,242,1)",
+                        strokeColor: "rgba(151,187,205,0.8)",
+                        highlightFill: "rgba(150,210,237,1)",
+                        highlightStroke: "rgba(151,187,205,1)",
+                        data: @collection.map((shard, index) -> shard.get('num_keys'))
+                    }]
+
+                compute_space = (collection_length) ->
+                    if collection_length < 5
+                        return 3
+                    else if collection_length < 10
+                        return 2
+                    else
+                        return 1
+
+                
+                @chart = new Chart(ctx).Bar data,
+                    barShowStroke: false
+                    barDatasetSpacing: compute_space(@collection.length)
+                    scaleOverride: true
+                    scaleSteps: 4
+                    scaleStepWidth: Math.floor _.max(@collection.models, ((shard) -> shard.get('num_keys'))).get('num_keys')*1.10/4
+                    scaleStartValue: 0,
+
             else
-                @chart.series[0].setData @collection.map((shard, index) -> shard.get('num_keys'))
-                @chart.xAxis[0].update({categories:@collection.map( (shard, index) -> "Shard #{index+1}")}, true)
+                @collection.each (shard, index) =>
+                    if @chart.datasets[0].bars[index]?
+                        @chart.datasets[0].bars[index].value = shard.get('num_keys')
+                        @chart.datasets[0].bars[index].label = "Shard #{index+1}"
 
-            if @pointPadding is null
-                @pointPadding = pointPadding
-            else if @pointPadding isnt pointPadding
-                @pointPadding = pointPadding
-                @chart.series[0].update {pointPadding: pointPadding}
-
+                @chart.update()
 
         remove: =>
             @stopListening()
