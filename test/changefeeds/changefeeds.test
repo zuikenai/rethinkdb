@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import collections, itertools, os, random, re, subprocess, sys, tempfile, threading, time, unittest, urllib
+import collections, itertools, os, random, re, subprocess, sys, tempfile, threading, time, unittest, urllib2
 
 lock = threading.Lock()
 
@@ -79,7 +79,7 @@ class ChangefeedsTest_Base(unittest.TestCase):
 		
 	# -- constants
 	
-	ServerEntry = collections.namedtuple('ServerEntry', ['process', 'connection', 'logfile'])
+	ServerEntry = collections.namedtuple('ServerEntry', ['process', 'connection', 'logfile', 'uuid'])
 	ShardEntry = collections.namedtuple('ShardEntry', ['lower', 'lowerHTTP', 'lowerCLI', 'upper', 'upperHTTP', 'upperCLI', 'master', 'replicas', 'sample'])
 	
 	# --
@@ -138,7 +138,7 @@ class ChangefeedsTest_Base(unittest.TestCase):
 		while time.time() < deadline:
 			try:
 				for shard in shards:
-					y = [x for x in r.db(cls.dbName).table(cls.tableName).get(shard.sample).run(connection)]
+					r.db(cls.dbName).table(cls.tableName).get(shard.sample).run(connection)
 				lastError = None
 				break
 			except r.RqlRuntimeError as e:
@@ -163,9 +163,11 @@ class ChangefeedsTest_Base(unittest.TestCase):
 		for i in range (cls.serversToStart):
 			logfile = tempfile.NamedTemporaryFile()
 			server = driver.Process(cluster=cluster, log_path=logfile.name)
+			server.wait_until_started_up()
 			cluster = server.cluster
 			connection =  r.connect(host=server.host, port=server.driver_port)
-			cls.servers.append(cls.ServerEntry(process=server, connection=connection, logfile=logfile))
+			uuid = urllib2.urlopen('http://%s:%d/ajax/semilattice/me' % (server.host, server.http_port)).read().replace('"', '')
+			cls.servers.append(cls.ServerEntry(process=server, connection=connection, logfile=logfile, uuid=uuid))
 		
 		primaryServer = cls.servers[0]
 		
@@ -196,6 +198,7 @@ class ChangefeedsTest_Base(unittest.TestCase):
 		for splitString in cls.splitStrings:
 			adminConn.add_table_shard(cls.tableName, splitString)
 		
+		time.sleep(2)
 		cls.waitForShards()
 		
 		# - parse out the shards created
@@ -208,40 +211,35 @@ class ChangefeedsTest_Base(unittest.TestCase):
 			
 			checkedCall(adminCommandPrefix + ['set', 'replicas', '%s.%s' % (cls.dbName, cls.tableName), str(cls.replicationLevel)])
 			checkedCall(adminCommandPrefix + ['set', 'durability', '%s.%s' % (cls.dbName, cls.tableName), '--hard'])
-			
-			# wait until the ranges are all avalible
-			
-			cls.waitForShards()
 		
 		# - pin the shards
 		
-		machines = adminConn.machines.values()
-		
-		if len(machines) < cls.replicationLevel * len(shards):
-			raise Exception('There are only %d machines, but we need %d (%d replicas x %d shards)' % (len(machines), cls.replicationLevel * len(cls.shards), cls.replicationLevel, len(cls.shards)))
+		if len(cls.servers) < cls.replicationLevel * len(shards):
+			raise Exception('There are only %d servers, but we need %d (%d replicas x %d shards)' % (len(servers), cls.replicationLevel * len(cls.shards), cls.replicationLevel, len(cls.shards)))
 		
 		for i in range(len(shards)):
 			shard = shards[i]
 			
 			# - master
 			
-			checkedCall(adminCommandPrefix + ['pin', 'shard', '%s.%s' % (cls.dbName, cls.tableName), '%s-%s' % (shard.lowerCLI, shard.upperCLI), '--master', machines[i].name])
-			cls.shards[i] = cls.shards[i]._replace(master=machines[i])
+			checkedCall(adminCommandPrefix + ['pin', 'shard', '%s.%s' % (cls.dbName, cls.tableName), '%s-%s' % (shard.lowerCLI, shard.upperCLI), '--master', cls.servers[i].uuid])
+			cls.shards[i] = cls.shards[i]._replace(master=cls.servers[i])
 			
 			# - secondary
 			
 			if cls.replicationLevel > 1:
-				names = []
-				replicaMachines = []
+				uuids = []
+				replicaServers = []
 				for j in range(1, cls.replicationLevel):
-					repliacMachine = machines[(cls.replicationLevel * j + 1) + i -1]
-					replicaMachines.append(repliacMachine)
-					names.append(repliacMachine.name)
-				checkedCall(adminCommandPrefix + ['pin', 'shard', '%s.%s' % (cls.dbName, cls.tableName), '%s-%s' % (shard.lowerCLI, shard.upperCLI), '--replicas', ','.join(names)])
-				cls.shards[i] = cls.shards[i]._replace(replicas=replicaMachines)
+					replicaServer = cls.servers[(cls.replicationLevel * j + 1) + i -1]
+					replicaServers.append(replicaServer)
+					uuids.append(replicaServer.uuid)
+				checkedCall(adminCommandPrefix + ['pin', 'shard', '%s.%s' % (cls.dbName, cls.tableName), '%s-%s' % (shard.lowerCLI, shard.upperCLI), '--replicas', ','.join(uuids)])
+				cls.shards[i] = cls.shards[i]._replace(replicas=replicaServers)
 		
 		# make sure everything is avalible
-		time.sleep(5)
+		
+		time.sleep(10) # way too long, but newton is sometimes not showing the operations for quite some time
 		cls.waitForShards()
 	
 	@classmethod
