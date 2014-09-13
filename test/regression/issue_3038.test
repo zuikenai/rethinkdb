@@ -64,7 +64,8 @@ subprocess.check_call(command, stdout=tempfile.TemporaryFile(), stderr=subproces
 
 # == wait for the table to be avalible
 
-time.sleep(.5)
+time.sleep(5) # longer than I like, but some servers are taking this long
+adminConn.wait_until_blueprint_satisfied(tableName)
 
 deadline = time.time() + 30
 while time.time() < deadline: # ToDo: use the table_wait command when avalible
