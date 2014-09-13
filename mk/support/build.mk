@@ -90,7 +90,7 @@ clean-$2_$3:
 #    and install-include rules in parallel
 #  * The `install.witness' file for each of the dependencies of the package
 build-$2_% $(foreach target,$1,$(subst _$3/,_%/,$(target))) $(SUPPORT_BUILD_DIR)/$2_%/install.witness: \
-  | $(SUPPORT_SRC_DIR)/$2_% $(filter $(SUPPORT_BUILD_DIR)/$2_$3/include, $(SUPPORT_INCLUDE_DIRS)) \
+  | $(SUPPORT_SRC_DIR)/$2_$3 $(filter $(SUPPORT_BUILD_DIR)/$2_$3/include, $(SUPPORT_INCLUDE_DIRS)) \
   $(foreach dep, $($2_DEPENDS), $(SUPPORT_BUILD_DIR)/$(dep)_$($(dep)_VERSION)/install.witness)
 ifeq (1,$(ALWAYS_MAKE))
 	$$(warning Building $2_$3 is disabled in --always-make (-B) mode)

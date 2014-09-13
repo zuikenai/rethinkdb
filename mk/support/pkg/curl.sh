@@ -12,12 +12,12 @@ pkg_configure () {
 pkg_install-include () {
     pkg_copy_src_to_build
     pkg_configure
-    make -C "$build_dir/include"  install
+    make -C "$build_dir/include" install
 }
 
 pkg_install () {
-    # pkg_copy_src_to_build
-    # pkg_configure
+    pkg_copy_src_to_build
+    pkg_configure
     make -C "$build_dir/lib" install-libLTLIBRARIES
     make -C "$build_dir" install-binSCRIPTS
 }
@@ -30,6 +30,7 @@ pkg_link-flags () {
     local ret=''
     out () { ret="$ret$@ " ; }
     local flags
+    local dl_libs=''
     flags="`"$install_dir/bin/curl-config" --static-libs`"
     for flag in $flags; do
         case "$flag" in
@@ -37,12 +38,12 @@ pkg_link-flags () {
             -lidn)    out `pkg link-flags libidn idn` ;;
             -lssl)    out `pkg link-flags openssl ssl` ;;
             -lcrypto) out `pkg link-flags openssl crypto` ;;
-            -ldl)     ;;
+            -ldl)     dl_libs=-ldl;; # Linking may fail if -ldl isn't last
             -lrt)     out "$flag" ;;
             -l*)      echo "Warning: '$pkg' links with '$flag'" >&2
                       out "$flag" ;;
             *)        out "$flag" ;;
         esac
     done
-    echo "$ret" -ldl
+    echo "$ret" $dl_libs
 }
