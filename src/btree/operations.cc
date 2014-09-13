@@ -416,7 +416,7 @@ void detach_all_children(const node_t *node, buf_parent_t parent,
     if (node::is_leaf(node)) {
         const leaf_node_t *leaf = reinterpret_cast<const leaf_node_t *>(node);
         // Detach the values that are now in `rbuf` with `buf` as their parent.
-        for (auto it = leaf::begin(leaf); it != leaf::end(leaf); ++it) {
+        for (auto it = leaf::begin(leaf); it != leaf::end(leaf); it.step()) {
             detacher->delete_value(parent, (*it).second);
         }
     } else {
@@ -975,11 +975,7 @@ void apply_keyvalue_change(
         value_sizer_t *sizer,
         keyvalue_location_t *kv_loc,
         const btree_key_t *key, repli_timestamp_t tstamp,
-        const value_deleter_t *detacher,
-        key_modification_callback_t *km_callback) {
-    key_modification_proof_t km_proof
-        = km_callback->value_modification(kv_loc, key);
-
+        const value_deleter_t *detacher) {
     /* how much this keyvalue change affects the total population of the btree
      * (should be -1, 0 or 1) */
     int population_change;
@@ -1016,8 +1012,7 @@ void apply_keyvalue_change(
                          leaf_node,
                          key,
                          kv_loc->value.get(),
-                         tstamp,
-                         km_proof);
+                         tstamp);
         }
 
         kv_loc->stats->pm_keys_set.record();
@@ -1032,8 +1027,7 @@ void apply_keyvalue_change(
                 leaf::remove(sizer,
                              leaf_node,
                              key,
-                             tstamp,
-                             km_proof);
+                             tstamp);
             }
             population_change = -1;
             kv_loc->stats->pm_keys_set.record();

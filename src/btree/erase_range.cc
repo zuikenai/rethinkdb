@@ -34,7 +34,7 @@ public:
 
         std::vector<store_key_t> keys_to_delete;
 
-        for (auto it = leaf::begin(node); it != leaf::end(node); ++it) {
+        for (auto it = leaf::begin(node); it != leaf::end(node); it.step()) {
             const btree_key_t *k = (*it).first;
             if (!k) {
                 break;
@@ -63,8 +63,7 @@ public:
             }
 
             deleter_->delete_value(buf_parent_t(leaf_node_buf), value.get());
-            leaf::erase_presence(sizer_, node, keys_to_delete[i].btree_key(),
-                                 key_modification_proof_t::real_proof());
+            leaf::erase_presence(sizer_, node, keys_to_delete[i].btree_key());
             --population_change;
         }
 

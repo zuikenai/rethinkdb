@@ -1,6 +1,6 @@
 // Copyright 2005 Google Inc. All Rights Reserved.
 
-#include "s2.h"
+#include "rdb_protocol/geo/s2/s2.h"
 
 #include <unordered_set>
 

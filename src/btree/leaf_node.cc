@@ -1413,7 +1413,7 @@ MUST_USE bool prepare_space_for_new_entry(value_sizer_t *sizer, leaf_node_t *nod
 
 // Inserts a key/value pair into the node.  Hopefully you've already
 // cleaned up the old value, if there is one.
-void insert(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, const void *value, repli_timestamp_t tstamp, UNUSED key_modification_proof_t km_proof) {
+void insert(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, const void *value, repli_timestamp_t tstamp) {
     rassert(!is_full(sizer, node, key, value));
 
     /* Make space for the entry itself */
@@ -1439,7 +1439,7 @@ void insert(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, con
 // This asserts that the key is in the node.  TODO: This means we're
 // already sure the key is in the node, which means we're doing an
 // unnecessary binary search.
-void remove(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, repli_timestamp_t tstamp, UNUSED key_modification_proof_t km_proof) {
+void remove(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, repli_timestamp_t tstamp) {
     /* Confirm that the key is already in the node */
     DEBUG_VAR int index;
     rassert(find_key(node, key, &index), "remove() called on key that's not in node");
@@ -1466,7 +1466,7 @@ void remove(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, rep
 }
 
 // Erases the entry for the given key, leaving behind no trace.
-void erase_presence(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, UNUSED key_modification_proof_t km_proof) {
+void erase_presence(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key) {
     int index;
     bool found = find_key(node, key, &index);
 
@@ -1575,21 +1575,19 @@ std::pair<const btree_key_t *, const void *> iterator::operator*() const {
     return std::make_pair(entry_key(entree), entry_value(entree));
 }
 
-iterator &iterator::operator++() {
+void iterator::step() {
     guarantee(index_ < static_cast<int>(node_->num_pairs),
               "Trying to increment past the end of an iterator.");
     do {
         ++index_;
     } while (index_ < node_->num_pairs && !entry_is_live(get_entry(node_, node_->pair_offsets[index_])));
-    return *this;
 }
 
-iterator &iterator::operator--() {
+void iterator::step_backward() {
     guarantee(index_ > -1, "Trying to decrement past the beginning of an iterator.");
     do {
         --index_;
     } while (index_ >= 0 && !entry_is_live(get_entry(node_, node_->pair_offsets[index_])));
-    return *this;
 }
 
 bool iterator::operator==(const iterator &other) const {
@@ -1609,14 +1607,8 @@ std::pair<const btree_key_t *, const void *> reverse_iterator::operator*() const
     return *inner_;
 }
 
-reverse_iterator &reverse_iterator::operator++() {
-    --inner_;
-    return *this;
-}
-
-reverse_iterator &reverse_iterator::operator--() {
-    ++inner_;
-    return *this;
+void reverse_iterator::step() {
+    inner_.step_backward();
 }
 
 bool reverse_iterator::operator==(const reverse_iterator &other) const {
@@ -1628,7 +1620,9 @@ bool reverse_iterator::operator!=(const reverse_iterator &other) const {
 
 
 leaf::iterator begin(const leaf_node_t *leaf_node) {
-    return ++leaf::iterator(leaf_node, -1);
+    leaf::iterator ret(leaf_node, -1);
+    ret.step();
+    return ret;
 }
 
 leaf::iterator end(const leaf_node_t *leaf_node) {
@@ -1636,7 +1630,9 @@ leaf::iterator end(const leaf_node_t *leaf_node) {
 }
 
 leaf::reverse_iterator rbegin(const leaf_node_t *leaf_node) {
-    return ++leaf::reverse_iterator(leaf_node, leaf_node->num_pairs);
+    leaf::reverse_iterator ret(leaf_node, leaf_node->num_pairs);
+    ret.step();
+    return ret;
 }
 
 leaf::reverse_iterator rend(const leaf_node_t *leaf_node) {
@@ -1650,7 +1646,9 @@ leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *
         entry_is_live(leaf::get_entry(leaf_node, leaf_node->pair_offsets[index]))) {
         return leaf::iterator(leaf_node, index);
     } else {
-        return ++leaf::iterator(leaf_node, index);
+        leaf::iterator ret(leaf_node, index);
+        ret.step();
+        return ret;
     }
 }
 
@@ -1666,7 +1664,9 @@ leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_
         }
     }
 
-    return ++leaf::reverse_iterator(leaf_node, index);
+    leaf::reverse_iterator ret(leaf_node, index);
+    ret.step();
+    return ret;
 }
 
 }  // namespace leaf

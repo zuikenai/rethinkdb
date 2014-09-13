@@ -131,9 +131,8 @@ void kv_location_delete(keyvalue_location_t *kv_location,
 
     kv_location->value.reset();
     rdb_value_sizer_t sizer(block_size);
-    null_key_modification_callback_t null_cb;
     apply_keyvalue_change(&sizer, kv_location, key.btree_key(), timestamp,
-            deletion_context->balancing_detacher(), &null_cb);
+            deletion_context->balancing_detacher());
 }
 
 MUST_USE ql::serialization_result_t
@@ -175,11 +174,10 @@ kv_location_set(keyvalue_location_t *kv_location,
 
     // Actually update the leaf, if needed.
     kv_location->value = std::move(new_value);
-    null_key_modification_callback_t null_cb;
     rdb_value_sizer_t sizer(block_size);
     apply_keyvalue_change(&sizer, kv_location, key.btree_key(),
                           timestamp,
-                          deletion_context->balancing_detacher(), &null_cb);
+                          deletion_context->balancing_detacher());
     return ql::serialization_result_t::SUCCESS;
 }
 
@@ -201,10 +199,9 @@ kv_location_set(keyvalue_location_t *kv_location,
     // Update the leaf, if needed.
     kv_location->value = std::move(new_value);
 
-    null_key_modification_callback_t null_cb;
     rdb_value_sizer_t sizer(kv_location->buf.cache()->max_block_size());
     apply_keyvalue_change(&sizer, kv_location, key.btree_key(), timestamp,
-                          deletion_context->balancing_detacher(), &null_cb);
+                          deletion_context->balancing_detacher());
     return ql::serialization_result_t::SUCCESS;
 }
 
@@ -1567,7 +1564,7 @@ public:
         const int MAX_CHUNK_SIZE = 10;
         int current_chunk_size = 0;
         const rdb_post_construction_deletion_context_t deletion_context;
-        for (auto it = leaf::begin(leaf_node); it != leaf::end(leaf_node); ++it) {
+        for (auto it = leaf::begin(leaf_node); it != leaf::end(leaf_node); it.step()) {
             if (current_chunk_size == 0) {
                 // Start a write transaction and acquire the secondary index
                 // at the beginning of each chunk. We reset the transaction
