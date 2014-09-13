@@ -6,13 +6,20 @@ src_url=http://curl.haxx.se/download/curl-$version.tar.bz2
 pkg_configure () {
     local prefix
     prefix="$(niceabspath "$install_dir")"
-    in_dir "$build_dir" ./configure --prefix="$prefix" --without-gnutls --with-ssl --without-librtmp --disable-ldap
+    in_dir "$build_dir" ./configure --prefix="$prefix" --without-gnutls --with-ssl --without-librtmp --disable-ldap --disable-shared
 }
 
 pkg_install-include () {
     pkg_copy_src_to_build
     pkg_configure
-    make -C "$build_dir/include" install
+    make -C "$build_dir/include"  install
+}
+
+pkg_install () {
+    # pkg_copy_src_to_build
+    # pkg_configure
+    make -C "$build_dir/lib" install-libLTLIBRARIES
+    make -C "$build_dir" install-binSCRIPTS
 }
 
 pkg_depends () {
@@ -30,12 +37,12 @@ pkg_link-flags () {
             -lidn)    out `pkg link-flags libidn idn` ;;
             -lssl)    out `pkg link-flags openssl ssl` ;;
             -lcrypto) out `pkg link-flags openssl crypto` ;;
-            -ldl)     out "$flag" ;;
+            -ldl)     ;;
             -lrt)     out "$flag" ;;
             -l*)      echo "Warning: '$pkg' links with '$flag'" >&2
                       out "$flag" ;;
             *)        out "$flag" ;;
         esac
     done
-    echo "$ret"
+    echo "$ret" -ldl
 }
