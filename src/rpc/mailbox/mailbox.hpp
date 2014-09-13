@@ -8,7 +8,6 @@
 
 #include "concurrency/new_semaphore.hpp"
 #include "containers/archive/archive.hpp"
-#include "containers/archive/vector_stream.hpp"
 #include "rpc/connectivity/cluster.hpp"
 #include "rpc/semilattice/joins/macros.hpp"
 

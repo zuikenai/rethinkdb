@@ -9,7 +9,6 @@
 #include "concurrency/mutex.hpp"
 #include "containers/buffer_group.hpp"
 #include "containers/archive/buffer_group_stream.hpp"
-#include "containers/archive/vector_stream.hpp"
 #include "containers/scoped.hpp"
 #include "perfmon/core.hpp"
 #include "serializer/types.hpp"
