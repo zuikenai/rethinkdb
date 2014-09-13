@@ -77,7 +77,8 @@ protected:
 
 class traversal_state_t : public coro_pool_callback_t<acquisition_waiter_callback_t *> {
 public:
-    traversal_state_t(block_size_t _max_block_size, btree_traversal_helper_t *_helper,
+    traversal_state_t(max_block_size_t _max_block_size,
+                      btree_traversal_helper_t *_helper,
                       signal_t *_interruptor)
         : max_block_size(_max_block_size),
           stat_block(NULL_BLOCK_ID),
@@ -100,7 +101,7 @@ public:
         }
     }
 
-    const block_size_t max_block_size;
+    const max_block_size_t max_block_size;
 
     /* The block id where we can find the stat block, we need this at the end
      * to update population counts. */
