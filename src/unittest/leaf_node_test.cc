@@ -83,7 +83,7 @@ public:
             return false;
         }
 
-        leaf::insert(&sizer_, node(), key.btree_key(), v.data(), tstamp, key_modification_proof_t::real_proof());
+        leaf::insert(&sizer_, node(), key.btree_key(), v.data(), tstamp);
 
         kv_[key] = value;
 
@@ -102,7 +102,7 @@ public:
 
         kv_.erase(key);
 
-        leaf::remove(&sizer_, node(), key.btree_key(), tstamp, key_modification_proof_t::real_proof());
+        leaf::remove(&sizer_, node(), key.btree_key(), tstamp);
 
         Verify();
 
@@ -193,7 +193,7 @@ public:
         ASSERT_TRUE(leaf::is_empty(right->node()));
 
         store_key_t median;
-        leaf::split(&sizer_, node(), right->node(), median.btree_key());
+        leaf::split(&sizer_, node(), right->node(), &median);
 
         std::map<store_key_t, std::string>::iterator p = kv_.end();
         --p;

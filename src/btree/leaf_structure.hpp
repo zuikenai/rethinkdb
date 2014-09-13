@@ -31,6 +31,8 @@ struct leaf_node_t {
     // The pair offsets.
     uint16_t pair_offsets[];
 
+    static const block_magic_t expected_magic;
+
 } __attribute__ ((__packed__));
 
 

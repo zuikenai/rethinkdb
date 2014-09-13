@@ -15,8 +15,6 @@
 #include "serializer/types.hpp"
 #include "version.hpp"
 
-extern const block_magic_t btree_leaf_magic_v1;
-
 class value_sizer_t {
 public:
     value_sizer_t() { }
