@@ -936,7 +936,7 @@ void move_elements(value_sizer_t *sizer, leaf_node_t *fro, int beg, int end,
     validate(sizer, tow);
 }
 
-void split(value_sizer_t *sizer, leaf_node_t *node, leaf_node_t *rnode, btree_key_t *median_out) {
+void split(value_sizer_t *sizer, leaf_node_t *node, leaf_node_t *rnode, store_key_t *median_out) {
     int tstamp_back_offset;
     int mandatory = mandatory_cost(sizer, node, MANDATORY_TIMESTAMPS, &tstamp_back_offset);
 
@@ -1009,7 +1009,8 @@ void split(value_sizer_t *sizer, leaf_node_t *node, leaf_node_t *rnode, btree_ke
     move_elements(sizer, node, s, node->num_pairs, 0, rnode, node_copysize,
                   tstamp_back_offset, NULL);
 
-    keycpy(median_out, entry_key(get_entry(node, node->pair_offsets[s - 1])));
+    keycpy(median_out->btree_key(),
+           entry_key(get_entry(node, node->pair_offsets[s - 1])));
 }
 
 void merge(value_sizer_t *sizer, leaf_node_t *left, leaf_node_t *right) {
