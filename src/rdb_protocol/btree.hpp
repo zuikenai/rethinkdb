@@ -40,10 +40,6 @@ public:
 
     int max_possible_size() const;
 
-    static block_magic_t leaf_magic();
-
-    block_magic_t btree_leaf_magic() const;
-
     max_block_size_t block_size() const;
 
 private:
