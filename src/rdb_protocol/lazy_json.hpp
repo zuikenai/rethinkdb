@@ -9,7 +9,6 @@
 struct rdb_value_t {
     char contents[];
 
-public:
     int inline_size(max_block_size_t bs) const {
         return blob::ref_size(bs, contents, blob::btree_maxreflen);
     }
@@ -25,10 +24,12 @@ public:
     char *value_ref() {
         return contents;
     }
-};
+
+    DISABLE_COPYING(rdb_value_t);
+} __attribute__((__packed__));
 
 ql::datum_t get_data(const rdb_value_t *value,
-                                      buf_parent_t parent);
+                     buf_parent_t parent);
 
 class lazy_json_pointee_t : public single_threaded_countable_t<lazy_json_pointee_t> {
     lazy_json_pointee_t(const rdb_value_t *_rdb_value, buf_parent_t _parent)
