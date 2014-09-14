@@ -110,7 +110,7 @@ public:
     }
 
     void *get_buf_write() {
-        return page_acq_t::get_buf_write(page_cache()->max_block_size());
+        return page_acq_t::get_buf_write(page_cache()->default_block_size());
     }
 };
 

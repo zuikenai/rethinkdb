@@ -62,7 +62,7 @@ void get_secondary_indexes_internal(
     const btree_sindex_block_t *data
         = static_cast<const btree_sindex_block_t *>(read.get_data_read());
 
-    blob_t sindex_blob(sindex_block->cache()->max_block_size(),
+    blob_t sindex_blob(sindex_block->cache()->default_block_size(),
                        const_cast<char *>(data->sindex_blob),
                        btree_sindex_block_t::SINDEX_BLOB_MAXREFLEN);
     deserialize_for_version_from_blob(sindex_block_version(data),
@@ -76,7 +76,7 @@ void set_secondary_indexes_internal(
     btree_sindex_block_t *data
         = static_cast<btree_sindex_block_t *>(write.get_data_write());
 
-    blob_t sindex_blob(sindex_block->cache()->max_block_size(),
+    blob_t sindex_blob(sindex_block->cache()->default_block_size(),
                        data->sindex_blob,
                        btree_sindex_block_t::SINDEX_BLOB_MAXREFLEN);
     // There's just one field in btree_sindex_block_t, sindex_blob.  So we set

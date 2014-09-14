@@ -72,8 +72,11 @@
 // Size of the metablock (in bytes)
 #define METABLOCK_SIZE                            (4 * KILOBYTE)
 
-// Size of each btree node (in bytes) on disk
-#define DEFAULT_BTREE_BLOCK_SIZE                  (4 * KILOBYTE)
+// The "targeted" max size of a btree block (or blob block or any
+// block) on disk.  (Sometimes we overflow because of in-place
+// upgrading, but usually they're between 1/2 and 1x this size.)  This
+// is the ser_value of a default_block_size_t.
+#define DEFAULT_DEFAULT_BTREE_BLOCK_SIZE          (4 * KILOBYTE)
 
 // Size of each extent (in bytes)
 // This should not be too small, or garbage collection will become

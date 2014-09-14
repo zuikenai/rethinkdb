@@ -9,7 +9,7 @@
 struct rdb_value_t {
     char contents[];
 
-    int inline_size(max_block_size_t bs) const {
+    int inline_size(default_block_size_t bs) const {
         return blob::ref_size(bs, contents, blob::btree_maxreflen);
     }
 

@@ -23,7 +23,7 @@ public:
     virtual int size(const void *value) const = 0;
     virtual bool fits(const void *value, int length_available) const = 0;
     virtual int max_possible_size() const = 0;
-    virtual max_block_size_t block_size() const = 0;
+    virtual default_block_size_t default_block_size() const = 0;
 
 private:
     DISABLE_COPYING(value_sizer_t);

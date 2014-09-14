@@ -17,7 +17,7 @@
 #include "stl_utils.hpp"
 
 // Max amount of bytes which can be read ahead in one i/o transaction (if enabled)
-const int64_t APPROXIMATE_READ_AHEAD_SIZE = 32 * DEFAULT_BTREE_BLOCK_SIZE;
+const int64_t APPROXIMATE_READ_AHEAD_SIZE = 32 * DEFAULT_DEFAULT_BTREE_BLOCK_SIZE;
 
 /*****************
  * GC Parameters *

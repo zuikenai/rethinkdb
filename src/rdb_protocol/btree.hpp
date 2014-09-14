@@ -26,11 +26,11 @@ struct sindex_disk_info_t;
 
 class parallel_traversal_progress_t;
 
-bool btree_value_fits(max_block_size_t bs, int data_length, const rdb_value_t *value);
+bool btree_value_fits(default_block_size_t bs, int data_length, const rdb_value_t *value);
 
 class rdb_value_sizer_t : public value_sizer_t {
 public:
-    explicit rdb_value_sizer_t(max_block_size_t bs);
+    explicit rdb_value_sizer_t(default_block_size_t bs);
 
     static const rdb_value_t *as_rdb(const void *p);
 
@@ -40,12 +40,12 @@ public:
 
     int max_possible_size() const;
 
-    max_block_size_t block_size() const;
+    default_block_size_t default_block_size() const;
 
 private:
     // The block size.  It's convenient for leaf node code and for
     // some subclasses, too.
-    max_block_size_t block_size_;
+    default_block_size_t block_size_;
 
     DISABLE_COPYING(rdb_value_sizer_t);
 };

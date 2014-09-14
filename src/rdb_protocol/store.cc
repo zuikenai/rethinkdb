@@ -111,7 +111,7 @@ void store_t::help_construct_bring_sindexes_up_to_date() {
                 // secondary index cannot be in use at this point and we therefore
                 // don't have to detach anything.
                 rdb_noop_deletion_context_t noop_deletion_context;
-                rdb_value_sizer_t sizer(store->cache->max_block_size());
+                rdb_value_sizer_t sizer(store->cache->default_block_size());
 
                 /* Clear the sindex. */
                 store->clear_sindex(
@@ -1047,7 +1047,7 @@ void store_t::delayed_clear_sindex(
         THROWS_NOTHING
 {
     try {
-        rdb_value_sizer_t sizer(cache->max_block_size());
+        rdb_value_sizer_t sizer(cache->default_block_size());
         /* If the index had been completely constructed, we must
          * detach its values since snapshots might be accessing it.
          * If on the other hand the index had not finished post

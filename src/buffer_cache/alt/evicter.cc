@@ -37,7 +37,7 @@ void evicter_t::initialize(page_cache_t *page_cache,
     balancer_ = balancer;
     balancer_->add_evicter(this);
     throttler_->inform_memory_limit_change(memory_limit_,
-                                           page_cache_->max_block_size());
+                                           page_cache_->default_block_size());
 }
 
 void evicter_t::update_memory_limit(uint64_t new_memory_limit,
@@ -57,7 +57,7 @@ void evicter_t::update_memory_limit(uint64_t new_memory_limit,
     evict_if_necessary();
 
     throttler_->inform_memory_limit_change(memory_limit_,
-                                           page_cache_->max_block_size());
+                                           page_cache_->default_block_size());
 }
 
 uint64_t evicter_t::get_clamped_bytes_loaded() const {

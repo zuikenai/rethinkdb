@@ -161,7 +161,7 @@ struct entry_iter_t {
     }
 
     bool done(value_sizer_t *sizer) const {
-        int bs = sizer->block_size().value();
+        int bs = sizer->default_block_size().value();
         rassert(offset <= bs, "offset=%d, bs=%d", offset, bs);
         return offset == bs;
     }
@@ -314,11 +314,11 @@ bool fsck(value_sizer_t *sizer, const btree_key_t *left_exclusive_or_null, const
                "bad leaf magic")
         || failed(node->frontmost >= offsetof(leaf_node_t, pair_offsets) + node->num_pairs * sizeof(uint16_t),
                   "frontmost offset is before the end of pair_offsets")
-        || failed(node->live_size <= (sizer->block_size().value() - node->frontmost) + sizeof(uint16_t) * node->num_pairs,
+        || failed(node->live_size <= (sizer->default_block_size().value() - node->frontmost) + sizeof(uint16_t) * node->num_pairs,
                   "live_size is impossibly large")
         || failed(node->tstamp_cutpoint >= node->frontmost,
                   "timestamp cut offset below frontmost offset")
-        || failed(node->tstamp_cutpoint <= sizer->block_size().value(),
+        || failed(node->tstamp_cutpoint <= sizer->default_block_size().value(),
                   "timestamp cut offset larger than block size")
         ) {
         return false;
@@ -332,7 +332,7 @@ bool fsck(value_sizer_t *sizer, const btree_key_t *left_exclusive_or_null, const
 
     if (failed(node->num_pairs == 0 || node->frontmost <= offs[0],
                "smallest pair offset is before frontmost offset")
-        || failed(node->num_pairs == 0 || offs[node->num_pairs - 1] < sizer->block_size().value(),
+        || failed(node->num_pairs == 0 || offs[node->num_pairs - 1] < sizer->default_block_size().value(),
                   "largest pair offset is larger than block size")
         ) {
         return false;
@@ -356,7 +356,7 @@ bool fsck(value_sizer_t *sizer, const btree_key_t *left_exclusive_or_null, const
             seen_tstamp_cutpoint = true;
         }
 
-        if (failed(offset + (offset < node->tstamp_cutpoint ? sizeof(repli_timestamp_t) : 0) < sizer->block_size().value(),
+        if (failed(offset + (offset < node->tstamp_cutpoint ? sizeof(repli_timestamp_t) : 0) < sizer->default_block_size().value(),
                    "offset would be past block size after accounting for the timestamp")) {
             return false;
         }
@@ -373,7 +373,7 @@ bool fsck(value_sizer_t *sizer, const btree_key_t *left_exclusive_or_null, const
         const entry_t *ent = get_entry(node, offset);
         if (entry_is_live(ent)) {
             const void *value = entry_value(ent);
-            int space = sizer->block_size().value() - (reinterpret_cast<const char *>(value) - reinterpret_cast<const char *>(node));
+            int space = sizer->default_block_size().value() - (reinterpret_cast<const char *>(value) - reinterpret_cast<const char *>(node));
             if (!sizer->fits(value, space)) {
                 *msg_out = strprintf("problem with key %.*s: value does not fit\n", entry_key(ent)->size, entry_key(ent)->contents);
                 return false;
@@ -447,12 +447,12 @@ void init(value_sizer_t *sizer, leaf_node_t *node) {
     node->magic = leaf_node_t::expected_magic;
     node->num_pairs = 0;
     node->live_size = 0;
-    node->frontmost = sizer->block_size().value();
+    node->frontmost = sizer->default_block_size().value();
     node->tstamp_cutpoint = node->frontmost;
 }
 
 int free_space(value_sizer_t *sizer) {
-    return sizer->block_size().value() - offsetof(leaf_node_t, pair_offsets);
+    return sizer->default_block_size().value() - offsetof(leaf_node_t, pair_offsets);
 }
 
 // Returns the mandatory storage cost of the node, returning a value
@@ -587,7 +587,7 @@ void garbage_collect(value_sizer_t *sizer, leaf_node_t *node, int num_tstamped, 
     int mand_offset;
     UNUSED int cost = mandatory_cost(sizer, node, num_tstamped, &mand_offset);
 
-    int w = sizer->block_size().value();
+    int w = sizer->default_block_size().value();
     int i = node->num_pairs - 1;
     for (; i >= 0; --i) {
         int offset = node->pair_offsets[indices[i]];
@@ -1079,7 +1079,7 @@ bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
     int prev_weight_movement = 0;
     int weight_movement = 0;
     int num_mandatories = 0;
-    int prev_diff = sizer->block_size().value();  // some impossibly large value
+    int prev_diff = sizer->default_block_size().value();  // some impossibly large value
     for (;;) {
         int offset = sibling->pair_offsets[*w];
         entry_t *ent = get_entry(sibling, offset);
@@ -1295,7 +1295,7 @@ MUST_USE bool prepare_space_for_new_entry(value_sizer_t *sizer, leaf_node_t *nod
     uint16_t end_of_where_new_entry_should_go;
     bool new_entry_should_have_timestamp;
 
-    if (node->frontmost == sizer->block_size().value() ||
+    if (node->frontmost == sizer->default_block_size().value() ||
             (node->frontmost < node->tstamp_cutpoint && get_timestamp(node, node->frontmost) <= tstamp)) {
         /* In the most common case, the new value will go right at
         `node->frontmost` and will get a timestamp. For performance reasons, we
@@ -1313,7 +1313,7 @@ MUST_USE bool prepare_space_for_new_entry(value_sizer_t *sizer, leaf_node_t *nod
         end_of_where_new_entry_should_go = iter.offset;
 
         if (end_of_where_new_entry_should_go == node->tstamp_cutpoint &&
-                node->tstamp_cutpoint != sizer->block_size().value()) {
+                node->tstamp_cutpoint != sizer->default_block_size().value()) {
             /* We are after all of the timestamped entries, but before at least
             one non-timestamped entry. Since we don't know what the timestamp
             would have been on the non-timestamped entry, we mustn't put a
@@ -1518,7 +1518,7 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
 
     // If we haven't found a [tstamp][entry] pair such that tstamp < minimum_tstamp, then we are missing some deletion history
     if (stop_offset == 0) {
-        stop_offset = sizer->block_size().value();
+        stop_offset = sizer->default_block_size().value();
         cb->lost_deletions();
         include_deletions = false;
     }

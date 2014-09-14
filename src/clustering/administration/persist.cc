@@ -109,7 +109,7 @@ static void write_blob(buf_parent_t parent, char *ref, int maxreflen,
         str.append(p->data, p->size);
     }
     guarantee(str.size() == slen);
-    blob_t blob(parent.cache()->max_block_size(), ref, maxreflen);
+    blob_t blob(parent.cache()->default_block_size(), ref, maxreflen);
     blob.clear(parent);
     blob.append_region(parent, str.size());
     blob.write_from_string(str, parent, 0);
@@ -120,7 +120,7 @@ template<class T>
 static void read_blob(cluster_version_t cluster_version,
                       buf_parent_t parent, const char *ref, int maxreflen,
                       T *value_out) {
-    blob_t blob(parent.cache()->max_block_size(),
+    blob_t blob(parent.cache()->default_block_size(),
                 const_cast<char *>(ref), maxreflen);
     blob_acq_t acq_group;
     buffer_group_t group;
@@ -239,8 +239,8 @@ persistent_file_t<metadata_t>::~persistent_file_t() {
 }
 
 template <class metadata_t>
-max_block_size_t persistent_file_t<metadata_t>::get_cache_block_size() const {
-    return cache->max_block_size();
+default_block_size_t persistent_file_t<metadata_t>::get_default_block_size() const {
+    return cache->default_block_size();
 }
 
 template <class metadata_t>
@@ -273,8 +273,8 @@ void persistent_file_t<metadata_t>::construct_serializer_and_cache(const bool cr
         get_write_transaction(&txn);
         buf_lock_t superblock(txn.get(), SUPERBLOCK_ID, alt_create_t::create);
         buf_write_t sb_write(&superblock);
-        void *sb_data = sb_write.get_data_write(cache->max_block_size().value());
-        memset(sb_data, 0, cache->max_block_size().value());
+        void *sb_data = sb_write.get_data_write(cache->default_block_size().value());
+        memset(sb_data, 0, cache->default_block_size().value());
     }
 }
 
@@ -311,7 +311,7 @@ auth_persistent_file_t::auth_persistent_file_t(io_backender_t *io_backender,
     buf_write_t sb_write(&superblock);
     auth_metadata_superblock_t *sb
         = static_cast<auth_metadata_superblock_t *>(sb_write.get_data_write());
-    memset(sb, 0, get_cache_block_size().value());
+    memset(sb, 0, get_default_block_size().value());
     sb->magic = auth_metadata_magic_t<cluster_version_t::LATEST_DISK>::value;
 
     write_blob<cluster_version_t::LATEST_DISK>(
@@ -386,7 +386,7 @@ cluster_persistent_file_t::cluster_persistent_file_t(io_backender_t *io_backende
     cluster_metadata_superblock_t *sb
         = static_cast<cluster_metadata_superblock_t *>(sb_write.get_data_write());
 
-    memset(sb, 0, get_cache_block_size().value());
+    memset(sb, 0, get_default_block_size().value());
     sb->magic = cluster_metadata_magic_t<cluster_version_t::LATEST_DISK>::value;
     sb->machine_id = machine_id;
     write_metadata_blob<cluster_version_t::LATEST_DISK>(

@@ -96,8 +96,8 @@ public:
         return inner->block_writes(write_infos, io_account, cb);
     }
 
-    /* The size, in bytes, of each serializer block */
-    max_block_size_t max_block_size() const { return inner->max_block_size(); }
+    /* The default size, in bytes, of serializer blocks. */
+    default_block_size_t default_block_size() const { return inner->default_block_size(); }
 
     /* Return true if no other processes have the file locked */
     bool coop_lock_and_check() { return inner->coop_lock_and_check(); }

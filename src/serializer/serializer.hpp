@@ -113,7 +113,7 @@ public:
                  iocallback_t *cb) = 0;
 
     /* The maximum size (and right now the typical size) that a block can have. */
-    virtual max_block_size_t max_block_size() const = 0;
+    virtual default_block_size_t default_block_size() const = 0;
 
     /* Return true if no other processes have the file locked */
     virtual bool coop_lock_and_check() = 0;

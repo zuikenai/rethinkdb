@@ -39,7 +39,7 @@ private:
 // (Hint: I don't really care.)
 class ranged_block_ids_t : public single_threaded_countable_t<ranged_block_ids_t> {
 public:
-    ranged_block_ids_t(block_size_t bs, const internal_node_t *node,
+    ranged_block_ids_t(default_block_size_t bs, const internal_node_t *node,
                        const btree_key_t *left_exclusive_or_null,
                        const btree_key_t *right_inclusive_or_null,
                        int _level)

@@ -58,7 +58,7 @@ void prep_serializer(
     on_thread_t thread_switcher(ser->home_thread());
 
     /* Write the initial configuration block */
-    const block_size_t config_block_size = ser->max_block_size();
+    const block_size_t config_block_size = ser->default_block_size();
     buf_ptr_t buf = buf_ptr_t::alloc_zeroed(config_block_size);
 
     multiplexer_config_block_t *c
@@ -108,7 +108,7 @@ void create_proxies(const std::vector<serializer_t *>& underlying,
     buf_ptr_t buf
         = ser->block_read(ser->index_read(CONFIG_BLOCK_ID.ser_id),
                           DEFAULT_DISK_ACCOUNT);
-    guarantee(buf.block_size() == ser->max_block_size());
+    guarantee(buf.block_size() == ser->default_block_size());
 
     multiplexer_config_block_t *c
         = reinterpret_cast<multiplexer_config_block_t *>(buf.cache_data());
@@ -160,7 +160,7 @@ serializer_multiplexer_t::serializer_multiplexer_t(const std::vector<serializer_
 
         /* Load config block */
         buf_ptr_t buf = underlying[0]->block_read(underlying[0]->index_read(CONFIG_BLOCK_ID.ser_id), DEFAULT_DISK_ACCOUNT);
-        guarantee(buf.block_size() == underlying[0]->max_block_size());
+        guarantee(buf.block_size() == underlying[0]->default_block_size());
 
         multiplexer_config_block_t *c
             = reinterpret_cast<multiplexer_config_block_t *>(buf.cache_data());
@@ -258,8 +258,8 @@ counted_t<standard_block_token_t> translator_serializer_t::index_read(block_id_t
     return inner->index_read(translate_block_id(block_id));
 }
 
-max_block_size_t translator_serializer_t::max_block_size() const {
-    return inner->max_block_size();
+default_block_size_t translator_serializer_t::default_block_size() const {
+    return inner->default_block_size();
 }
 
 bool translator_serializer_t::coop_lock_and_check() {

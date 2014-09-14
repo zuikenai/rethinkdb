@@ -40,7 +40,7 @@ internal_disk_backed_queue_t::internal_disk_backed_queue_t(io_backender_t *io_ba
               repli_timestamp_t::distant_past, 1);
     buf_lock_t block(&txn, SUPERBLOCK_ID, alt_create_t::create);
     buf_write_t write(&block);
-    const block_size_t block_size = cache->max_block_size();
+    const block_size_t block_size = cache->default_block_size();
     void *buf = write.get_data_write(block_size.value());
     memset(buf, 0, block_size.value());
 }
@@ -82,11 +82,11 @@ void internal_disk_backed_queue_t::push_single(txn_t *txn, const write_message_t
     char buffer[DBQ_MAX_REF_SIZE];
     memset(buffer, 0, DBQ_MAX_REF_SIZE);
 
-    blob_t blob(cache->max_block_size(), buffer, DBQ_MAX_REF_SIZE);
+    blob_t blob(cache->default_block_size(), buffer, DBQ_MAX_REF_SIZE);
 
     write_onto_blob(buf_parent_t(_head.get()), &blob, wm);
 
-    if (static_cast<size_t>((head->data + head->data_size) - reinterpret_cast<char *>(head)) + blob.refsize(cache->max_block_size()) > cache->max_block_size().value()) {
+    if (static_cast<size_t>((head->data + head->data_size) - reinterpret_cast<char *>(head)) + blob.refsize(cache->default_block_size()) > cache->default_block_size().value()) {
         // The data won't fit in our current head block, so it's time to make a new one.
         head = NULL;
         write.reset();
@@ -99,8 +99,8 @@ void internal_disk_backed_queue_t::push_single(txn_t *txn, const write_message_t
     }
 
     memcpy(head->data + head->data_size, buffer,
-           blob.refsize(cache->max_block_size()));
-    head->data_size += blob.refsize(cache->max_block_size());
+           blob.refsize(cache->default_block_size()));
+    head->data_size += blob.refsize(cache->default_block_size());
 
     queue_size++;
 }
@@ -123,7 +123,7 @@ void internal_disk_backed_queue_t::pop(buffer_group_viewer_t *viewer) {
             = static_cast<const queue_block_t *>(read.get_data_read());
         rassert(tail->data_size != tail->live_data_offset);
         memcpy(buffer, tail->data + tail->live_data_offset,
-               blob::ref_size(cache->max_block_size(),
+               blob::ref_size(cache->default_block_size(),
                               tail->data + tail->live_data_offset,
                               DBQ_MAX_REF_SIZE));
     }
@@ -132,7 +132,7 @@ void internal_disk_backed_queue_t::pop(buffer_group_viewer_t *viewer) {
 
     std::vector<char> data_vec;
 
-    blob_t blob(cache->max_block_size(), buffer, DBQ_MAX_REF_SIZE);
+    blob_t blob(cache->default_block_size(), buffer, DBQ_MAX_REF_SIZE);
     {
         blob_acq_t acq_group;
         buffer_group_t blob_group;
@@ -148,7 +148,7 @@ void internal_disk_backed_queue_t::pop(buffer_group_viewer_t *viewer) {
         buf_write_t write(&_tail);
         queue_block_t *tail = static_cast<queue_block_t *>(write.get_data_write());
         /* Record how far along in the blob we are. */
-        tail->live_data_offset += blob.refsize(cache->max_block_size());
+        tail->live_data_offset += blob.refsize(cache->default_block_size());
         data_size = tail->data_size;
         live_data_offset = tail->live_data_offset;
     }

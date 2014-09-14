@@ -73,9 +73,9 @@ void alt_txn_throttler_t::end_txn(UNUSED throttler_acq_t acq) {
 }
 
 void alt_txn_throttler_t::inform_memory_limit_change(uint64_t memory_limit,
-                                                     const max_block_size_t max_block_size) {
+                                                     const default_block_size_t default_block_size) {
     int64_t throttler_limit = std::min<int64_t>(SOFT_UNWRITTEN_CHANGES_LIMIT,
-        (memory_limit / max_block_size.ser_value()) * SOFT_UNWRITTEN_CHANGES_MEMORY_FRACTION);
+        (memory_limit / default_block_size.ser_value()) * SOFT_UNWRITTEN_CHANGES_MEMORY_FRACTION);
 
     // Always provide at least one capacity in the semaphore
     throttler_limit = std::max<int64_t>(throttler_limit, minimum_unwritten_changes_limit_);
@@ -792,6 +792,6 @@ void *buf_write_t::get_data_write(uint32_t block_size) {
 }
 
 void *buf_write_t::get_data_write() {
-    return get_data_write(lock_->cache()->max_block_size().value());
+    return get_data_write(lock_->cache()->default_block_size().value());
 }
 

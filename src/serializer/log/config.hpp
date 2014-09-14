@@ -29,28 +29,29 @@ struct log_serializer_dynamic_config_t {
 /* This is equivalent to log_serializer_static_config_t below, but is an on-disk
 structure. Changes to this change the on-disk database format! */
 struct log_serializer_on_disk_static_config_t {
-    uint64_t block_size_;
+    uint64_t default_block_size_;
     uint64_t extent_size_;
 
-    // Some helpers
-    uint64_t blocks_per_extent() const { return extent_size_ / block_size_; }
+    // A helper.
     uint64_t extent_index(int64_t offset) const { return offset / extent_size_; }
 
     // Minimize calls to these.
-    max_block_size_t max_block_size() const { return max_block_size_t::unsafe_make(block_size_); }
+    default_block_size_t default_block_size() const {
+        return default_block_size_t::unsafe_make(default_block_size_);
+    }
     uint64_t extent_size() const { return extent_size_; }
-};
+} __attribute__((__packed__));
 
 /* Configuration for the serializer that is set when the database is created */
 struct log_serializer_static_config_t : public log_serializer_on_disk_static_config_t {
     log_serializer_static_config_t() {
         extent_size_ = DEFAULT_EXTENT_SIZE;
-        block_size_ = DEFAULT_BTREE_BLOCK_SIZE;
+        default_block_size_ = DEFAULT_DEFAULT_BTREE_BLOCK_SIZE;
     }
 };
 
 RDB_MAKE_SERIALIZABLE_2(log_serializer_static_config_t,
-                        block_size_, extent_size_);
+                        default_block_size_, extent_size_);
 
 #endif /* SERIALIZER_LOG_CONFIG_HPP_ */
 

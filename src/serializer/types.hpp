@@ -96,18 +96,18 @@ inline bool operator!=(block_size_t x, block_size_t y) {
     return !(x == y);
 }
 
-class max_block_size_t : public block_size_t {
+class default_block_size_t : public block_size_t {
 public:
     using block_size_t::value;
     using block_size_t::ser_value;
 
-    static max_block_size_t unsafe_make(uint32_t ser_bs) {
-        CT_ASSERT(sizeof(block_size_t) == sizeof(max_block_size_t));
-        return max_block_size_t(ser_bs);
+    static default_block_size_t unsafe_make(uint32_t ser_bs) {
+        CT_ASSERT(sizeof(block_size_t) == sizeof(default_block_size_t));
+        return default_block_size_t(ser_bs);
     }
 
 private:
-    explicit max_block_size_t(uint32_t ser_bs)
+    explicit default_block_size_t(uint32_t ser_bs)
         : block_size_t(ser_bs) { }
 };
 

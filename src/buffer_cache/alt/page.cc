@@ -480,9 +480,9 @@ uint32_t page_t::hypothetical_memory_usage(page_cache_t *page_cache) const {
     } else if (block_token_.has()) {
         return buf_ptr_t::compute_aligned_block_size(block_token_->block_size());
     } else {
-        // If the block isn't loaded and we don't know, we respond conservatively,
-        // to stay on the proper side of the memory limit.
-        return page_cache->max_block_size().ser_value();
+        // If the block isn't loaded and we don't know, we... make a
+        // pretty conservative guess.
+        return page_cache->default_block_size().ser_value();
     }
 }
 

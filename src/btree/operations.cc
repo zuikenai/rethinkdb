@@ -149,7 +149,7 @@ bool get_superblock_metainfo(buf_lock_t *superblock,
         guarantee(sb_size == BTREE_SUPERBLOCK_SIZE);
 
         // The const cast is okay because we access the data with access_t::read.
-        blob_t blob(superblock->cache()->max_block_size(),
+        blob_t blob(superblock->cache()->default_block_size(),
                     const_cast<char *>(data->metainfo_blob),
                     btree_superblock_t::METAINFO_BLOB_MAXREFLEN);
 
@@ -191,7 +191,7 @@ void get_superblock_metainfo(
 
         // The const cast is okay because we access the data with access_t::read
         // and don't write to the blob.
-        blob_t blob(superblock->cache()->max_block_size(),
+        blob_t blob(superblock->cache()->default_block_size(),
                     const_cast<char *>(data->metainfo_blob),
                     btree_superblock_t::METAINFO_BLOB_MAXREFLEN);
         blob_acq_t acq;
@@ -230,7 +230,7 @@ void set_superblock_metainfo(buf_lock_t *superblock,
     btree_superblock_t *data
         = static_cast<btree_superblock_t *>(write.get_data_write(BTREE_SUPERBLOCK_SIZE));
 
-    blob_t blob(superblock->cache()->max_block_size(),
+    blob_t blob(superblock->cache()->default_block_size(),
                 data->metainfo_blob, btree_superblock_t::METAINFO_BLOB_MAXREFLEN);
 
     std::vector<char> metainfo;
@@ -317,7 +317,7 @@ void delete_superblock_metainfo(buf_lock_t *superblock,
     btree_superblock_t *const data
         = static_cast<btree_superblock_t *>(write.get_data_write(BTREE_SUPERBLOCK_SIZE));
 
-    blob_t blob(superblock->cache()->max_block_size(),
+    blob_t blob(superblock->cache()->default_block_size(),
                 data->metainfo_blob, btree_superblock_t::METAINFO_BLOB_MAXREFLEN);
 
     std::vector<char> metainfo;
@@ -371,7 +371,7 @@ void clear_superblock_metainfo(buf_lock_t *superblock) {
     buf_write_t write(superblock);
     auto data
         = static_cast<btree_superblock_t *>(write.get_data_write(BTREE_SUPERBLOCK_SIZE));
-    blob_t blob(superblock->cache()->max_block_size(),
+    blob_t blob(superblock->cache()->default_block_size(),
                 data->metainfo_blob,
                 btree_superblock_t::METAINFO_BLOB_MAXREFLEN);
     blob.clear(buf_parent_t(superblock));
@@ -504,7 +504,7 @@ void check_and_handle_split(value_sizer_t *sizer,
         *last_buf = buf_lock_t(sb->expose_buf(), alt_create_t::create);
         {
             buf_write_t last_write(last_buf);
-            internal_node::init(sizer->block_size(),
+            internal_node::init(sizer->default_block_size(),
                                 static_cast<internal_node_t *>(last_write.get_data_write()));
         }
         // We set the recency of the new root block to the max of the subtrees'
@@ -517,7 +517,7 @@ void check_and_handle_split(value_sizer_t *sizer,
     {
         buf_write_t last_write(last_buf);
         DEBUG_VAR bool success
-            = internal_node::insert(sizer->block_size(),
+            = internal_node::insert(sizer->default_block_size(),
                                     static_cast<internal_node_t *>(last_write.get_data_write()),
                                     median.btree_key(),
                                     buf->block_id(), rbuf.block_id());
@@ -654,7 +654,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
 
             if (!parent_is_singleton) {
                 buf_write_t last_buf_write(last_buf);
-                internal_node::remove(sizer->block_size(),
+                internal_node::remove(sizer->default_block_size(),
                                       static_cast<internal_node_t *>(last_buf_write.get_data_write()),
                                       key_in_middle.btree_key());
             } else {
@@ -691,7 +691,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                 //  detach the children as well or do nothing))
                 if (is_internal) {
                     std::vector<block_id_t> moved_children;
-                    leveled = internal_node::level(sizer->block_size(),
+                    leveled = internal_node::level(sizer->default_block_size(),
                             static_cast<internal_node_t *>(buf_write.get_data_write()),
                             static_cast<internal_node_t *>(sib_buf_write.get_data_write()),
                             replacement_key, parent_node, &moved_children);

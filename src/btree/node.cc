@@ -21,7 +21,8 @@ bool is_underfull(value_sizer_t *sizer, const node_t *node) {
         return leaf::is_underfull(sizer, reinterpret_cast<const leaf_node_t *>(node));
     } else {
         rassert(is_internal(node));
-        return internal_node::is_underfull(sizer->block_size(), reinterpret_cast<const internal_node_t *>(node));
+        return internal_node::is_underfull(sizer->default_block_size(),
+                                           reinterpret_cast<const internal_node_t *>(node));
     }
 }
 
@@ -30,7 +31,10 @@ bool is_mergable(value_sizer_t *sizer, const node_t *node, const node_t *sibling
         return leaf::is_mergable(sizer, reinterpret_cast<const leaf_node_t *>(node), reinterpret_cast<const leaf_node_t *>(sibling));
     } else {
         rassert(is_internal(node));
-        return internal_node::is_mergable(sizer->block_size(), reinterpret_cast<const internal_node_t *>(node), reinterpret_cast<const internal_node_t *>(sibling), parent);
+        return internal_node::is_mergable(sizer->default_block_size(),
+                                          reinterpret_cast<const internal_node_t *>(node),
+                                          reinterpret_cast<const internal_node_t *>(sibling),
+                                          parent);
     }
 }
 
@@ -40,7 +44,7 @@ void split(value_sizer_t *sizer, node_t *node, node_t *rnode, store_key_t *media
         leaf::split(sizer, reinterpret_cast<leaf_node_t *>(node),
                     reinterpret_cast<leaf_node_t *>(rnode), median_out);
     } else {
-        internal_node::split(sizer->block_size(), reinterpret_cast<internal_node_t *>(node),
+        internal_node::split(sizer->default_block_size(), reinterpret_cast<internal_node_t *>(node),
                              reinterpret_cast<internal_node_t *>(rnode), median_out);
     }
 }
@@ -49,7 +53,10 @@ void merge(value_sizer_t *sizer, node_t *node, node_t *rnode, const internal_nod
     if (is_leaf(node)) {
         leaf::merge(sizer, reinterpret_cast<leaf_node_t *>(node), reinterpret_cast<leaf_node_t *>(rnode));
     } else {
-        internal_node::merge(sizer->block_size(), reinterpret_cast<internal_node_t *>(node), reinterpret_cast<internal_node_t *>(rnode), parent);
+        internal_node::merge(sizer->default_block_size(),
+                             reinterpret_cast<internal_node_t *>(node),
+                             reinterpret_cast<internal_node_t *>(rnode),
+                             parent);
     }
 }
 
@@ -58,7 +65,8 @@ void validate(DEBUG_VAR value_sizer_t *sizer, DEBUG_VAR const node_t *node) {
     if (is_leaf(node)) {
         leaf::validate(sizer, reinterpret_cast<const leaf_node_t *>(node));
     } else if (node->magic == internal_node_t::expected_magic) {
-        internal_node::validate(sizer->block_size(), reinterpret_cast<const internal_node_t *>(node));
+        internal_node::validate(sizer->default_block_size(),
+                                reinterpret_cast<const internal_node_t *>(node));
     } else {
         unreachable("Invalid leaf node type.");
     }

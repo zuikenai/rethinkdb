@@ -194,7 +194,7 @@ public:
 page_cache_t::page_cache_t(serializer_t *serializer,
                            cache_balancer_t *balancer,
                            alt_txn_throttler_t *throttler)
-    : max_block_size_(serializer->max_block_size()),
+    : default_block_size_(serializer->default_block_size()),
       serializer_(serializer),
       free_list_(serializer),
       evicter_(),
@@ -363,12 +363,12 @@ current_page_t *page_cache_t::internal_page_for_new_chosen(block_id_t block_id) 
     rassert(recency_for_block_id(block_id) == repli_timestamp_t::invalid,
             "expected chosen block %" PR_BLOCK_ID "to be deleted", block_id);
 
-    buf_ptr_t buf = buf_ptr_t::alloc_uninitialized(max_block_size_);
+    buf_ptr_t buf = buf_ptr_t::alloc_uninitialized(default_block_size_);
 
 #if !defined(NDEBUG) || defined(VALGRIND)
     // KSI: This should actually _not_ exist -- we are ignoring legitimate errors
     // where we write uninitialized data to disk.
-    memset(buf.cache_data(), 0xCD, max_block_size_.value());
+    memset(buf.cache_data(), 0xCD, default_block_size_.value());
 #endif
 
     resize_current_pages_to_id(block_id);

@@ -342,7 +342,7 @@ void store_t::reset_data(
     maybe_drop_all_sindexes(zero_metainfo, durability, interruptor);
 
     // Erase the data in small chunks
-    rdb_value_sizer_t sizer(cache->max_block_size());
+    rdb_value_sizer_t sizer(cache->default_block_size());
     always_true_key_tester_t key_tester;
 
     const unsigned int max_erased_per_pass = 100;

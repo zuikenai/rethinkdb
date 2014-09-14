@@ -77,10 +77,10 @@ protected:
 
 class traversal_state_t : public coro_pool_callback_t<acquisition_waiter_callback_t *> {
 public:
-    traversal_state_t(max_block_size_t _max_block_size,
+    traversal_state_t(default_block_size_t _default_block_size,
                       btree_traversal_helper_t *_helper,
                       signal_t *_interruptor)
-        : max_block_size(_max_block_size),
+        : default_block_size(_default_block_size),
           stat_block(NULL_BLOCK_ID),
           helper(_helper),
           interruptor(_interruptor),
@@ -101,7 +101,7 @@ public:
         }
     }
 
-    const max_block_size_t max_block_size;
+    const default_block_size_t default_block_size;
 
     /* The block id where we can find the stat block, we need this at the end
      * to update population counts. */
@@ -346,7 +346,7 @@ void btree_parallel_traversal(superblock_t *superblock,
                               signal_t *interruptor,
                               release_superblock_t release_superblock)
     THROWS_ONLY(interrupted_exc_t) {
-    traversal_state_t state(superblock->cache()->max_block_size(),
+    traversal_state_t state(superblock->cache()->default_block_size(),
                             helper, interruptor);
 
     /* Record the stat block for updating populations later */
@@ -497,7 +497,7 @@ void process_a_internal_node(traversal_state_t *state,
             = static_cast<const internal_node_t *>(read.get_data_read());
 
         ids_source = make_counted<ranged_block_ids_t>(
-                    state->max_block_size, node,
+                    state->default_block_size, node,
                     left_exclusive_or_null, right_inclusive_or_null, level);
     }
 

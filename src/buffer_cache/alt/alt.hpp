@@ -28,7 +28,7 @@ public:
     void end_txn(alt::throttler_acq_t acq);
 
     void inform_memory_limit_change(uint64_t memory_limit,
-                                    max_block_size_t max_block_size);
+                                    default_block_size_t default_block_size);
 
 private:
     const int64_t minimum_unwritten_changes_limit_;
@@ -45,7 +45,7 @@ public:
                      perfmon_collection_t *perfmon_collection);
     ~cache_t();
 
-    max_block_size_t max_block_size() const { return page_cache_.max_block_size(); }
+    default_block_size_t default_block_size() const { return page_cache_.default_block_size(); }
 
     // These todos come from the mirrored cache.  The real problem is that whole
     // cache account / priority thing is just one ghetto hack amidst a dozen other
@@ -318,7 +318,7 @@ public:
     const void *get_data_read() {
         uint32_t block_size;
         const void *data = get_data_read(&block_size);
-        guarantee(block_size == lock_->cache()->max_block_size().value());
+        guarantee(block_size == lock_->cache()->default_block_size().value());
         return data;
     }
 
@@ -335,7 +335,7 @@ public:
     ~buf_write_t();
 
     void *get_data_write(uint32_t block_size);
-    // Equivalent to passing the max_block_size.
+    // Equivalent to passing the default_block_size.
     void *get_data_write();
 
 private:

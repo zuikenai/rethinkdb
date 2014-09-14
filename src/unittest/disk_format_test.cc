@@ -125,7 +125,7 @@ TEST(DiskFormatTest, LogSerializerMetablockT) {
 }
 
 TEST(DiskFormatTest, LogSerializerStaticConfigT) {
-    EXPECT_EQ(0u, offsetof(log_serializer_on_disk_static_config_t, block_size_));
+    EXPECT_EQ(0u, offsetof(log_serializer_on_disk_static_config_t, default_block_size_));
     EXPECT_EQ(8u, offsetof(log_serializer_on_disk_static_config_t, extent_size_));
     EXPECT_EQ(16u, sizeof(log_serializer_on_disk_static_config_t));
 }
