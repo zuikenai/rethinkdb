@@ -41,7 +41,7 @@ protected:
     void get_write_transaction(object_buffer_t<txn_t> *txn_out);
     void get_read_transaction(object_buffer_t<txn_t> *txn_out);
 
-    block_size_t get_cache_block_size() const;
+    max_block_size_t get_cache_block_size() const;
 
 private:
     /* Shared between constructors */

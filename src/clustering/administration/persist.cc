@@ -239,7 +239,7 @@ persistent_file_t<metadata_t>::~persistent_file_t() {
 }
 
 template <class metadata_t>
-block_size_t persistent_file_t<metadata_t>::get_cache_block_size() const {
+max_block_size_t persistent_file_t<metadata_t>::get_cache_block_size() const {
     return cache->max_block_size();
 }
 
