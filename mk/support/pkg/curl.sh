@@ -3,6 +3,15 @@ version=7.36.0
 
 src_url=http://curl.haxx.se/download/curl-$version.tar.bz2
 
+# Don't fetch openssl on OS X
+# TODO: This functionality should really be elsewhere, in configure or
+# in openssl.sh, but pkg.sh isn't smart enough
+if [[ "$OS" = Darwin ]]; then
+    system_openssl=true
+else
+    system_openssl=false
+fi
+
 pkg_configure () {
     local prefix
     prefix="$(niceabspath "$install_dir")"
@@ -23,12 +32,24 @@ pkg_install () {
 }
 
 pkg_depends () {
-    echo libidn zlib openssl
+    local deps='libidn zlib'
+    if $system_openssl; then
+        echo $deps
+    else
+        echo $deps openssl
+    fi
 }
 
 pkg_link-flags () {
     local ret=''
     out () { ret="$ret$@ " ; }
+    out_openssl () {
+        if $system_openssl; then
+            out -l$1
+        else
+            out `pkg link-flags openssl ssl`
+        fi
+    }
     local flags
     local dl_libs=''
     flags="`"$install_dir/bin/curl-config" --static-libs`"
@@ -36,8 +57,8 @@ pkg_link-flags () {
         case "$flag" in
             -lz)      out `pkg link-flags zlib z` ;;
             -lidn)    out `pkg link-flags libidn idn` ;;
-            -lssl)    out `pkg link-flags openssl ssl` ;;
-            -lcrypto) out `pkg link-flags openssl crypto` ;;
+            -lssl)    out_openssl ssl
+            -lcrypto) out_openssl crypto
             -ldl)     dl_libs=-ldl;; # Linking may fail if -ldl isn't last
             -lrt)     out "$flag" ;;
             -l*)      echo "Warning: '$pkg' links with '$flag'" >&2
