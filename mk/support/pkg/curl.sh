@@ -3,15 +3,6 @@ version=7.36.0
 
 src_url=http://curl.haxx.se/download/curl-$version.tar.bz2
 
-# Don't fetch openssl on OS X
-# TODO: This functionality should really be elsewhere, in configure or
-# in openssl.sh, but pkg.sh isn't smart enough
-if [[ "$OS" = Darwin ]]; then
-    system_openssl=true
-else
-    system_openssl=false
-fi
-
 pkg_configure () {
     local prefix
     prefix="$(niceabspath "$install_dir")"
@@ -33,10 +24,10 @@ pkg_install () {
 
 pkg_depends () {
     local deps='libidn zlib'
-    if $system_openssl; then
-        echo $deps
-    else
+    if will_fetch openssl; then
         echo $deps openssl
+    else
+        echo $deps
     fi
 }
 
@@ -44,10 +35,10 @@ pkg_link-flags () {
     local ret=''
     out () { ret="$ret$@ " ; }
     out_openssl () {
-        if $system_openssl; then
-            out -l$1
-        else
+        if will_fetch openssl; then
             out `pkg link-flags openssl ssl`
+        else
+            out -l$1
         fi
     }
     local flags
