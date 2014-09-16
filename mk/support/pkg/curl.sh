@@ -18,7 +18,11 @@ pkg_install-include () {
 pkg_install () {
     pkg_copy_src_to_build
     pkg_configure
+
+    # install the libraries
     make -C "$build_dir/lib" install-libLTLIBRARIES
+
+    # install the curl-config script
     make -C "$build_dir" install-binSCRIPTS
 }
 
@@ -48,8 +52,8 @@ pkg_link-flags () {
         case "$flag" in
             -lz)      out `pkg link-flags zlib z` ;;
             -lidn)    out `pkg link-flags libidn idn` ;;
-            -lssl)    out_openssl ssl
-            -lcrypto) out_openssl crypto
+            -lssl)    out_openssl ssl ;;
+            -lcrypto) out_openssl crypto ;;
             -ldl)     dl_libs=-ldl;; # Linking may fail if -ldl isn't last
             -lrt)     out "$flag" ;;
             -l*)      echo "Warning: '$pkg' links with '$flag'" >&2

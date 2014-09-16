@@ -5,7 +5,9 @@ src_url="https://www.openssl.org/source/openssl-$version.tar.gz"
 
 
 pkg_configure () {
-    in_dir "$build_dir" ./config no-shared --prefix="$(niceabspath "$install_dir")"
+    # use shared instead of no-shared because curl's configure script
+    # fails on some platforms if it can't find -ldl
+    in_dir "$build_dir" ./config shared --prefix="$(niceabspath "$install_dir")"
 }
 
 pkg_install () {
@@ -17,4 +19,12 @@ pkg_install () {
     pkg_make -j1
 
     pkg_make install
+}
+
+pkg_link-flags () {
+    local dl_libs=''
+    if [[ "$OS" = "Linux" ]]; then
+        dl_libs=-ldl
+    fi
+    echo "$install_dir/lib/lib$(lc $1).a" $dl_libs
 }
