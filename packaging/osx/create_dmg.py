@@ -49,7 +49,7 @@ atexit.register(removeAtExit, scratchFolder)
 
 def compileUninstallApp():
 	outputPath = os.path.join(scratchFolder, 'Uninstall.app')
-	logFile = open(os.path.join(scratchFolder, 'uninstall-compile.log'), 'w')
+	logFile = open(os.path.join(scratchFolder, 'uninstall-compile.log'), 'w+')
 	try:
 		subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=logFile, stderr=logFile)
 	except Exception as e:
@@ -67,7 +67,7 @@ def convertReleaseNotes():
 		releaseNotes = re.sub(r'((?P<pre>[\s\(]+))#(?P<number>\d+)(?P<post>[, \)])', '\g<pre><a href="http://github.com/rethinkdb/rethinkdb/issues/\g<number>">#\g<number></a>\g<post>', releaseNotes)
 		
 		# contributors
-		releaseNotes = re.sub(r'(\@(?P<name>\w+))', '<a href="http://github.com/\g<name>">\g<0></a>', releaseNotes)
+		releaseNotes = re.sub(r'(@(?P<name>\w+))', '<a href="http://github.com/\g<name>">\g<0></a>', releaseNotes)
 		
 		with open(notesPath, 'w') as outputFile:
 			outputFile.write(releaseNotes)
@@ -97,7 +97,7 @@ def buildPackage(versionString, serverRootPath, signingName=None):
 		os.mkdir(packageFolder)
 	
 	serverPackagePath = os.path.join(packageFolder, 'rethinkdb_server.pkg')
-	logFile = open(os.path.join(scratchFolder, 'rethinkdb_server_pkg.log'), 'w')
+	logFile = open(os.path.join(scratchFolder, 'rethinkdb_server_pkg.log'), 'w+')
 	try:
 		subprocess.check_call(['/usr/bin/pkgbuild', '--root', serverRootPath, '--identifier', 'com.rethinkdb.server', '--version', versionString, serverPackagePath], stdout=logFile, stderr=logFile)
 	except Exception as e:
@@ -113,7 +113,7 @@ def buildPackage(versionString, serverRootPath, signingName=None):
 	if signingName is not None:
 		productBuildCommand += ['--sign', signingName]
 	
-	logFile = open(os.path.join(scratchFolder, 'rethinkdb_pkg.log'), 'w')
+	logFile = open(os.path.join(scratchFolder, 'rethinkdb_pkg.log'), 'w+')
 	try:
 		subprocess.check_call(productBuildCommand, stdout=logFile, stderr=logFile)
 	except Exception as e:
