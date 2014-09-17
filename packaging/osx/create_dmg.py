@@ -13,7 +13,7 @@ import dmgbuild, markdown2
 
 scratchFolder = tempfile.mkdtemp()
 
-packagePosition = (565, 165)
+packagePosition = (470, 170)
 
 defaultOptions = {
 	'format': 'UDBZ',
@@ -24,12 +24,12 @@ defaultOptions = {
 	'icon_size': 64,
 	'text_size': 14,
 	'icon_locations': {
-		'Release Notes.html': (450, 300),
-		'Uninstall.app': (565, 300),
-		'COPYRIGHT': (680, 300)
+		'Uninstall RethinkDB.app': (630, 170),
+		'Release Notes.html': (470, 303),
+		'COPYRIGHT': (630, 303)
 	},
 	'background': os.path.join(thisFolder, 'dmg_background.png'),
-	'window_rect': ((200, 200), (780, 429)),
+	'window_rect': ((200, 200), (739, 435)),
 	'default_view': 'icon-view',
 	'show_icon_preview': True
 }
@@ -48,7 +48,7 @@ def removeAtExit(removePath):
 atexit.register(removeAtExit, scratchFolder)
 
 def compileUninstallApp():
-	outputPath = os.path.join(scratchFolder, 'Uninstall.app')
+	outputPath = os.path.join(scratchFolder, 'Uninstall RethinkDB.app')
 	logFile = open(os.path.join(scratchFolder, 'uninstall-compile.log'), 'w+')
 	try:
 		subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=logFile, stderr=logFile)
@@ -62,7 +62,55 @@ def convertReleaseNotes():
 	notesPath = os.path.join(scratchFolder, 'Release Notes.html')
 	with open(os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'NOTES.md'), 'r') as sourceFile:
 		releaseNotes = markdown2.markdown(sourceFile.read().encode('utf-8'))
-				
+	        
+	        # note: percentages are escaped ('%%') for string interpolation
+	        template = """
+<!doctype html>
+<html>
+    <head>
+        <style type="text/css">
+            html, body {
+                font-family: 'Helvetica Neue', 'Arial', sans-serif;
+                font-size: 100%%;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                color: #333;
+            }
+
+            div.container {
+                position: relative;
+                width: 960px;
+                margin: 0 auto;
+                padding: 0;
+            }
+
+            a { color: #4075ad;}
+
+            p, li {
+                line-height: 1.3em;
+            }
+
+            hr{
+                border: 0;
+                border-bottom: thin solid #dfdfdf;
+                margin: 2em 0;
+            }
+
+            code {
+                background-color: #f7f7f7;
+                padding: 0.25em 0.4em;
+                font-size: 0.8em;
+                color: #c51244;
+                font-family: 'Monaco', 'Courier', monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">%s</div>
+    </body>
+</html>
+"""
 		# replace bug urls
 		releaseNotes = re.sub(r'((?P<pre>[\s\(]+))#(?P<number>\d+)(?P<post>[, \)])', '\g<pre><a href="http://github.com/rethinkdb/rethinkdb/issues/\g<number>">#\g<number></a>\g<post>', releaseNotes)
 		
@@ -70,7 +118,7 @@ def convertReleaseNotes():
 		releaseNotes = re.sub(r'(@(?P<name>\w+))', '<a href="http://github.com/\g<name>">\g<0></a>', releaseNotes)
 		
 		with open(notesPath, 'w') as outputFile:
-			outputFile.write(releaseNotes)
+			outputFile.write(template % releaseNotes)
 	return notesPath
 
 def buildPackage(versionString, serverRootPath, signingName=None):
