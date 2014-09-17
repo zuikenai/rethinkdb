@@ -144,15 +144,9 @@ def main():
 	
 	# find the binary
 	
-	rethinkdbPath = None
-	for root, dirs, files in os.walk(options.serverRoot):
-		if options.binaryName in files:
-			canidatePath = os.path.join(root, options.binaryName)
-			if os.access(canidatePath, os.X_OK):
-				rethinkdbPath = canidatePath
-				break
-	if rethinkdbPath is None:
-		parser.error('Unable to find a RethinkDB executable')
+	rethinkdbPath = os.path.join(options.serverRoot, 'usr', 'local', 'bin', 'rethinkdb')
+	if not os.access(rethinkdbPath, os.X_OK):
+		parser.error('No runnable RethinkDB executable at: %s' % rethinkdbPath)
 	
 	# get the version string
 	
