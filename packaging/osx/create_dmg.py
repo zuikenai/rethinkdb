@@ -7,7 +7,7 @@ import atexit, copy, os, re, shutil, subprocess, sys, tempfile
 
 thisFolder = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(thisFolder)
-import dmgbuild, markdown2
+import dmgbuild
 
 # == defaults
 
@@ -25,11 +25,11 @@ defaultOptions = {
 	'text_size': 14,
 	'icon_locations': {
 		'Uninstall RethinkDB.app': (630, 170),
-		'Release Notes.html': (470, 303),
+		'Release Notes.url': (470, 303),
 		'COPYRIGHT': (630, 303)
 	},
 	'background': os.path.join(thisFolder, 'dmg_background.png'),
-	'window_rect': ((200, 200), (739, 435)),
+	'window_rect': ((200, 200), (739, 420)),
 	'default_view': 'icon-view',
 	'show_icon_preview': True
 }
@@ -58,67 +58,10 @@ def compileUninstallApp():
 		raise
 	return outputPath
 
-def convertReleaseNotes():
-	notesPath = os.path.join(scratchFolder, 'Release Notes.html')
-	with open(os.path.join(thisFolder, os.path.pardir, os.path.pardir, 'NOTES.md'), 'r') as sourceFile:
-		releaseNotes = markdown2.markdown(sourceFile.read().encode('utf-8'))
-	        
-	        # note: percentages are escaped ('%%') for string interpolation
-	        template = """
-<!doctype html>
-<html>
-    <head>
-        <style type="text/css">
-            html, body {
-                font-family: 'Helvetica Neue', 'Arial', sans-serif;
-                font-size: 100%%;
-                margin: 0;
-                padding: 0;
-                border: 0;
-                color: #333;
-            }
-
-            div.container {
-                position: relative;
-                width: 960px;
-                margin: 0 auto;
-                padding: 0;
-            }
-
-            a { color: #4075ad;}
-
-            p, li {
-                line-height: 1.3em;
-            }
-
-            hr{
-                border: 0;
-                border-bottom: thin solid #dfdfdf;
-                margin: 2em 0;
-            }
-
-            code {
-                background-color: #f7f7f7;
-                padding: 0.25em 0.4em;
-                font-size: 0.8em;
-                color: #c51244;
-                font-family: 'Monaco', 'Courier', monospace;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">%s</div>
-    </body>
-</html>
-"""
-		# replace bug urls
-		releaseNotes = re.sub(r'((?P<pre>[\s\(]+))#(?P<number>\d+)(?P<post>[, \)])', '\g<pre><a href="http://github.com/rethinkdb/rethinkdb/issues/\g<number>">#\g<number></a>\g<post>', releaseNotes)
-		
-		# contributors
-		releaseNotes = re.sub(r'(@(?P<name>\w+))', '<a href="http://github.com/\g<name>">\g<0></a>', releaseNotes)
-		
-		with open(notesPath, 'w') as outputFile:
-			outputFile.write(template % releaseNotes)
+def makeReleaseNotesLink(version):
+	notesPath = os.path.join(scratchFolder, 'Release Notes.url')
+	with open(notesPath, 'w') as outputFile:
+		outputFile.write('[InternetShortcut]\nURL=https://github.com/rethinkdb/rethinkdb/releases/tag/v%s\n' % version)
 	return notesPath
 
 def buildPackage(versionString, serverRootPath, signingName=None):
@@ -261,7 +204,7 @@ def main():
 	
 	# = release notes
 	
-	dmgOptions['files'].append(convertReleaseNotes())
+	dmgOptions['files'].append(makeReleaseNotesLink(strictVersion))
 	
 	# == dmg creation
 	
