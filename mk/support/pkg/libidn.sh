@@ -18,9 +18,9 @@ pkg_link-flags () {
     OUTFILE=$TEMPFOLDER/libiconv_check.out
     printf "#include <iconv.h>\n int main(void) { iconv_t sample; sample = iconv_open(\"UTF-8\", \"ASCII\"); return 0; }" >$INFILE
     
-    if $CXX "$INFILE" -o "$OUTFILE" 2>/dev/null; then
+    if $CXX "$INFILE" -o "$OUTFILE" 2>/dev/null 1>&2; then
         echo "$lib"
-    elif $CXX -liconv "$INFILE" -o "$OUTFILE" 2>/dev/null; then
+    elif $CXX -liconv "$INFILE" -o "$OUTFILE" 2>/dev/null 1>&2; then
         echo "-liconv $lib"
     else
         rm -rf "$TEMPFOLDER"
