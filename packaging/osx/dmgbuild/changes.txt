@@ -1,8 +1,6 @@
-This is from the dmgbuild project: http://alastairs-place.net/projects/dmgbuild
+From the dmgbuild project: http://alastairs-place.net/projects/dmgbuild
 
-This is version 1.0 and modified in the following ways:
-- removed the need for the `six` module, while keeping (the partial) Python3 compatibility
-- individual items copied into the dmg now keep their permission (e.g.: executables)
-- the ‘defines’ now override settings (as stated)
-
-Pull request with changes sent with https://bitbucket.org/al45tair/dmgbuild/pull-request/1
+Based on commit b34fc97, modified in the following ways:
+- changed ‘defines’ to override settings rather than provide data to the configuration file
+- some better handling of bad cases (https://bitbucket.org/al45tair/dmgbuild/pull-request/2/)
+- added support for HiDPI backgrounds (https://bitbucket.org/al45tair/dmgbuild/pull-request/3/)
