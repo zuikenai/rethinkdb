@@ -49,6 +49,9 @@ atexit.register(removeAtExit, scratchFolder)
 
 def compileUninstallApp():
 	outputPath = os.path.join(scratchFolder, 'Uninstall RethinkDB.app')
+	
+	# - compile the app
+	
 	logFile = open(os.path.join(scratchFolder, 'uninstall-compile.log'), 'w+')
 	try:
 		subprocess.check_call(['/usr/bin/osacompile', '-o', outputPath, os.path.join(thisFolder, 'uninstall.scpt')], stdout=logFile, stderr=logFile)
@@ -56,6 +59,15 @@ def compileUninstallApp():
 		logFile.seek(0)
 		sys.stderr.write('Failed while compiling %s: %s\n%s' % (os.path.join(thisFolder, 'uninstall.scpt'), str(e), logFile.read()))
 		raise
+	
+	# - change the icon - ToDo: re-do this once an icon is chosen
+	
+	#iconPath = os.path.join(outputPath, 'Contents', 'Resources', 'applet.icns')
+	#os.unlink(iconPath)
+	#os.symlink('/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/Unsupported.icns', iconPath)
+	
+	# -
+	
 	return outputPath
 
 def makeReleaseNotesLink(version):
