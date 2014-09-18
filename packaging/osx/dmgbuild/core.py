@@ -363,20 +363,20 @@ def build_dmg(filename, volume_name, settings_file=None, defines={}, lookForHiDP
             
             if lookForHiDPI is True:
                 name, extension = os.path.splitext(os.path.basename(background))
-                orderdImages = [background]
+                orderedImages = [background]
                 imageDirectory = os.path.dirname(background)
-                for canidateName in os.listdir(imageDirectory):
+                for candidateName in os.listdir(imageDirectory):
                     hasScale = re.match(
                         '^(?P<name>.+)@(?P<scale>\d+)x(?P<extension>\.\w+)$',
-                        canidateName)
+                        candidateName)
                     if hasScale and name == hasScale.group('name') and \
                         extension == hasScale.group('extension'):
                             scale = int(hasScale.group('scale'))
-                            if len(orderdImages) < scale:
-                                orderdImages += [None] * (scale - len(orderdImages))
-                            orderdImages[scale - 1] = os.path.join(imageDirectory, canidateName)
+                            if len(orderedImages) < scale:
+                                orderedImages += [None] * (scale - len(orderedImages))
+                            orderedImages[scale - 1] = os.path.join(imageDirectory, candidateName)
                 
-                if len(orderdImages) > 1:
+                if len(orderedImages) > 1:
                     # compile the grouped tiff
                     backgroundFile = tempfile.NamedTemporaryFile(suffix='.tiff')
                     background = backgroundFile.name
@@ -384,7 +384,7 @@ def build_dmg(filename, volume_name, settings_file=None, defines={}, lookForHiDP
                     try:
                         subprocess.check_call(
                             ['/usr/bin/tiffutil', '-cathidpicheck'] +
-                            filter(None, orderdImages) +
+                            filter(None, orderedImages) +
                             ['-out', background], stdout=output, stderr=output)
                     except Exception as e:
                         output.seek(0)
