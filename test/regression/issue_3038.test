@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # Copyright 2014 RethinkDB, all rights reserved.
 
-# issue-url: https://github.com/rethinkdb/rethinkdb/issues/
-# issue-description: when a master suddenly dies cahangefeed requests to that serever are not cleanred up correctly
+# issue-url: https://github.com/rethinkdb/rethinkdb/issues/3038
+# issue-description: when a master suddenly dies changefeed requests to that server are not cleaned up correctly
 
 import os, subprocess, sys, tempfile, threading, time
 
@@ -62,13 +62,13 @@ command = [
 ]
 subprocess.check_call(command, stdout=tempfile.TemporaryFile(), stderr=subprocess.STDOUT)
 
-# == wait for the table to be avalible
+# == wait for the table to be available
 
 time.sleep(5) # longer than I like, but some servers are taking this long
 adminConn.wait_until_blueprint_satisfied(tableName)
 
 deadline = time.time() + 30
-while time.time() < deadline: # ToDo: use the table_wait command when avalible
+while time.time() < deadline: # ToDo: use the table_wait command when available
 	try:
 		r.db(databaseName).table(tableName).get(1).run(connA)
 		r.db(databaseName).table(tableName).get(records).run(connA)
