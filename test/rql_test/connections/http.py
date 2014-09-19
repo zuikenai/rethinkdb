@@ -2,7 +2,7 @@
 
 '''Tests the http term'''
 
-import datetime, os, sys, tempfile, unittest
+import datetime, os, re, sys, tempfile, unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'common'))
 import driver, utils
@@ -19,7 +19,7 @@ class TestHttpTerm(unittest.TestCase):
     def setUp(self):
         if self.conn == None:
             try:
-                port = int(sys.argv[1])
+                self._server.driver_port = int(sys.argv[1])
             except Exception:
                 self.__class__._server_log = tempfile.NamedTemporaryFile()
                 self.__class__._server = driver.Process(log_path=self._server_log.name)
@@ -27,15 +27,16 @@ class TestHttpTerm(unittest.TestCase):
             
             self.__class__.conn = r.connect('localhost', self._server.driver_port)
         if not hasattr(self, 'assertRaisesRegexp'):
-            def assertRaisesRegexp_replacement(self, exception, regexp, function, *args, **kwds):
+            def assertRaisesRegexp_replacement(exception, regexp, function, *args, **kwds):
                 try:
-                    command(*args, **kwds)
+                    function(*args, **kwds)
                 except Exception as e:
-                    if not isinstance(e, exception):
+                    if not isinstance(e, Exception):
                         raise
                     if not re.match(regexp, str(e)):
-                        raise exceptions.AssertionError('"%s" does not match "%s"' % (str(regexp), str(e)))
-                raise exceptions.AssertionError('TypeError not raised')
+                        raise AssertionError('"%s" does not match "%s"' % (str(regexp), str(e)))
+                    return
+                raise AssertionError('TypeError not raised for: %s' % str(function))
             self.assertRaisesRegexp = assertRaisesRegexp_replacement
     
     def err_string(self, method, url, msg):
@@ -245,4 +246,4 @@ class TestHttpTerm(unittest.TestCase):
         self.assertEqual(res, ['PTYPE<BINARY>', '{'])
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(argv=[sys.argv[0]])
