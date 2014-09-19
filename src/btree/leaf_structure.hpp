@@ -45,15 +45,23 @@ struct main_leaf_node_t {
     // The size of pair_offsets;
     uint16_t num_pairs;
 
-    uint16_t live_size;
+    // The total size of "live" entries, including their 2-byte pair offsets in
+    // pair_offsets.  Accounts for the size of metadata such as entries' timestamps.
+    uint16_t live_entry_size;
 
+    // The total size of "dead" entries, including their 2-byte pair offsets in
+    // pair_offsets.  Accounts for the size of metadata.
+    uint16_t dead_size;
+
+    // The frontmost offset.  This is just the minimum value in pair_offsets.  If
+    // num_paris is empty, this value is unspecified?
+    // TODO(2014-09): Is it still unspecified?
     uint16_t frontmost;
 
-    uint16_t tstamp_cutpoint;
-
-    uint16_t deletions_cutpoint;
-
+    // The pair offsets.
     uint16_t pair_offsets[];
+
+    static const block_magic_t expected_magic;
 
 } __attribute__ ((__packed__));
 
