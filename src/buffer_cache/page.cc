@@ -1,3 +1,4 @@
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #include "buffer_cache/page.hpp"
 
 #include "arch/runtime/coroutines.hpp"

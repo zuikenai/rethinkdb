@@ -1,3 +1,4 @@
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #ifndef BUFFER_CACHE_FREE_LIST_HPP_
 #define BUFFER_CACHE_FREE_LIST_HPP_
 

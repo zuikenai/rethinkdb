@@ -1,3 +1,4 @@
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #ifndef BUFFER_CACHE_EVICTION_BAG_HPP_
 #define BUFFER_CACHE_EVICTION_BAG_HPP_
 
