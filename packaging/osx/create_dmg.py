@@ -192,7 +192,7 @@ def main():
 	
 	# == build the pkg	
 	
-	pkgPath = buildPackage(strictVersion, options.serverRoot, signingName=options.signingName)
+	pkgPath = buildPackage(versionString, options.serverRoot, signingName=options.signingName)
 	
 	# == add dynamic content to settings
 	
