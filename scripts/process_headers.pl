@@ -179,12 +179,18 @@ sub includes_header ($$) {
     return $edges{$val}->{$header};
 }
 
+sub unprepend_src ($) {
+    my ($path) = @_;
+    $path =~ s!^\./src/!./!;
+    return $path;
+}
+
 my @pairs;
 if ($ARGV[0] && $ARGV[0] eq '-x') {
-    @pairs = sort { $a->[1] <=> $b->[1] } map { [$_, $counts{$_}] } (keys %{$edges{$ARGV[1]}});
+    @pairs = sort { $a->[1] <=> $b->[1] } map { [$_, $counts{$_}] } (keys %{$edges{unprepend_src($ARGV[1])}});
 
 } elsif ($ARGV[0]) {
-    @pairs = sort { $a->[1] <=> $b->[1] } map { [$_, $counts{$_}] } grep { includes_header($ARGV[0], $_) } keys %counts;
+    @pairs = sort { $a->[1] <=> $b->[1] } map { [$_, $counts{$_}] } grep { includes_header(unprepend_src($ARGV[0]), $_) } keys %counts;
 
 } else {
 
