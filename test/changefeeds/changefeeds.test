@@ -353,8 +353,8 @@ class ChangefeedsTest_Destructive(ChangefeedsTest_Base):
 		
 		self.assertRaises(r.RqlRuntimeError, NextWithTimeout.getNext, changefeed)
 
-	def test_secondary_falure(self):
-		'''Test when a primary shardholder fails for a range'''
+	def test_secondary_failure(self):
+		'''Test when a secondary shardholder fails for a range'''
 		
 		conn = self.servers[0].connection
 		
