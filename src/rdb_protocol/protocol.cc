@@ -4,19 +4,19 @@
 #include <algorithm>
 #include <functional>
 
+#include "btree/operations.hpp"
 #include "concurrency/cross_thread_signal.hpp"
 #include "concurrency/cross_thread_watchable.hpp"
 #include "containers/archive/boost_types.hpp"
 #include "containers/cow_ptr.hpp"
 #include "containers/disk_backed_queue.hpp"
+#include "debug.hpp"
 #include "rdb_protocol/btree.hpp"
 #include "rdb_protocol/changefeed.hpp"
 #include "rdb_protocol/env.hpp"
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/ql2.pb.h"
 #include "rdb_protocol/store.hpp"
-
-#include "debug.hpp"
 
 store_key_t key_max(sorting_t sorting) {
     return !reversed(sorting) ? store_key_t::max() : store_key_t::min();
