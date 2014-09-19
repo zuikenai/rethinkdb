@@ -4,10 +4,11 @@
 
 class buf_ptr_t;
 
-namespace new_leaf {
+struct orig_btree_t;
 
-buf_ptr_t init();
-
-}  // namespace new_leaf
+template <class btree_type>
+struct new_leaf {
+    static buf_ptr_t init();
+};
 
 #endif /* BTREE_NEW_LEAF_HPP_ */

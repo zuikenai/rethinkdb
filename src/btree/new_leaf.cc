@@ -3,9 +3,8 @@
 #include "btree/leaf_structure.hpp"
 #include "serializer/buf_ptr.hpp"
 
-namespace new_leaf {
-
-buf_ptr_t init() {
+template <class btree_type>
+buf_ptr_t new_leaf<btree_type>::init() {
     static_assert(sizeof(main_leaf_node_t) == offsetof(main_leaf_node_t, pair_offsets),
                   "Weird main_leaf_node_t packing.");
     buf_ptr_t ret = buf_ptr_t::alloc_uninitialized(
@@ -20,8 +19,4 @@ buf_ptr_t init() {
 }
 
 
-
-
-}  // namespace new_leaf
-
-
+template struct new_leaf<orig_btree_t>;
