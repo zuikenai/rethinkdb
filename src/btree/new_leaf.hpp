@@ -2,12 +2,12 @@
 #ifndef BTREE_NEW_LEAF_HPP_
 #define BTREE_NEW_LEAF_HPP_
 
-struct orig_btree_t;
+class buf_ptr_t;
 
-template <class btree_type>
-struct new_leaf {
+namespace new_leaf {
 
+buf_ptr_t init();
 
-};
+}  // namespace new_leaf
 
 #endif /* BTREE_NEW_LEAF_HPP_ */

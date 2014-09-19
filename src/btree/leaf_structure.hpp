@@ -51,11 +51,12 @@ struct main_leaf_node_t {
 
     // The total size of "dead" entries, including their 2-byte pair offsets in
     // pair_offsets.  Accounts for the size of metadata.
-    uint16_t dead_size;
+    uint16_t dead_entry_size;
 
     // The frontmost offset.  This is just the minimum value in pair_offsets.  If
-    // num_paris is empty, this value is unspecified?
-    // TODO(2014-09): Is it still unspecified?
+    // num_pairs is 0, what might this value be?  Probably something >=
+    // offsetof(main_leaf_node_t, pair_offsets).  TODO(2014-09): Update the docs on
+    // what frontmost could be when num_pairs == 0.
     uint16_t frontmost;
 
     // The pair offsets.
