@@ -46,6 +46,8 @@
 use strict;
 use File::Find;
 
+chdir 'src';  # (Does nothing if we're already in the src directory.)
+
 my @paths;
 
 my %edges;
