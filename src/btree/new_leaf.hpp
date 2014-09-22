@@ -6,6 +6,7 @@ template <class> class sized_ptr_t;
 struct btree_key_t;
 class buf_ptr_t;
 struct main_leaf_node_t;
+class value_sizer_t;
 
 namespace new_leaf {
 
@@ -18,6 +19,12 @@ struct new_leaf_t {
             sized_ptr_t<const main_leaf_node_t> node,
             const btree_key_t *key,
             int *index_out);
+
+#ifndef NDEBUG
+    void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);
+#else
+    void validate(value_sizer_t *, sized_ptr_t<const main_leaf_node_t>) { }
+#endif
 };
 
 }  // namespace new_leaf
