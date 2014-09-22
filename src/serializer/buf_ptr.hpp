@@ -81,7 +81,7 @@ public:
     }
 
     void release(block_size_t *block_size_out,
-                 scoped_malloc_t<ser_buffer_t> *ser_buffer_out) {
+                 scoped_malloc_t<ser_buffer_t> *ser_buffer_out) RVALUE_THIS {
         buf_ptr_t tmp(std::move(*this));
         *block_size_out = tmp.block_size_;
         *ser_buffer_out = std::move(tmp.ser_buffer_);

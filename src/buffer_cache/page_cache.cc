@@ -61,7 +61,7 @@ void page_read_ahead_cb_t::offer_read_ahead_buf(
 
     block_size_t block_size = block_size_t::undefined();
     scoped_malloc_t<ser_buffer_t> ptr;
-    local_buf.release(&block_size, &ptr);
+    std::move(local_buf).release(&block_size, &ptr);
 
     // We're going to reconstruct the buf_ptr_t on the other side of this do_on_thread
     // call, so we'd better make sure the block size is right.
