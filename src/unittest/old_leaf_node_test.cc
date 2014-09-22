@@ -9,6 +9,7 @@
 #include "unittest/gtest.hpp"
 #include "utils.hpp"
 
+namespace unittest {
 
 struct short_value_t;
 
@@ -36,8 +37,6 @@ private:
 
     DISABLE_COPYING(short_value_sizer_t);
 };
-
-namespace unittest {
 
 class short_value_buffer_t {
 public:
