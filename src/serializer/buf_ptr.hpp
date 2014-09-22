@@ -3,6 +3,7 @@
 
 #include <utility>
 
+#include "buffer_cache/sized_ptr.hpp"  // RSI: Move to containers?
 #include "containers/scoped.hpp"
 #include "errors.hpp"
 #include "math.hpp"
@@ -64,6 +65,11 @@ public:
 
     void *cache_data() const {
         return ser_buffer()->cache_data;
+    }
+
+    template <class U>
+    sized_ptr_t<U> sized_cache_data() const {
+        return sized_ptr_t<U>(static_cast<U *>(cache_data()), block_size().value());
     }
 
     // Returns the actual allocated size of the buffer, wich is

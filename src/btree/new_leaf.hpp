@@ -21,12 +21,15 @@ struct new_leaf_t {
             int *index_out);
 
 #ifndef NDEBUG
-    void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);
+    static void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);
 #else
-    void validate(value_sizer_t *, sized_ptr_t<const main_leaf_node_t>) { }
+    static void validate(value_sizer_t *, sized_ptr_t<const main_leaf_node_t>) { }
 #endif
 };
 
 }  // namespace new_leaf
+
+using new_leaf::orig_btree_t;
+using new_leaf::new_leaf_t;
 
 #endif /* BTREE_NEW_LEAF_HPP_ */

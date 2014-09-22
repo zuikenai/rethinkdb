@@ -200,14 +200,16 @@ void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const ma
     // Then check that no entries overlap.
     std::sort(entry_bounds.begin(), entry_bounds.end());
     {
-        size_t prev_back_offset = offsetof(main_leaf_node_t, pair_offsets) + back_of_pair_offsets;
+        size_t prev_back_offset = back_of_pair_offsets;
         for (auto pair : entry_bounds) {
             rassert(pair.first >= prev_back_offset);
             prev_back_offset = pair.second;
         }
 
         // This is redundant with some preceding entry_fits assertion.
-        rassert(prev_back_offset <= node.block_size);
+        rassert(prev_back_offset <= node.block_size,
+                "prev_back_offset = %zu, block_size = %" PRIu32,
+                prev_back_offset, node.block_size);
     }
 
     // Now that entries don't overlap, do other per-entry validation.

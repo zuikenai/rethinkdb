@@ -2,6 +2,8 @@
 #ifndef BUFFER_CACHE_SIZED_PTR_HPP_
 #define BUFFER_CACHE_SIZED_PTR_HPP_
 
+#include <stdint.h>
+
 template <class T>
 class sized_ptr_t {
 public:
