@@ -304,7 +304,7 @@ private:
     DISABLE_COPYING(LeafNodeTracker);
 };
 
-TEST(LeafNodeTest, Offsets) {
+TEST(OldLeafNodeTest, Offsets) {
     ASSERT_EQ(0u, offsetof(leaf_node_t, magic));
     ASSERT_EQ(4u, offsetof(leaf_node_t, num_pairs));
     ASSERT_EQ(6u, offsetof(leaf_node_t, live_size));
@@ -314,7 +314,7 @@ TEST(LeafNodeTest, Offsets) {
     ASSERT_EQ(12u, sizeof(leaf_node_t));
 }
 
-TEST(LeafNodeTest, Reinserts) {
+TEST(OldLeafNodeTest, Reinserts) {
     LeafNodeTracker tracker;
     std::string v = "aa";
     store_key_t k("key");
@@ -326,7 +326,7 @@ TEST(LeafNodeTest, Reinserts) {
     }
 }
 
-TEST(LeafNodeTest, TenInserts) {
+TEST(OldLeafNodeTest, TenInserts) {
     LeafNodeTracker tracker;
 
     ASSERT_LT(old_leaf::MANDATORY_TIMESTAMPS, 10);
@@ -354,7 +354,7 @@ TEST(LeafNodeTest, TenInserts) {
     }
 }
 
-TEST(LeafNodeTest, InsertRemove) {
+TEST(OldLeafNodeTest, InsertRemove) {
     LeafNodeTracker tracker;
 
     const int num_keys = 10;
@@ -387,7 +387,7 @@ TEST(LeafNodeTest, InsertRemove) {
     }
 }
 
-TEST(LeafNodeTest, RandomOutOfOrder) {
+TEST(OldLeafNodeTest, RandomOutOfOrder) {
     for (int try_num = 0; try_num < 10; ++try_num) {
         LeafNodeTracker tracker;
 
@@ -428,14 +428,14 @@ TEST(LeafNodeTest, RandomOutOfOrder) {
     }
 }
 
-TEST(LeafNodeTest, ZeroZeroMerging) {
+TEST(OldLeafNodeTest, ZeroZeroMerging) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
     right.Merge(&left);
 }
 
-TEST(LeafNodeTest, ZeroOneMerging) {
+TEST(OldLeafNodeTest, ZeroOneMerging) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -444,7 +444,7 @@ TEST(LeafNodeTest, ZeroOneMerging) {
     right.Merge(&left);
 }
 
-TEST(LeafNodeTest, OneZeroMerging) {
+TEST(OldLeafNodeTest, OneZeroMerging) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -454,7 +454,7 @@ TEST(LeafNodeTest, OneZeroMerging) {
 }
 
 
-TEST(LeafNodeTest, OneOneMerging) {
+TEST(OldLeafNodeTest, OneOneMerging) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -464,7 +464,7 @@ TEST(LeafNodeTest, OneOneMerging) {
     right.Merge(&left);
 }
 
-TEST(LeafNodeTest, SimpleMerging) {
+TEST(OldLeafNodeTest, SimpleMerging) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -494,7 +494,7 @@ TEST(LeafNodeTest, SimpleMerging) {
     right.Merge(&left);
 }
 
-TEST(LeafNodeTest, MergingWithRemoves) {
+TEST(OldLeafNodeTest, MergingWithRemoves) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -510,7 +510,7 @@ TEST(LeafNodeTest, MergingWithRemoves) {
     right.Merge(&left);
 }
 
-TEST(LeafNodeTest, MergingWithHugeEntries) {
+TEST(OldLeafNodeTest, MergingWithHugeEntries) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -533,7 +533,7 @@ TEST(LeafNodeTest, MergingWithHugeEntries) {
 }
 
 
-TEST(LeafNodeTest, LevelingLeftToRight) {
+TEST(OldLeafNodeTest, LevelingLeftToRight) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -556,7 +556,7 @@ TEST(LeafNodeTest, LevelingLeftToRight) {
     ASSERT_TRUE(could_level);
 }
 
-TEST(LeafNodeTest, LevelingLeftToZero) {
+TEST(OldLeafNodeTest, LevelingLeftToZero) {
     LeafNodeTracker left;
     LeafNodeTracker right;
 
@@ -569,7 +569,7 @@ TEST(LeafNodeTest, LevelingLeftToZero) {
     ASSERT_TRUE(could_level);
 }
 
-TEST(LeafNodeTest, LevelingRightToLeft) {
+TEST(OldLeafNodeTest, LevelingRightToLeft) {
     LeafNodeTracker left;
     LeafNodeTracker right;
     for (int i = 0; i < 4272 / 12; ++i) {
@@ -584,7 +584,7 @@ TEST(LeafNodeTest, LevelingRightToLeft) {
 }
 
 
-TEST(LeafNodeTest, LevelingRightToZero) {
+TEST(OldLeafNodeTest, LevelingRightToZero) {
     LeafNodeTracker left;
     LeafNodeTracker right;
     for (int i = 0; i < 4272 / 12; ++i) {
@@ -596,7 +596,7 @@ TEST(LeafNodeTest, LevelingRightToZero) {
     ASSERT_TRUE(could_level);
 }
 
-TEST(LeafNodeTest, Splitting) {
+TEST(OldLeafNodeTest, Splitting) {
     LeafNodeTracker left;
     for (int i = 0; i < 4272 / 12; ++i) {
         left.Insert(store_key_t(strprintf("a%d", i)), strprintf("A%d", i));
@@ -607,7 +607,7 @@ TEST(LeafNodeTest, Splitting) {
     left.Split(&right);
 }
 
-TEST(LeafNodeTest, Fullness) {
+TEST(OldLeafNodeTest, Fullness) {
     LeafNodeTracker node;
     int i;
     for (i = 0; i < 4272 / 12; ++i) {
