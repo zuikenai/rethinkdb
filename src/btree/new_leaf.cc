@@ -17,12 +17,15 @@ struct orig_btree_t {
     }
 };
 
-const entry_t *get_entry(const main_leaf_node_t *node, int offset) {
-    return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node) + offset);
+const entry_t *get_entry(sized_ptr_t<const main_leaf_node_t> node, int offset) {
+    rassert(offset >= static_cast<int>(offsetof(main_leaf_node_t, pair_offsets) + node.buf->num_pairs * sizeof(uint16_t)));
+    rassert(static_cast<uint32_t>(offset) < node.block_size);
+    return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node.buf) + offset);
 }
 
-const entry_t *entry_for_index(const main_leaf_node_t *node, int index) {
-    return get_entry(node, node->pair_offsets[index]);
+const entry_t *entry_for_index(sized_ptr_t<const main_leaf_node_t> node, int index) {
+    rassert(index >= 0 && index < node.buf->num_pairs);
+    return get_entry(node, node.buf->pair_offsets[index]);
 }
 
 template <class btree_type>
@@ -59,9 +62,7 @@ bool new_leaf_t<btree_type>::find_key(
         // when (end - beg) > 0, (end - beg) / 2 is always less than (end - beg).  So beg <= test_point < end.
         int test_point = beg + (end - beg) / 2;
 
-        int res = btree_type::compare_key_to_entry(
-                key,
-                entry_for_index(node.buf, test_point));
+        int res = btree_type::compare_key_to_entry(key, entry_for_index(node, test_point));
 
         if (res < 0) {
             // key < *test_point.
@@ -81,7 +82,6 @@ bool new_leaf_t<btree_type>::find_key(
     // should be set to beg, and false should be returned.
     *index_out = beg;
     return false;
-
 }
 
 template struct new_leaf_t<orig_btree_t>;
