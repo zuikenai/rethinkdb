@@ -124,6 +124,7 @@ buf_ptr_t new_leaf_t<btree_type>::init() {
     p->live_entry_size = 0;
     p->dead_entry_size = 0;
     p->frontmost = offsetof(main_leaf_node_t, pair_offsets);
+    p->partial_replicability_age = repli_timestamp_t::distant_past;
     return ret;
 }
 

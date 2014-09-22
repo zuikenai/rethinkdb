@@ -60,7 +60,8 @@ struct main_leaf_node_t {
     // what frontmost could be when num_pairs == 0.
     uint16_t frontmost;
 
-    // The timestamp for which we aren't missing any "dead" entries.
+    // The timestamp for which we aren't missing any "dead" entries.  (Initialized to
+    // distant_past when we have 0 entries.)
     repli_timestamp_t partial_replicability_age;
 
     // The pair offsets.
