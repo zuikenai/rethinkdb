@@ -31,7 +31,7 @@ public:
 
     static const repli_timestamp_t distant_past;
     static const repli_timestamp_t invalid;
-};
+} __attribute__((__packed__));
 
 // Returns the max of x and y, treating invalid as a negative infinity value.
 repli_timestamp_t superceding_recency(repli_timestamp_t x, repli_timestamp_t y);

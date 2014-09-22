@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "buffer_cache/types.hpp"
+#include "repli_timestamp.hpp"
 
 // The leaf node begins with the following struct layout.  (This is the old leaf node
 // layout, which is getting migrated to main_leaf_node_t or something else, depending
@@ -58,6 +59,9 @@ struct main_leaf_node_t {
     // offsetof(main_leaf_node_t, pair_offsets).  TODO(2014-09): Update the docs on
     // what frontmost could be when num_pairs == 0.
     uint16_t frontmost;
+
+    // The timestamp for which we aren't missing any "dead" entries.
+    repli_timestamp_t partial_replicability_age;
 
     // The pair offsets.
     uint16_t pair_offsets[];
