@@ -11,6 +11,10 @@
 
 namespace unittest {
 
+// Tests for the new leaf node code might reuse some of the same names here, so I've
+// made this namespace.
+namespace old_leaf_node_test {
+
 struct short_value_t;
 
 class short_value_sizer_t : public value_sizer_t {
@@ -612,5 +616,7 @@ TEST(LeafNodeTest, Fullness) {
 
     ASSERT_TRUE(node.IsFull(store_key_t(strprintf("a%d", i)), strprintf("A%d", i)));
 }
+
+}  // namespace old_leaf_node_test
 
 }  // namespace unittest
