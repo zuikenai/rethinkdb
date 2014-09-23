@@ -21,12 +21,13 @@ struct entry_t;
 //
 // Differences from old_leaf:
 //
-//   - An "entry" structure includes the timestamp (because now all entries have timestamps).
+//   - An "entry" structure includes the timestamp (because now all entries have
+//     timestamps).
 //
 //   - There are no "skip" entries (because we don't care to enumerate the entries
 //     efficiently in physical order, because there's no meaning to their physical
-//     order).  Unused space in the block SHOULD be zeroed to avoid having unused
-//     space on disk.
+//     order).  Unused space in the block SHOULD be zeroed to avoid having garbage
+//     data on disk.
 
 struct orig_btree_t {
 public:
