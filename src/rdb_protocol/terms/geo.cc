@@ -75,6 +75,7 @@ private:
     counted_t<val_t> eval_geo(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<val_t> v = args->arg(env, 0);
         datum_t geo_json = v->as_datum();
+        validate_geojson(geo_json);
 
         // Store the geo_json object inline, just add a $reql_type$ field
         datum_object_builder_t result(geo_json);
@@ -82,56 +83,11 @@ private:
                               datum_t(pseudo::geometry_string));
         rcheck(!dup, base_exc_t::GENERIC, "GeoJSON object already had a "
                                           "$reql_type$ field.");
-
-        datum_t coordinates = result.try_get(datum_string_t("coordinates"));
-        if (coordinates.get_type() == datum_t::type_t::R_ARRAY) {
-            result.overwrite("coordinates", convert_coordinates(coordinates,
-                                                                env->env->limits()));
-        }
-
         // Drop the `bbox` field in case it exists. We don't have any use for it.
         UNUSED bool had_bbox = result.delete_field("bbox");
 
-        datum_t datum_result = std::move(result).to_datum();
-        validate_geojson(datum_result);
-        return new_val(datum_result);
+        return new_val(std::move(result).to_datum());
     }
-
-    static const datum_t convert_coordinates(const datum_t &geojson,
-                                             const configured_limits_t &limits) {
-        if (geojson.get_type() != datum_t::type_t::R_ARRAY) {
-            return geojson;
-        }
-
-        if (geojson.arr_size() == 0) {
-            return datum_t(std::vector<datum_t>(), limits);
-        }
-
-        datum_t first_elem = geojson.get(0);
-        if (first_elem.get_type() == datum_t::type_t::R_ARRAY) {
-            datum_array_builder_t builder(limits);
-            for (size_t i = 0; i < geojson.arr_size(); ++i) {
-                builder.add(convert_coordinates(geojson.get(i), limits));
-            }
-            return std::move(builder).to_datum();
-        }
-
-        // At this point, we assume we are making a coordinate pair
-        // Being lenient here to allow validation later for more descriptive errors
-        datum_object_builder_t builder;
-        if (geojson.arr_size() >= 1) {
-            builder.overwrite(pseudo::geo_longitude_key, first_elem);
-        }
-        if (geojson.arr_size() >= 2) {
-            builder.overwrite(pseudo::geo_latitude_key, geojson.get(1));
-        }
-        if (geojson.arr_size() >= 3) {
-            // We don't actually use altitude, but this will be caught later
-            builder.overwrite("alt", geojson.get(1));
-        }
-        return std::move(builder).to_datum();
-    }
-
     virtual const char *name() const { return "geojson"; }
 };
 
@@ -149,30 +105,8 @@ private:
         datum_object_builder_t result(v->as_ptype(pseudo::geometry_string));
         bool success = result.delete_field(datum_t::reql_type_string);
         r_sanity_check(success);
-
-        // Convert internal coordinate objects into valid geojson [lat, long] arrays
-        datum_t coordinates = result.try_get(datum_string_t("coordinates"));
-        if (coordinates.get_type() != datum_t::type_t::R_NULL) {
-            result.overwrite("coordinates", convert_coordinates(coordinates,
-                                                                env->env->limits()));
-        }
         return new_val(std::move(result).to_datum());
     }
-
-    static datum_t convert_coordinates(const datum_t &internal,
-                                       const configured_limits_t &limits) {
-        datum_array_builder_t builder(limits);
-        if (internal.get_type() == datum_t::type_t::R_ARRAY) {
-            for (size_t i = 0; i < internal.arr_size(); ++i) {
-                builder.add(convert_coordinates(internal.get(i), limits));
-            }
-        } else {
-            builder.add(internal.get_field(pseudo::geo_longitude_key));
-            builder.add(internal.get_field(pseudo::geo_latitude_key));
-        }
-        return std::move(builder).to_datum();
-    }
-
     virtual const char *name() const { return "to_geojson"; }
 };
 
@@ -182,11 +116,11 @@ public:
         : geo_term_t(env, term, argspec_t(2)) { }
 private:
     counted_t<val_t> eval_geo(scope_env_t *env, args_t *args, eval_flags_t) const {
-        double lat = args->arg(env, 0)->as_num();
-        double lon = args->arg(env, 1)->as_num();
-        lat_lon_point_t point(lat, lon);
+        double lon = args->arg(env, 0)->as_num();
+        double lat = args->arg(env, 1)->as_num();
+        lon_lat_point_t point(lon, lat);
 
-        const datum_t result = construct_geo_point(point);
+        const datum_t result = construct_geo_point(point, env->env->limits());
         validate_geojson(result);
 
         return new_val(result);
@@ -196,25 +130,25 @@ private:
 
 // Accepts either a geometry object of type Point, or an array with two coordinates.
 // We often want to support both.
-lat_lon_point_t parse_point_argument(const datum_t &point_datum) {
+lon_lat_point_t parse_point_argument(const datum_t &point_datum) {
     if (point_datum.is_ptype(pseudo::geometry_string)) {
         // The argument is a point (should be at least, if not this will throw)
-        return extract_lat_lon_point(point_datum);
+        return extract_lon_lat_point(point_datum);
     } else {
         // The argument must be a coordinate pair
         rcheck_target(&point_datum, base_exc_t::GENERIC, point_datum.arr_size() == 2,
             strprintf("Expected point coordinate pair.  "
                       "Got %zu element array instead of a 2 element one.",
                       point_datum.arr_size()));
-        double lat = point_datum.get(0).as_num();
-        double lon = point_datum.get(1).as_num();
-        return lat_lon_point_t(lat, lon);
+        double lon = point_datum.get(0).as_num();
+        double lat = point_datum.get(1).as_num();
+        return lon_lat_point_t(lon, lat);
     }
 }
 
 // Used by line_term_t and polygon_term_t
-lat_lon_line_t parse_line_from_args(scope_env_t *env, args_t *args) {
-    lat_lon_line_t line;
+lon_lat_line_t parse_line_from_args(scope_env_t *env, args_t *args) {
+    lon_lat_line_t line;
     line.reserve(args->num_args());
     for (size_t i = 0; i < args->num_args(); ++i) {
         counted_t<const val_t> point_arg = args->arg(env, i);
@@ -231,7 +165,7 @@ public:
         : geo_term_t(env, term, argspec_t(2, -1)) { }
 private:
     counted_t<val_t> eval_geo(scope_env_t *env, args_t *args, eval_flags_t) const {
-        const lat_lon_line_t line = parse_line_from_args(env, args);
+        const lon_lat_line_t line = parse_line_from_args(env, args);
 
         const datum_t result = construct_geo_line(line, env->env->limits());
         validate_geojson(result);
@@ -247,7 +181,7 @@ public:
         : geo_term_t(env, term, argspec_t(3, -1)) { }
 private:
     counted_t<val_t> eval_geo(scope_env_t *env, args_t *args, eval_flags_t) const {
-        const lat_lon_line_t shell = parse_line_from_args(env, args);
+        const lon_lat_line_t shell = parse_line_from_args(env, args);
 
         const datum_t result = construct_geo_polygon(shell, env->env->limits());
         validate_geojson(result);
@@ -392,11 +326,11 @@ private:
         ellipsoid_spec_t reference_ellipsoid = pick_reference_ellipsoid(env, args);
         dist_unit_t radius_unit = pick_dist_unit(env, args);
 
-        lat_lon_point_t center = parse_point_argument(center_arg->as_datum());
+        lon_lat_point_t center = parse_point_argument(center_arg->as_datum());
         double radius = radius_arg->as_num();
         radius = convert_dist_unit(radius, radius_unit, dist_unit_t::M);
 
-        const lat_lon_line_t circle =
+        const lon_lat_line_t circle =
             build_circle(center, radius, num_vertices, reference_ellipsoid);
 
         const datum_t result =
@@ -439,8 +373,8 @@ public:
 private:
     counted_t<val_t> eval_geo(scope_env_t *env, args_t *args, eval_flags_t) const {
         counted_t<val_t> l_arg = args->arg(env, 0);
-        const lat_lon_line_t shell =
-            extract_lat_lon_line(l_arg->as_ptype(pseudo::geometry_string));
+        const lon_lat_line_t shell =
+            extract_lon_lat_line(l_arg->as_ptype(pseudo::geometry_string));
 
         const datum_t result = construct_geo_polygon(shell, env->env->limits());
         validate_geojson(result);
@@ -464,7 +398,7 @@ private:
             rfail(base_exc_t::GENERIC, "get_nearest requires an index argument.");
         }
         std::string index_str = index->as_str().to_std();
-        lat_lon_point_t center = parse_point_argument(center_arg->as_datum());
+        lon_lat_point_t center = parse_point_argument(center_arg->as_datum());
         ellipsoid_spec_t reference_ellipsoid = pick_reference_ellipsoid(env, args);
         dist_unit_t dist_unit = pick_dist_unit(env, args);
         counted_t<val_t> max_dist_arg = args->optarg(env, "max_dist");
