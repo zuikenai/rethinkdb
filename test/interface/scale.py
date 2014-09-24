@@ -61,6 +61,9 @@ with driver.Metacluster() as metacluster:
     ob["connect"] = time.time() - start
     print "Done (%.2f seconds)" % ob["connect"]
 
+    datum["server_version"] = \
+        r.db("rethinkdb").table("server_status").nth(0)["version"].run(conns[0])
+
     print "Creating a DB..."
     start = time.time()
     r.db_create("test").run(conns[0])
