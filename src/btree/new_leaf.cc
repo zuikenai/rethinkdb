@@ -6,7 +6,7 @@
 #include "btree/keys.hpp"
 #include "btree/leaf_structure.hpp"
 #include "btree/node.hpp"
-#include "buffer_cache/sized_ptr.hpp"
+#include "containers/sized_ptr.hpp"
 #include "serializer/buf_ptr.hpp"
 
 // There is no instantiation for entry_t anywhere.

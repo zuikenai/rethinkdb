@@ -3,8 +3,8 @@
 
 #include <utility>
 
-#include "buffer_cache/sized_ptr.hpp"  // RSI: Move to containers?
 #include "containers/scoped.hpp"
+#include "containers/sized_ptr.hpp"
 #include "errors.hpp"
 #include "math.hpp"
 #include "serializer/types.hpp"
