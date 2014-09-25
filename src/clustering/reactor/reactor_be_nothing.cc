@@ -4,6 +4,8 @@
 #include "errors.hpp"
 #include <boost/bind.hpp>
 
+#include "debug.hpp"
+
 #include "clustering/immediate_consistency/branch/backfiller.hpp"
 #include "clustering/immediate_consistency/branch/replier.hpp"
 #include "concurrency/cross_thread_signal.hpp"
@@ -62,9 +64,9 @@ bool reactor_t::is_safe_for_us_to_be_nothing(const change_tracking_map_t<peer_id
 void reactor_t::be_nothing(region_t region,
         store_view_t *svs, const clone_ptr_t<watchable_t<blueprint_t> > &blueprint,
         signal_t *interruptor) THROWS_NOTHING {
+    debug_timer_t timer("be_nothing()");
     try {
         directory_entry_t directory_entry(this, region);
-
         {
             cross_thread_signal_t ct_interruptor(interruptor, svs->home_thread());
 
@@ -112,6 +114,7 @@ void reactor_t::be_nothing(region_t region,
              */
             wait_for_directory_acks(version_to_wait_on, interruptor);
 
+            timer.tick("A");
             /* Make sure we don't go down and delete the data on our machine
              * before every who needs a copy has it. */
             run_until_satisfied_2(
@@ -120,6 +123,8 @@ void reactor_t::be_nothing(region_t region,
                 boost::bind(&reactor_t::is_safe_for_us_to_be_nothing, this, _1, _2, region),
                 interruptor,
                 REACTOR_RUN_UNTIL_SATISFIED_NAP);
+            
+            timer.tick("wait others");
         }
 
         /* We now know that it's safe to shutdown so we tell the other peers
@@ -154,6 +159,7 @@ void reactor_t::be_nothing(region_t region,
          * end of story. */
         directory_entry.set(reactor_business_card_t::nothing_t());
 
+        timer.tick("B");
         interruptor->wait_lazily_unordered();
     } catch (const interrupted_exc_t &) {
         /* ignore */

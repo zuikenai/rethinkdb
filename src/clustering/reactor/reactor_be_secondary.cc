@@ -4,6 +4,8 @@
 #include "errors.hpp"
 #include <boost/bind.hpp>
 
+#include "debug.hpp"
+
 #include "clustering/immediate_consistency/branch/listener.hpp"
 #include "clustering/immediate_consistency/branch/replier.hpp"
 #include "clustering/immediate_consistency/query/direct_reader.hpp"
@@ -145,6 +147,7 @@ bool reactor_t::find_replier_in_directory(
 
 void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr_t<watchable_t<blueprint_t> > &blueprint, signal_t *interruptor) THROWS_NOTHING {
     try {
+        debug_timer_t timer("be_secondary()");
         order_source_t order_source(svs->home_thread());  // TODO: order_token_t::ignore
 
         /* Tell everyone that we're backfilling so that we can get up to
@@ -188,6 +191,7 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                     activity(to_version_range_map(metainfo_blob), backfiller.get_business_card(), direct_reader.get_business_card(), branch_history);
 
                 directory_entry.set(activity);
+                timer.tick("A");
 
                 /* Wait until we can find a primary for our region. */
                 run_until_satisfied_2(
@@ -196,6 +200,8 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                     boost::bind(&reactor_t::find_broadcaster_in_directory, this, region, _2, _1, &broadcaster),
                     interruptor,
                     REACTOR_RUN_UNTIL_SATISFIED_NAP);
+
+                timer.tick("find primary");
 
                 /* We need to save this to a local variable because there may be a
                  * race condition should the broadcaster go down. */
@@ -215,6 +221,8 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                     boost::bind(&reactor_t::find_replier_in_directory, this, region, branch_id, _2, _1, &location_to_backfill_from, &peer_id, &activity_id),
                     interruptor,
                     REACTOR_RUN_UNTIL_SATISFIED_NAP);
+
+                timer.tick("find backfiller");
 
                 /* Note, the backfiller goes out of scope here, that's because
                  * we're about to start backfilling from someone else and thus
@@ -244,6 +252,8 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                 perfmon_collection_t region_perfmon_collection;
                 perfmon_membership_t region_perfmon_membership(&regions_perfmon_collection, &region_perfmon_collection, region_name);
 
+                timer.tick("B");
+
                 /* This causes backfilling to happen. Once this constructor returns we are up to date. */
                 listener_t listener(base_path, io_backender, mailbox_manager,
                                     backfill_throttler, ct_broadcaster.get_watchable(),
@@ -251,6 +261,8 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                                     ct_location_to_backfill_from.get_watchable(),
                                     backfill_session_id, &regions_perfmon_collection,
                                     &ct_interruptor, &order_source);
+
+                timer.tick("listener_t");
 
                 /* This gives others access to our services, in particular once
                  * this constructor returns people can send us queries and use
@@ -265,6 +277,8 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                 /* Make the directory reflect the new role that we are filling.
                  * (Being a secondary). */
                 directory_entry.set(reactor_business_card_t::secondary_up_to_date_t(branch_id, replier.get_business_card(), direct_reader.get_business_card()));
+
+                timer.tick("C");
 
                 /* Wait for something to change. */
                 wait_interruptible(&ct_broadcaster_lost_signal, interruptor);

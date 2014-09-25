@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2010-2014 RethinkDB, all rights reserved.
-import sys, os, time, traceback, socket, md5
+import sys, os, time, traceback, socket, pprint
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import driver, scenario_common, utils
 from vcoptparse import *
@@ -8,13 +8,17 @@ r = utils.import_python_driver()
 
 op = OptParser()
 scenario_common.prepare_option_parser_mode_flags(op)
-op["num_servers"] = IntFlag("--num-servers", 5)
+op["servers"] = IntFlag("--servers", 5)
+op["shards"] = IntFlag("--shards", 5)
+op["replicas"] = IntFlag("--replicas", 3)
 op["dump"] = BoolFlag("--dump")
 opts = op.parse(sys.argv)
 
 with open(__file__) as this_script:
     datum = {
-        "num_servers": opts["num_servers"],
+        "num_servers": opts["servers"],
+        "num_shards": opts["shards"],
+        "num_replicas": opts["replicas"],
         "host_name": socket.gethostname(),
         "time_stamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "script_hash": hash(this_script.read()),
@@ -26,7 +30,7 @@ with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
     executable_path, command_prefix, serve_options = scenario_common.parse_mode_flags(opts)
 
-    num_servers = opts["num_servers"]
+    num_servers = opts["servers"]
     print "Spinning up %d processes..." % num_servers
     start = time.time()
     files = [driver.Files(metacluster,
@@ -99,9 +103,10 @@ with driver.Metacluster() as metacluster:
 
     print "Reconfiguring table..."
     start = time.time()
-    r.table("test").reconfigure(num_servers, 3).run(conns[0])
+    new = r.table("test").reconfigure(opts["shards"], opts["replicas"]).run(conns[0])
     ob["reconfigure_a"] = time.time() - start
     print "Done (%.2f seconds)" % ob["reconfigure_a"]
+    pprint.pprint(new)
 
     print "Waiting for reconfigure to take effect..."
     start = time.time()

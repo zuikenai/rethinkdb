@@ -9,6 +9,8 @@
 #include "errors.hpp"
 #include <boost/make_shared.hpp>
 
+#include "debug.hpp"
+
 #include "concurrency/cross_thread_signal.hpp"
 #include "concurrency/pmap.hpp"
 #include "concurrency/promise.hpp"
@@ -510,6 +512,7 @@ void semilattice_manager_t<metadata_t>::on_connections_change() {
 
 template<class metadata_t>
 void semilattice_manager_t<metadata_t>::join_metadata_locally(metadata_t added_metadata) {
+    debug_timer_t timer("join_metadata_locally()");
     assert_thread();
     DEBUG_VAR rwi_lock_assertion_t::write_acq_t acq(&metadata_mutex);
     semilattice_join(&metadata, added_metadata);

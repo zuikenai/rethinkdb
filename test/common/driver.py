@@ -326,13 +326,15 @@ class _Process(object):
 
     def wait_until_started_up(self, timeout = 30):
         time_limit = time.time() + timeout
+        delay = 0.1
         while time.time() < time_limit:
             self.check()
             s = socket.socket()
             try:
                 s.connect(("localhost", self.http_port))
             except socket.error:
-                time.sleep(1)
+                time.sleep(delay)
+                delay *= 1.5
             else:
                 break
             finally:
@@ -342,6 +344,7 @@ class _Process(object):
 
     def read_ports_from_log(self, timeout = 30):
         time_limit = time.time() + timeout
+        delay = 0.1
         while time.time() < time_limit:
             self.check()
             try:
@@ -350,14 +353,16 @@ class _Process(object):
                 http_ports = re.findall("(?<=Listening for administrative HTTP connections on port )([0-9]+)", log)
                 driver_ports = re.findall("(?<=Listening for client driver connections on port )([0-9]+)", log)
                 if cluster_ports == [] or http_ports == []:
-                    time.sleep(1)
+                    time.sleep(delay)
+                    delay *= 1.5
                 else:
                     self.cluster_port = int(cluster_ports[-1])
                     self.http_port = int(http_ports[-1])
                     self.driver_port = int(driver_ports[-1])
                     break
             except IOError:
-                time.sleep(1)
+                time.sleep(delay)
+                delay *= 1.5
 
         else:
             raise RuntimeError("Timeout while trying to read cluster port from log file")
@@ -384,10 +389,12 @@ class _Process(object):
             self.process.send_signal(signal.SIGINT)
             start_time = time.time()
             grace_period = 300
+            delay = 0.1
             while time.time() < start_time + grace_period:
                 if self.process.poll() is not None:
                     break
-                time.sleep(1)
+                time.sleep(delay)
+                delay *= 1.5
             else:
                 raise RuntimeError("Process failed to stop within %d seconds after SIGINT" % grace_period)
             if self.process.poll() != 0:

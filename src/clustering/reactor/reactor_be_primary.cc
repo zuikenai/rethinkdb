@@ -7,6 +7,8 @@
 #include "errors.hpp"
 #include <boost/bind.hpp>
 
+#include "debug.hpp"
+
 #include "clustering/administration/http/json_adapters.hpp"
 #include "clustering/immediate_consistency/branch/backfillee.hpp"
 #include "clustering/immediate_consistency/branch/backfill_throttler.hpp"
@@ -401,6 +403,7 @@ bool reactor_t::attempt_backfill_from_peers(directory_entry_t *directory_entry,
 
 void reactor_t::be_primary(region_t region, store_view_t *svs, const clone_ptr_t<watchable_t<blueprint_t> > &blueprint, signal_t *interruptor) THROWS_NOTHING {
     try {
+        debug_timer_t timer("be_primary()");
         //Tell everyone that we're looking to become the primary
         directory_entry_t directory_entry(this, region);
 
@@ -412,11 +415,14 @@ void reactor_t::be_primary(region_t region, store_view_t *svs, const clone_ptr_t
         /* block until all peers have acked `directory_entry` */
         wait_for_directory_acks(version_to_wait_on, interruptor);
 
+        timer.tick("A");
 
         /* In this loop we repeatedly attempt to find peers to backfill from
          * and then perform the backfill. We exit the loop either when we get
          * interrupted or we have backfilled the most up to date data. */
         while (!attempt_backfill_from_peers(&directory_entry, &order_source, region, svs, blueprint, interruptor)) { }
+
+        timer.tick("backfill");
 
         // TODO: Don't use local stack variable.
         std::string region_name = strprintf("be_primary_%p", &region);
@@ -427,6 +433,8 @@ void reactor_t::be_primary(region_t region, store_view_t *svs, const clone_ptr_t
         perfmon_collection_t region_perfmon_collection;
         perfmon_membership_t region_perfmon_membership(&regions_perfmon_collection, &region_perfmon_collection, region_name);
 
+        timer.tick("B");
+
         broadcaster_t broadcaster(mailbox_manager, ctx, branch_history_manager, svs,
                                   &region_perfmon_collection, &order_source,
                                   &ct_interruptor);
@@ -434,6 +442,8 @@ void reactor_t::be_primary(region_t region, store_view_t *svs, const clone_ptr_t
         on_thread_t th2(this->home_thread());
 
         directory_entry.set(reactor_business_card_t::primary_t(broadcaster.get_business_card()));
+
+        timer.tick("C");
 
         clone_ptr_t<watchable_t<boost::optional<boost::optional<broadcaster_business_card_t> > > > broadcaster_business_card =
             get_directory_entry_view<reactor_business_card_t::primary_t>(get_me(), directory_entry.get_reactor_activity_id())->
@@ -448,11 +458,15 @@ void reactor_t::be_primary(region_t region, store_view_t *svs, const clone_ptr_t
 
         cross_thread_watchable_variable_t<boost::optional<boost::optional<broadcaster_business_card_t> > > ct_broadcaster_business_card(broadcaster_business_card, svs->home_thread());
 
+        timer.tick("D");
+
         on_thread_t th3(svs->home_thread());
         listener_t listener(base_path, io_backender, mailbox_manager, ct_broadcaster_business_card.get_watchable(), branch_history_manager, &broadcaster, &region_perfmon_collection, &ct_interruptor, &order_source);
         replier_t replier(&listener, mailbox_manager, branch_history_manager);
         master_t master(mailbox_manager, ack_checker, region, &broadcaster);
         direct_reader_t direct_reader(mailbox_manager, svs);
+
+        timer.tick("E");
 
         on_thread_t th4(this->home_thread());
 
@@ -462,6 +476,8 @@ void reactor_t::be_primary(region_t region, store_view_t *svs, const clone_ptr_t
                 replier.get_business_card(),
                 master.get_business_card(),
                 direct_reader.get_business_card()));
+
+        timer.tick("F");
 
         interruptor->wait_lazily_unordered();
 
