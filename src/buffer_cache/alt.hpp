@@ -341,9 +341,16 @@ public:
 
     // Unlike get_data_write and get_data_write(block_size), this doesn't change the
     // block size.
-    sized_ptr_t<void> get_sized_data_write();
+    template <class T>
+    sized_ptr_t<T> get_sized_data_write() {
+        uint32_t block_size;
+        void *ptr = help_get_sized_data_write(&block_size);
+        return sized_ptr_t<T>(static_cast<T *>(ptr), block_size);
+    }
 
 private:
+    void *help_get_sized_data_write(uint32_t *block_size_out);
+
     buf_lock_t *lock_;
     alt::page_acq_t page_acq_;
 

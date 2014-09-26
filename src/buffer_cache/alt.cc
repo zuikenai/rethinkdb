@@ -795,7 +795,7 @@ void *buf_write_t::get_data_write() {
     return get_data_write(lock_->cache()->default_block_size().value());
 }
 
-sized_ptr_t<void> buf_write_t::get_sized_data_write() {
+void *buf_write_t::help_get_sized_data_write(uint32_t *block_size_out) {
     // Get the page for read -- when we're in the buf_write_t!
     page_t *page = lock_->get_held_page_for_read();
     if (!page_acq_.has()) {
@@ -806,5 +806,6 @@ sized_ptr_t<void> buf_write_t::get_sized_data_write() {
     page_acq_.buf_ready_signal()->wait();
     block_size_t bs = block_size_t::undefined();
     void *data = page_acq_.get_sized_buf_write(&bs);
-    return sized_ptr_t<void>(data, bs.value());
+    *block_size_out = bs.value();
+    return data;
 }

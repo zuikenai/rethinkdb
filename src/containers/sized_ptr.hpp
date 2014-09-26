@@ -18,5 +18,11 @@ public:
     uint32_t block_size;
 };
 
+template <class T, class U>
+sized_ptr_t<U> sized_reinterpret_cast(sized_ptr_t<T> castee) {
+    return sized_ptr_t<U>(reinterpret_cast<U *>(castee.buf), castee.block_size);
+}
+
+
 
 #endif  // BUFFER_CACHE_SIZED_PTR_HPP_
