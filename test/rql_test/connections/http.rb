@@ -21,7 +21,7 @@ if Dir.exists?(expectedDriverPath)
   $LOAD_PATH.unshift expectedDriverPath
   require 'rethinkdb'
   $LOAD_PATH.shift
-  include RethinkDB::Shortcuts
+  extend RethinkDB::Shortcuts
   
   actualDirverPath = File.dirname(r.method(:connect).source_location[0])
   if actualDirverPath != expectedDriverPath
