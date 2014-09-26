@@ -115,10 +115,45 @@ debug_timer_t::~debug_timer_t() {
     fprintf(stderr, "%s", out.c_str());
 #endif // NDEBUG
 }
+
+struct formatted_big_number_t {
+    formatted_big_number_t(uint64_t num) {
+        for (int i = 0; i < bufsz - 1; ++i) {
+            buffer[i] = ' ';
+        }
+        buffer[bufsz - 1] = 0;
+        if (num == 0) {
+            buffer[bufsz - 2] = 0;
+        } else {
+            int i = bufsz - 2;
+            while (num > 0) {
+                if ((bufsz - i) % 4 == 1) {
+                    buffer[i] = ',';
+                    --i;
+                    if (i == 0) {
+                        buffer[0] = 'X';
+                        return;
+                    }
+                }
+                buffer[i] = '0' + (num % 10);
+                --i;
+                if (i == 0) {
+                    buffer[0] = 'X';
+                    return;
+                }
+                num /= 10;
+            }
+        }
+    }
+    static const int bufsz = 15;
+    char buffer[bufsz];
+};
+
 microtime_t debug_timer_t::tick(const std::string &tag) {
     microtime_t prev = last;
     last = current_microtime();
-    out += strprintf("TIMER %s: %15s (%" PRIu64 " %12" PRIu64 " %12" PRIu64 ")\n",
-                     name.c_str(), tag.c_str(), last, last - start, last - prev);
+    formatted_big_number_t a(last), b(last - start), c(last - prev);
+    out += strprintf("TIMER %s: %15s (%s %s %s)\n",
+                     name.c_str(), tag.c_str(), a.buffer, b.buffer, c.buffer);
     return last - start;
 }

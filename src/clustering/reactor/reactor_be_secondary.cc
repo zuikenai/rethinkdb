@@ -286,9 +286,11 @@ void reactor_t::be_secondary(region_t region, store_view_t *svs, const clone_ptr
                 /* We lost the replier which means we should retry, just
                  * going back to the top of the while loop accomplishes this.
                  * */
+                timer.tick("lost-backf");
             } catch (const listener_t::broadcaster_lost_exc_t &) {
                 /* We didn't find the broadcaster which means we should retry,
                  * same deal as above. */
+                timer.tick("lost-broadc");
             }
         }
     } catch (const interrupted_exc_t &) {

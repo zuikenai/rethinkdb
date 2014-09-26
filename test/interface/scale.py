@@ -80,6 +80,7 @@ with driver.Metacluster() as metacluster:
     ob["create_table"] = time.time() - start
     print "Done (%.2f seconds)" % ob["create_table"]
 
+    pprint.pprint(r.table_config("test").run(conns[0])["shards"])
     primary = int(r.table_config("test").run(conns[0])["shards"][0]["director"][1:]) - 1
 
     print "Inserting 1000 documents..."
@@ -106,14 +107,25 @@ with driver.Metacluster() as metacluster:
     new = r.table("test").reconfigure(opts["shards"], opts["replicas"]).run(conns[0])
     ob["reconfigure_a"] = time.time() - start
     print "Done (%.2f seconds)" % ob["reconfigure_a"]
-    pprint.pprint(new)
+    pprint.pprint(new["shards"])
 
     print "Waiting for reconfigure to take effect..."
     start = time.time()
     while True:
         st = r.table_status("test").run(conns[0])
+        keys = ["dt", "db", "dr", "rt", "rl", "rb", "rr", "nt", "no", "ne"]
+        counts = dict((key, 0) for key in keys)
+        for shard in st["shards"]:
+            for row in shard:
+                key = row["role"][0] + row["state"][0]
+                counts[key] += 1
+        print "%6.2fs" % (time.time() - start),
+        for key in keys:
+            print key, "%3d" % counts[key],
+        print
         if st["ready_completely"]:
             break
+        time.sleep(0.1)
     while True:
         try:
             st = r.table("test").run(conns[0])
@@ -121,6 +133,7 @@ with driver.Metacluster() as metacluster:
             pass
         else:
             break
+        time.sleep(1)
     ob["reconfigure_b"] = time.time() - start
     print "Done (%.2f seconds)" % ob["reconfigure_b"]
 
