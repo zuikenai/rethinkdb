@@ -6,8 +6,12 @@
 #include "btree/keys.hpp"
 #include "btree/leaf_structure.hpp"
 #include "btree/node.hpp"
+#include "buffer_cache/alt.hpp"
 #include "containers/sized_ptr.hpp"
 #include "serializer/buf_ptr.hpp"
+
+// The byte value we use to wipe entries with.
+#define ENTRY_WIPE_CODE 0
 
 // There is no instantiation for entry_t anywhere.
 namespace new_leaf {
@@ -84,9 +88,6 @@ public:
         return *(p + sizeof(repli_timestamp_t)) != DELETION_ENTRY_CODE;
     }
 
-private:
-    static const uint8_t DELETION_ENTRY_CODE = 255;
-
     static const btree_key_t *entry_key(const entry_t *entry) {
         static_assert(DELETION_ENTRY_CODE > MAX_KEY_SIZE, "DELETION_ENTRY_CODE incompatible with MAX_KEY_SIZE.");
 
@@ -98,20 +99,39 @@ private:
         rassert(ret->size <= MAX_KEY_SIZE);
         return ret;
     }
+
+private:
+    static const uint8_t DELETION_ENTRY_CODE = 255;
 };
 
+size_t pair_offsets_back_offset(int num_pairs) {
+    return offsetof(main_leaf_node_t, pair_offsets) + num_pairs * sizeof(uint16_t);
+}
 
+size_t pair_offsets_back_offset(const main_leaf_node_t *node) {
+    return pair_offsets_back_offset(node->num_pairs);
+}
 
 const entry_t *get_entry(sized_ptr_t<const main_leaf_node_t> node, size_t offset) {
-    rassert(offset >= offsetof(main_leaf_node_t, pair_offsets) + node.buf->num_pairs * sizeof(uint16_t));
+    rassert(offset >= pair_offsets_back_offset(node.buf));
     rassert(offset < node.block_size);
     return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node.buf) + offset);
+}
+
+entry_t *get_entry(sized_ptr_t<main_leaf_node_t> node, size_t offset) {
+    return const_cast<entry_t *>(get_entry(sized_ptr_t<const main_leaf_node_t>(node), offset));
 }
 
 const entry_t *entry_for_index(sized_ptr_t<const main_leaf_node_t> node, int index) {
     rassert(index >= 0 && index < node.buf->num_pairs);
     return get_entry(node, node.buf->pair_offsets[index]);
 }
+
+entry_t *entry_for_index(sized_ptr_t<main_leaf_node_t> node, int index) {
+    rassert(index >= 0 && index < node.buf->num_pairs);
+    return get_entry(node, node.buf->pair_offsets[index]);
+}
+
 
 template <class btree_type>
 buf_ptr_t new_leaf_t<btree_type>::init() {
@@ -174,7 +194,7 @@ bool new_leaf_t<btree_type>::find_key(
 template <class btree_type>
 void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node) {
     rassert(node.buf->magic == main_leaf_node_t::expected_magic);
-    const size_t back_of_pair_offsets = node.buf->num_pairs * sizeof(uint16_t) + offsetof(main_leaf_node_t, pair_offsets);
+    const size_t back_of_pair_offsets = pair_offsets_back_offset(node.buf);
     rassert(node.block_size >= back_of_pair_offsets);
 
     rassert(node.buf->frontmost >= back_of_pair_offsets);
@@ -200,6 +220,10 @@ void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const ma
 
     // Then check that no entries overlap.
     std::sort(entry_bounds.begin(), entry_bounds.end());
+    if (entry_bounds.size() > 0) {
+        rassert(entry_bounds[0].first >= node.buf->frontmost);
+    }
+
     {
         size_t prev_back_offset = back_of_pair_offsets;
         for (auto pair : entry_bounds) {

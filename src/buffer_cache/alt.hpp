@@ -334,10 +334,18 @@ public:
     ~buf_write_t();
 
     // Deprecated.
+    // RSI: Remove this.
     void *get_data_write(uint32_t block_size);
 
     // Equivalent to passing the default_block_size.
+    // RSI: Remove this or rename this.
     void *get_data_write();
+
+    template <class T>
+    MUST_USE sized_ptr_t<T> resize(uint32_t block_size) {
+        void *ptr = get_data_write(block_size);
+        return sized_ptr_t<T>(static_cast<T *>(ptr), block_size);
+    }
 
     // Unlike get_data_write and get_data_write(block_size), this doesn't change the
     // block size.

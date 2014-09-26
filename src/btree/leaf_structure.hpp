@@ -54,7 +54,8 @@ struct main_leaf_node_t {
     // pair_offsets.  Accounts for the size of metadata.
     uint16_t dead_entry_size;
 
-    // The frontmost offset.  This is just the minimum value in pair_offsets.  If
+    // The frontmost offset.  This is just the minimum value in pair_offsets, or
+    // perhaps less than the minimum value (if the first entry was removed).  If
     // num_pairs is 0, what might this value be?  Probably something >=
     // offsetof(main_leaf_node_t, pair_offsets).  TODO(2014-09): Update the docs on
     // what frontmost could be when num_pairs == 0.

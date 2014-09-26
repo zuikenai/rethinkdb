@@ -2,6 +2,8 @@
 #ifndef BTREE_NEW_LEAF_HPP_
 #define BTREE_NEW_LEAF_HPP_
 
+#include "errors.hpp"
+
 template <class> class sized_ptr_t;
 struct btree_key_t;
 class buf_write_t;
@@ -18,9 +20,9 @@ struct new_leaf_t {
     static buf_ptr_t init();
     // Returns to *index_out, the index (in the pair_offsets array) for the given
     // key, be it dead or alive.
-    static bool find_key(sized_ptr_t<const main_leaf_node_t> node,
-                         const btree_key_t *key,
-                         int *index_out);
+    static MUST_USE bool find_key(sized_ptr_t<const main_leaf_node_t> node,
+                                  const btree_key_t *key,
+                                  int *index_out);
 
 #ifndef NDEBUG
     static void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);
