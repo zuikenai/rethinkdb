@@ -5,7 +5,7 @@ from __future__ import print_function
 
 import sys, os, time
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common'))
 import http_admin, driver, rdb_workload_common
 
 with driver.Metacluster() as metacluster:
