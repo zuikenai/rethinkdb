@@ -341,7 +341,7 @@ public:
 
     // Unlike get_data_write and get_data_write(block_size), this doesn't change the
     // block size.
-    void *get_sized_data_write(uint32_t *block_size_out);
+    sized_ptr_t<void> get_sized_data_write();
 
 private:
     buf_lock_t *lock_;
