@@ -46,7 +46,7 @@ def expect_error(query, err_type, err_info)
     begin
         res = query.run()
     rescue err_type => ex
-        if ex.message.lines[0].rstrip != err_info
+        if ex.message.lines.first.rstrip != err_info
             raise
         end
         return
