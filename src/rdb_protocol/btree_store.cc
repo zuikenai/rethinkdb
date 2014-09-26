@@ -21,6 +21,7 @@
 #include "logger.hpp"
 #include "rdb_protocol/btree.hpp"
 #include "rdb_protocol/protocol.hpp"
+#include "rdb_protocol/value_sizer.hpp"
 #include "serializer/config.hpp"
 #include "stl_utils.hpp"
 
@@ -53,7 +54,7 @@ sindex_not_ready_exc_t::sindex_not_ready_exc_t(
     }
 }
 
-const char* sindex_not_ready_exc_t::what() const throw() {
+const char *sindex_not_ready_exc_t::what() const throw() {
     return info.c_str();
 }
 

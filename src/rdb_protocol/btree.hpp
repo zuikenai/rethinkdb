@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "backfill_progress.hpp"
-#include "btree/node.hpp"
+#include "btree/node.hpp"  // RSI: Remove?
 #include "buffer_cache/alt.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "rdb_protocol/datum.hpp"
@@ -22,34 +22,9 @@ class deletion_context_t;
 class key_tester_t;
 class parallel_traversal_progress_t;
 template <class> class promise_t;
-struct rdb_value_t;
 struct sindex_disk_info_t;
 
 class parallel_traversal_progress_t;
-
-bool btree_value_fits(default_block_size_t bs, int data_length, const rdb_value_t *value);
-
-class rdb_value_sizer_t : public value_sizer_t {
-public:
-    explicit rdb_value_sizer_t(default_block_size_t bs);
-
-    static const rdb_value_t *as_rdb(const void *p);
-
-    int size(const void *value) const;
-
-    bool fits(const void *value, int length_available) const;
-
-    int max_possible_size() const;
-
-    default_block_size_t default_block_size() const;
-
-private:
-    // The block size.  It's convenient for leaf node code and for
-    // some subclasses, too.
-    default_block_size_t block_size_;
-
-    DISABLE_COPYING(rdb_value_sizer_t);
-};
 
 struct rdb_modification_info_t;
 struct rdb_modification_report_t;

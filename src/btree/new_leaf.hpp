@@ -13,8 +13,6 @@ class value_sizer_t;
 
 namespace new_leaf {
 
-struct orig_btree_t;
-
 template <class btree_type>
 struct new_leaf_t {
     static buf_ptr_t init();
@@ -33,7 +31,6 @@ struct new_leaf_t {
 
 }  // namespace new_leaf
 
-using new_leaf::orig_btree_t;
 using new_leaf::new_leaf_t;
 
 #endif /* BTREE_NEW_LEAF_HPP_ */

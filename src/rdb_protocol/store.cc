@@ -11,6 +11,7 @@
 #include "rdb_protocol/btree.hpp"
 #include "rdb_protocol/env.hpp"
 #include "rdb_protocol/func.hpp"
+#include "rdb_protocol/value_sizer.hpp"
 
 void store_t::note_reshard() {
     if (changefeed_server.has()) {

@@ -2,6 +2,7 @@
 #include <map>
 
 #include "btree/leaf_structure.hpp"
+#include "btree/main_btree.hpp"
 #include "btree/new_leaf.hpp"
 #include "btree/node.hpp"
 #include "serializer/buf_ptr.hpp"
@@ -12,17 +13,17 @@ namespace unittest {
 
 namespace new_leaf_node_test {
 
-using orig_leaf_t = new_leaf_t<orig_btree_t>;
+using main_leaf_t = new_leaf_t<main_btree_t>;
 
 #ifndef NDEBUG
 TEST(NewLeafNodeTest, InitValidate) {
-    buf_ptr_t buf = orig_leaf_t::init();
+    buf_ptr_t buf = main_leaf_t::init();
 
     // Let's hope validate doesn't crash!  That's what this test does...
     short_value_sizer_t sizer(default_block_size_t::unsafe_make(4096));
-    orig_leaf_t::validate(&sizer, buf.sized_cache_data<main_leaf_node_t>());
+    main_leaf_t::validate(&sizer, buf.sized_cache_data<main_leaf_node_t>());
 }
-#endif
+#endif  // NDEBUG
 
 }  // namespace new_leaf_node_test
 
