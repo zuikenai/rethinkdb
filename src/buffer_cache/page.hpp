@@ -241,6 +241,7 @@ public:
     // These block, uninterruptibly waiting for buf_ready_signal() to be pulsed.
     block_size_t get_buf_size();
     void *get_buf_write(block_size_t block_size);
+    void *get_sized_buf_write(block_size_t *block_size_out);
     const void *get_buf_read();
 
 private:

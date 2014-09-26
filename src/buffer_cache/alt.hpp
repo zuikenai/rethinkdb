@@ -333,9 +333,15 @@ public:
     explicit buf_write_t(buf_lock_t *lock);
     ~buf_write_t();
 
+    // Deprecated.
     void *get_data_write(uint32_t block_size);
+
     // Equivalent to passing the default_block_size.
     void *get_data_write();
+
+    // Unlike get_data_write and get_data_write(block_size), this doesn't change the
+    // block size.
+    void *get_sized_data_write(uint32_t *block_size_out);
 
 private:
     buf_lock_t *lock_;

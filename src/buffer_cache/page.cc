@@ -604,6 +604,13 @@ void *page_acq_t::get_buf_write(block_size_t block_size) {
     return page_->get_page_buf(page_cache_);
 }
 
+void *page_acq_t::get_sized_buf_write(block_size_t *block_size_out) {
+    buf_ready_signal_.wait();
+    page_->reset_block_token(page_cache_);
+    *block_size_out = page_->get_page_buf_size();
+    return page_->get_page_buf(page_cache_);
+}
+
 const void *page_acq_t::get_buf_read() {
     buf_ready_signal_.wait();
     return page_->get_page_buf(page_cache_);
