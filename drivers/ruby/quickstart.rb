@@ -8,7 +8,7 @@ expectedDriverPath = File.join(File.dirname(__FILE__), 'lib')
 $LOAD_PATH.unshift(expectedDriverPath)
 require 'rethinkdb'
 $LOAD_PATH.shift
-include RethinkDB::Shortcuts
+extend RethinkDB::Shortcuts
 
 # -- test that we got the driver we expected
 
