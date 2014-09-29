@@ -176,10 +176,6 @@ def import_python_driver(targetDir=None):
     
     keptPaths = sys.path[:]
     try:
-        # remove any references to the driver in sys.modules to avoid getting cached versions
-        for moduleName in [x for x in sys.modules if str(x) == 'rethinkdb' or str(x).startswith('rethinkdb.')]:
-            sys.modules.pop(moduleName)
-        
         moduleFile, pathname, desc = imp.find_module('rethinkdb', [os.path.dirname(driverDir)])
         driverModule = imp.load_module('rethinkdb', moduleFile, pathname, desc)
         if moduleFile is not None:
