@@ -114,7 +114,7 @@ TPTEST(NewLeafNodeTest, InsertFind) {
                                                       "b",
                                                       "abc");
 
-        main_leaf_t::insert(&sizer, &write, entry.get());
+        main_leaf_t::insert_entry(&sizer, &write, entry.get());
     }
 
     // Now check that find_key works with the key we're looking for.
@@ -139,7 +139,7 @@ TPTEST(NewLeafNodeTest, InsertFind) {
         scoped_malloc_t<void> entry = make_live_entry(repli_timestamp_t::distant_past,
                                                       "c",
                                                       "def");
-        main_leaf_t::insert(&sizer, &write, entry.get());
+        main_leaf_t::insert_entry(&sizer, &write, entry.get());
     }
 
     found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),

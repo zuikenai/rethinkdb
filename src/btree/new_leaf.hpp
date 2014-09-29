@@ -22,13 +22,17 @@ public:
                                   const btree_key_t *key,
                                   int *index_out);
 
-    static void insert(value_sizer_t *sizer,
-                       buf_write_t *buf,
-                       const void *entry);
+    static void insert_entry(value_sizer_t *sizer,
+                             buf_write_t *buf,
+                             const void *entry);
 
     static void erase_presence(value_sizer_t *sizer,
                                buf_write_t *buf,
                                const btree_key_t *key);
+
+    static MUST_USE bool lookup_entry(sized_ptr_t<const main_leaf_node_t> node,
+                                      const btree_key_t *key,
+                                      const void **entry_ptr_out);
 
 #ifndef NDEBUG
     static void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);

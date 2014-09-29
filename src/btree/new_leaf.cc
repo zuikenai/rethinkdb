@@ -213,9 +213,9 @@ make_gap_in_pair_offsets(value_sizer_t *sizer, buf_write_t *buf, int index, int 
 
 // Inserts an entry, possibly replacing the existing one for that key.
 template <class btree_type>
-void new_leaf_t<btree_type>::insert(value_sizer_t *sizer,
-                                    buf_write_t *buf,
-                                    const void *v_entry) {
+void new_leaf_t<btree_type>::insert_entry(value_sizer_t *sizer,
+                                          buf_write_t *buf,
+                                          const void *v_entry) {
     const entry_t *entry = static_cast<const entry_t *>(v_entry);
     const size_t entry_size = btree_type::entry_size(sizer, entry);
     const btree_key_t *const key = btree_type::entry_key(entry);
@@ -257,8 +257,20 @@ void new_leaf_t<btree_type>::erase_presence(value_sizer_t *sizer,
     normalize<btree_type>(sizer, buf);
 }
 
-
-
+template <class btree_type>
+bool new_leaf_t<btree_type>::lookup_entry(sized_ptr_t<const main_leaf_node_t> node,
+                                          const btree_key_t *key,
+                                          const void **entry_ptr_out) {
+    int index;
+    const bool found = find_key(node, key, &index);
+    if (found) {
+        *entry_ptr_out = get_entry(node, index);
+        return true;
+    } else {
+        *entry_ptr_out = NULL;
+        return false;
+    }
+}
 
 
 
