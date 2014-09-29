@@ -317,7 +317,6 @@ void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const ma
     rassert(node.buf->frontmost == frontmost_offset);
     rassert(node.buf->live_entry_size == live_size);
     rassert(node.buf->dead_entry_size == dead_size);
-
 }
 #endif  // NDEBUG
 
