@@ -134,6 +134,35 @@ TPTEST(NewLeafNodeTest, InsertFind) {
                                   store_key_t("c").btree_key(),
                                   &index);
     ASSERT_FALSE(found);
+
+    {
+        scoped_malloc_t<void> entry = make_live_entry(repli_timestamp_t::distant_past,
+                                                      "c",
+                                                      "def");
+        main_leaf_t::insert(&sizer, &write, entry.get());
+    }
+
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("b").btree_key(),
+                                  &index);
+    ASSERT_TRUE(found);
+    ASSERT_EQ(0, index);
+
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("c").btree_key(),
+                                  &index);
+    ASSERT_TRUE(found);
+    ASSERT_EQ(1, index);
+
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("bm").btree_key(),
+                                  &index);
+    ASSERT_FALSE(found);
+
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("d").btree_key(),
+                                  &index);
+    ASSERT_FALSE(found);
 }
 
 }  // namespace new_leaf_node_test
