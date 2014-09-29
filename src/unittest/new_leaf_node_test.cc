@@ -109,7 +109,12 @@ TPTEST(NewLeafNodeTest, InsertFind) {
 
     main_leaf_t::insert(&sizer, &write, entry.get());
 
-
+    int index;
+    bool found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                       store_key_t("a").btree_key(),
+                                       &index);
+    ASSERT_TRUE(found);
+    ASSERT_EQ(0, index);
 }
 
 }  // namespace new_leaf_node_test
