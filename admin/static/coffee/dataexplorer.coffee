@@ -2846,6 +2846,7 @@ module 'DataExplorerView', ->
             'span': Handlebars.templates['dataexplorer_result_json_tree_span-template']
             'span_with_quotes': Handlebars.templates['dataexplorer_result_json_tree_span_with_quotes-template']
             'url': Handlebars.templates['dataexplorer_result_json_tree_url-template']
+            'bin': Handlebars.templates['dataexplorer_result_json_tree_bin-template']
             'email': Handlebars.templates['dataexplorer_result_json_tree_email-template']
             'object': Handlebars.templates['dataexplorer_result_json_tree_object-template']
             'array': Handlebars.templates['dataexplorer_result_json_tree_array-template']
@@ -2984,9 +2985,25 @@ module 'DataExplorerView', ->
                     classname: 'jt_date'
                     value: @date_to_string(value)
             else if Object::toString.call(value) is '[object Object]' and value.$reql_type$ is 'BINARY'
-                return @template_json_tree.span
-                    classname: 'jt_bin'
-                    value: @binary_to_string(value)
+                try
+                    byteCharacters = atob(value.data) # base64 to string (one character for one byte)
+                    byteNumbers = new Array(byteCharacters.length)
+                    for byte, i in byteCharacters
+                        byteNumbers[i] = byteCharacters.charCodeAt(i) # Use charCodeAt to get the byte value
+                    byteArray = new Uint8Array(byteNumbers) # Convert it to a Uint8Array
+                    blob = new Blob([byteArray], {type: "application/octet-stream"}) # Create the blog
+                    url = URL.createObjectURL(blob) # Create a nice url to dowload the binary
+                    return @template_json_tree.bin
+                        value: @binary_to_string(value)
+                        downloadable: true
+                        url: url
+                        data: value.data
+                catch err
+                    # Something went wrong (`Blob` not available for example)
+                    # We don't display a download link
+                    return @template_json_tree.bin
+                        value: @binary_to_string(value)
+                        downloadable: false
 
             else if value_type is 'object'
                 sub_keys = []

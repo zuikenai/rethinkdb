@@ -294,6 +294,10 @@ Sorry, the data explorer does not support your browser. Please upgrade it. See t
 <script id="dataexplorer_result_json_tree_span_with_quotes-template" type="text/x-handlebars-template">
     <span class="jt_editable {{classname}}">"{{value}}"</span></script>
 
+<script id="dataexplorer_result_json_tree_bin-template" type="text/xs-handlebars-template">
+    <span class="jt_editable jt_bin" >{{value}}</span>{{#if downloadable}}, 
+    <a download target="_blank" href="{{url}}" class="jt_link">»</a>{{/if}}</script>
+
 <script id="dataexplorer_result_json_tree_url-template" type="text/xs-handlebars-template">
     <span class="jt_editable jt_url" >{{url}}</span>,
     <a href="{{url}}" class="jt_link">»</a></script>
