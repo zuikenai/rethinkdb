@@ -297,4 +297,9 @@ private:
     DISABLE_COPYING(scoped_malloc_t);
 };
 
+template <class T, class U>
+scoped_malloc_t<T> scoped_malloc_reinterpret_cast(scoped_malloc_t<U> other) {
+    return scoped_malloc_t<T>(reinterpret_cast<T *>(other.release()));
+}
+
 #endif  // CONTAINERS_SCOPED_HPP_

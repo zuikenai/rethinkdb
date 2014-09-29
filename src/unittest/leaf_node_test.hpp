@@ -2,6 +2,7 @@
 #define UNITTEST_LEAF_NODE_TEST_HPP_
 
 #include "btree/node.hpp"
+#include "debug.hpp"
 
 namespace unittest {
 

@@ -58,6 +58,35 @@ public:
           txn_t(this, write_durability_t::SOFT, repli_timestamp_t::distant_past) { }
 };
 
+scoped_malloc_t<void> make_live_entry(repli_timestamp_t timestamp,
+                                      std::string key,
+                                      std::string value) {
+    guarantee(key.size() <= MAX_KEY_SIZE);
+    guarantee(value.size() <= MAX_KEY_SIZE);
+    const size_t computed_entry_size = sizeof(repli_timestamp_t) + 1 + key.size() + 1 + value.size();
+    scoped_malloc_t<char> ret(computed_entry_size);
+
+    store_key_t store_key(key);
+    store_key_t store_value(value);
+
+    *reinterpret_cast<repli_timestamp_t *>(ret.get()) = timestamp;
+    keycpy(reinterpret_cast<btree_key_t *>(ret.get() + sizeof(repli_timestamp_t)),
+           store_key.btree_key());
+    keycpy(reinterpret_cast<btree_key_t *>(ret.get() + sizeof(repli_timestamp_t) + store_key.btree_key()->full_size()),
+           store_value.btree_key());
+    {
+        short_value_sizer_t sizer(default_block_size_t::unsafe_make(4096));
+        guarantee(computed_entry_size ==
+                  main_btree_t::entry_size(&sizer,
+                                           reinterpret_cast<main_btree_t::entry_t *>(ret.get())),
+                  "computed_entry_size is %zu, real size is %zu",
+                  computed_entry_size,
+                  main_btree_t::entry_size(&sizer,
+                                           reinterpret_cast<main_btree_t::entry_t *>(ret.get())));
+    }
+    return scoped_malloc_reinterpret_cast<void>(std::move(ret));
+}
+
 TEST(NewLeafNodeTest, InitValidate) {
     buf_ptr_t buf = main_leaf_t::init();
 
@@ -73,7 +102,12 @@ TPTEST(NewLeafNodeTest, InsertFind) {
     buf_write_t write(&lock);
     write.set_data_write(main_leaf_t::init());
 
-    
+
+    scoped_malloc_t<void> entry = make_live_entry(repli_timestamp_t::distant_past,
+                                                  "a",
+                                                  "abc");
+
+    main_leaf_t::insert(&sizer, &write, entry.get());
 
 
 }

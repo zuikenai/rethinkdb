@@ -53,9 +53,9 @@ void add_entry_size_change(main_leaf_node_t *node,
                            const entry_t *entry,
                            size_t entry_size) {
     if (btree_type::is_live(entry)) {
-        node->live_entry_size += entry_size;
+        node->live_entry_size += entry_size + sizeof(uint16_t);
     } else {
-        node->dead_entry_size += entry_size;
+        node->dead_entry_size += entry_size + sizeof(uint16_t);
     }
 }
 
@@ -64,9 +64,9 @@ void subtract_entry_size_change(main_leaf_node_t *node,
                                 const entry_t *entry,
                                 size_t entry_size) {
     if (btree_type::is_live(entry)) {
-        node->live_entry_size -= entry_size;
+        node->live_entry_size -= entry_size - sizeof(uint16_t);
     } else {
-        node->dead_entry_size -= entry_size;
+        node->dead_entry_size -= entry_size - sizeof(uint16_t);
     }
 }
 
@@ -171,28 +171,33 @@ make_gap_in_pair_offsets(value_sizer_t *sizer, buf_write_t *buf, int index, int 
     const size_t new_num_pairs = node.buf->num_pairs + size;
     const size_t new_back = pair_offsets_back_offset(new_num_pairs);
 
-    // RSI: Make validate check that frontmost is a tight bound.
-    // Make room for us to make the gap.
-    while (new_back > node.buf->frontmost) {
-        int frontmost_index = -1;
-        for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
-            if (node.buf->pair_offsets[i] == node.buf->frontmost) {
-                frontmost_index = i;
-                break;
-            }
-        }
-
-        rassert(frontmost_index != -1);
-
-        entry_t *const entry = get_entry(node, node.buf->frontmost);
-        const size_t entry_size = btree_type::entry_size(sizer, entry);
-        const size_t insertion_offset = std::max<size_t>(new_back, node.block_size);
-        node = buf->resize<main_leaf_node_t>(insertion_offset + entry_size);
-        memcpy(get_entry(node, insertion_offset), entry, entry_size);
-        memset(entry, ENTRY_WIPE_CODE, entry_size);
-        node.buf->pair_offsets[frontmost_index] = insertion_offset;
-
+    if (node.buf->num_pairs == 0) {
+        node = buf->resize<main_leaf_node_t>(new_back);
         recompute_frontmost(node);
+    } else {
+        // RSI: Make validate check that frontmost is a tight bound.
+        // Make room for us to make the gap.
+        while (new_back > node.buf->frontmost) {
+            int frontmost_index = -1;
+            for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+                if (node.buf->pair_offsets[i] == node.buf->frontmost) {
+                    frontmost_index = i;
+                    break;
+                }
+            }
+
+            rassert(frontmost_index != -1);
+
+            entry_t *const entry = get_entry(node, node.buf->frontmost);
+            const size_t entry_size = btree_type::entry_size(sizer, entry);
+            const size_t insertion_offset = std::max<size_t>(new_back, node.block_size);
+            node = buf->resize<main_leaf_node_t>(insertion_offset + entry_size);
+            memcpy(get_entry(node, insertion_offset), entry, entry_size);
+            memset(entry, ENTRY_WIPE_CODE, entry_size);
+            node.buf->pair_offsets[frontmost_index] = insertion_offset;
+
+            recompute_frontmost(node);
+        }
     }
 
     // Now make the gap.
