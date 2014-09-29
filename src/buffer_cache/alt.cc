@@ -781,6 +781,18 @@ buf_write_t::~buf_write_t() {
     lock_->access_ref_count_--;
 }
 
+void buf_write_t::set_data_write(buf_ptr_t buf) {
+    page_t *page = lock_->get_held_page_for_write();
+    // RSI: Could we just create a new page...?  Instead of forcibly copying this
+    // one, for nothing...?
+    if (!page_acq_.has()) {
+        page_acq_.init(page, &lock_->cache()->page_cache_,
+                       lock_->txn()->account());
+    }
+    page_acq_.buf_ready_signal()->wait();
+    page_acq_.set_buf_write(std::move(buf));
+}
+
 void *buf_write_t::get_data_write(uint32_t block_size) {
     page_t *page = lock_->get_held_page_for_write();
     if (!page_acq_.has()) {

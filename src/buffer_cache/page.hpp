@@ -43,6 +43,10 @@ public:
     void remove_waiter(page_acq_t *acq);
 
     // These may not be called until the page_acq_t's buf_ready_signal is pulsed.
+
+    // This resets the block token for you...
+    void replace_page_buf(buf_ptr_t buf, page_cache_t *page_cache);
+
     void *get_page_buf(page_cache_t *page_cache);
     void reset_block_token(page_cache_t *page_cache);
     void set_page_buf_size(block_size_t block_size, page_cache_t *page_cache);
@@ -241,6 +245,7 @@ public:
     // These block, uninterruptibly waiting for buf_ready_signal() to be pulsed.
     block_size_t get_buf_size();
     void *get_buf_write(block_size_t block_size);
+    void set_buf_write(buf_ptr_t buf);
     void *get_sized_buf_write(block_size_t *block_size_out);
     const void *get_buf_read();
 

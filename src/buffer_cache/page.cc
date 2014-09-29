@@ -487,6 +487,22 @@ uint32_t page_t::hypothetical_memory_usage(page_cache_t *page_cache) const {
     }
 }
 
+void page_t::replace_page_buf(buf_ptr_t buf, page_cache_t *page_cache) {
+    // TODO(2014-11): Other TODO's suggest this behavior could change, and buf_.has()
+    // might not be the right assertion if you address those issues.
+    rassert(buf_.has());
+
+    // We'll just be nice and call reset_block_token for you...
+    reset_block_token(page_cache);
+
+    access_time_ = page_cache->evicter().next_access_time();
+
+    {
+        usage_adjuster_t adjuster(page_cache, this);
+        buf_ = std::move(buf);
+    }
+}
+
 void *page_t::get_page_buf(page_cache_t *page_cache) {
     rassert(buf_.has());
     access_time_ = page_cache->evicter().next_access_time();
@@ -595,6 +611,13 @@ signal_t *page_acq_t::buf_ready_signal() {
 block_size_t page_acq_t::get_buf_size() {
     buf_ready_signal_.wait();
     return page_->get_page_buf_size();
+}
+
+void page_acq_t::set_buf_write(buf_ptr_t buf) {
+    buf_ready_signal_.wait();
+    // TODO(2014-11): Is reset_block_token appropriate?
+    // TODO(2014-11): Do we really need to wait for buf_ready_signal_?  It doesn't hurt usually, I think...
+    page_->replace_page_buf(std::move(buf), page_cache_);
 }
 
 void *page_acq_t::get_buf_write(block_size_t block_size) {

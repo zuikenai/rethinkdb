@@ -341,6 +341,9 @@ public:
     // RSI: Remove this or rename this.
     void *get_data_write();
 
+    // Sets the data to be the given buf.
+    void set_data_write(buf_ptr_t buf);
+
     template <class T>
     MUST_USE sized_ptr_t<T> resize(uint32_t block_size) {
         void *ptr = get_data_write(block_size);
