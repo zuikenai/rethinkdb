@@ -26,6 +26,10 @@ public:
                        buf_write_t *buf,
                        const void *entry);
 
+    static void erase_presence(value_sizer_t *sizer,
+                               buf_write_t *buf,
+                               const btree_key_t *key);
+
 #ifndef NDEBUG
     static void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);
 #else

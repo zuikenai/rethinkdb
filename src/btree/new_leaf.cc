@@ -240,6 +240,23 @@ void new_leaf_t<btree_type>::insert(value_sizer_t *sizer,
     normalize<btree_type>(sizer, buf);
 }
 
+// Removes an entry.  Asserts that the key is in the node.  TODO(2014-11): This means
+// we're already sure the key is in the node, which means we're doing an unnecessary
+// binary search.
+template <class btree_type>
+void new_leaf_t<btree_type>::erase_presence(value_sizer_t *sizer,
+                                            buf_write_t *buf,
+                                            const btree_key_t *key) {
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+
+    int index;
+    const bool found = find_key(node, key, &index);
+    guarantee(found);
+
+    remove_entry_for_index<btree_type>(sizer, node, index);
+    normalize<btree_type>(sizer, buf);
+}
+
 
 
 
