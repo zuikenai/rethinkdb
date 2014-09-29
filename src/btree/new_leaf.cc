@@ -294,10 +294,12 @@ void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const ma
 
     // Now that entries don't overlap, do other per-entry validation.
 
+    uint16_t frontmost_offset = node.block_size;
     size_t live_size = 0;
     size_t dead_size = 0;
 
     for (uint16_t i = 0; i < node.buf->num_pairs; ++i) {
+        frontmost_offset = std::min(frontmost_offset, node.buf->pair_offsets[i]);
         const entry_t *entry = entry_for_index(node, i);
 
         if (i > 0) {
@@ -312,6 +314,7 @@ void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const ma
         }
     }
 
+    rassert(node.buf->frontmost == frontmost_offset);
     rassert(node.buf->live_entry_size == live_size);
     rassert(node.buf->dead_entry_size == dead_size);
 
