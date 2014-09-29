@@ -14,13 +14,17 @@ class value_sizer_t;
 namespace new_leaf {
 
 template <class btree_type>
-struct new_leaf_t {
+class new_leaf_t {
+public:
     static buf_ptr_t init();
-    // Returns to *index_out, the index (in the pair_offsets array) for the given
-    // key, be it dead or alive.
+
     static MUST_USE bool find_key(sized_ptr_t<const main_leaf_node_t> node,
                                   const btree_key_t *key,
                                   int *index_out);
+
+    static void insert(value_sizer_t *sizer,
+                       buf_write_t *buf,
+                       const void *entry);
 
 #ifndef NDEBUG
     static void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);

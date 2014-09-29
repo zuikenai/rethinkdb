@@ -48,6 +48,28 @@ entry_t *entry_for_index(sized_ptr_t<main_leaf_node_t> node, int index) {
     return get_entry(node, node.buf->pair_offsets[index]);
 }
 
+template <class btree_type>
+void add_entry_size_change(main_leaf_node_t *node,
+                           const entry_t *entry,
+                           size_t entry_size) {
+    if (btree_type::is_live(entry)) {
+        node->live_entry_size += entry_size;
+    } else {
+        node->dead_entry_size += entry_size;
+    }
+}
+
+template <class btree_type>
+void subtract_entry_size_change(main_leaf_node_t *node,
+                                const entry_t *entry,
+                                size_t entry_size) {
+    if (btree_type::is_live(entry)) {
+        node->live_entry_size -= entry_size;
+    } else {
+        node->dead_entry_size -= entry_size;
+    }
+}
+
 
 template <class btree_type>
 buf_ptr_t new_leaf_t<btree_type>::init() {
@@ -105,6 +127,118 @@ bool new_leaf_t<btree_type>::find_key(
     *index_out = beg;
     return false;
 }
+
+template <class btree_type>
+void normalize(value_sizer_t *sizer, buf_write_t *buf) {
+    // RSI: Implement.
+    new_leaf_t<btree_type>::validate(sizer,
+                                     buf->get_sized_data_write<main_leaf_node_t>());
+}
+
+void recompute_frontmost(sized_ptr_t<main_leaf_node_t> node) {
+    uint16_t frontmost = node.block_size;
+    for (uint16_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+        frontmost = std::min(frontmost, node.buf->pair_offsets[i]);
+    }
+    node.buf->frontmost = frontmost;
+}
+
+// This doesn't call normalize, which you might want to do.
+template <class btree_type>
+void remove_entry_for_index(value_sizer_t *sizer,
+                            sized_ptr_t<main_leaf_node_t> node,
+                            int index) {
+    rassert(0 <= index && index < node.buf->num_pairs);
+    const size_t entry_offset = node.buf->pair_offsets[index];
+    const entry_t *entry = get_entry(node, entry_offset);
+    const size_t entry_size = btree_type::entry_size(sizer, entry);
+
+    subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
+    memmove(node.buf->pair_offsets + index, node.buf->pair_offsets + index + 1,
+            (node.buf->num_pairs - (index + 1)) * sizeof(uint16_t));
+    node.buf->num_pairs -= 1;
+    if (entry_offset == node.buf->frontmost) {
+        recompute_frontmost(node);
+    }
+}
+
+// Invalidates old buf pointers that were returned by get_data_write -- either call get_data_write again, or use this return value.
+template <class btree_type>
+MUST_USE sized_ptr_t<main_leaf_node_t>
+make_gap_in_pair_offsets(value_sizer_t *sizer, buf_write_t *buf, int index, int size) {
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+    rassert(0 <= index && index <= node.buf->num_pairs);
+    const size_t new_num_pairs = node.buf->num_pairs + size;
+    const size_t new_back = pair_offsets_back_offset(new_num_pairs);
+
+    // RSI: Make validate check that frontmost is a tight bound.
+    // Make room for us to make the gap.
+    while (new_back > node.buf->frontmost) {
+        int frontmost_index = -1;
+        for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+            if (node.buf->pair_offsets[i] == node.buf->frontmost) {
+                frontmost_index = i;
+                break;
+            }
+        }
+
+        rassert(frontmost_index != -1);
+
+        entry_t *const entry = get_entry(node, node.buf->frontmost);
+        const size_t entry_size = btree_type::entry_size(sizer, entry);
+        const size_t insertion_offset = std::max<size_t>(new_back, node.block_size);
+        node = buf->resize<main_leaf_node_t>(insertion_offset + entry_size);
+        memcpy(get_entry(node, insertion_offset), entry, entry_size);
+        memset(entry, ENTRY_WIPE_CODE, entry_size);
+        node.buf->pair_offsets[frontmost_index] = insertion_offset;
+
+        recompute_frontmost(node);
+    }
+
+    // Now make the gap.
+    memmove(node.buf->pair_offsets + index + size,
+            node.buf->pair_offsets + index,
+            (node.buf->num_pairs - index) * sizeof(uint16_t));
+
+    memset(node.buf->pair_offsets + index, 0, size * sizeof(uint16_t));
+    node.buf->num_pairs = new_num_pairs;
+
+    return node;
+}
+
+// Inserts an entry, possibly replacing the existing one for that key.
+template <class btree_type>
+void new_leaf_t<btree_type>::insert(value_sizer_t *sizer,
+                                    buf_write_t *buf,
+                                    const void *v_entry) {
+    const entry_t *entry = static_cast<const entry_t *>(v_entry);
+    const size_t entry_size = btree_type::entry_size(sizer, entry);
+    const btree_key_t *const key = btree_type::entry_key(entry);
+
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+
+    int index;
+    const bool found = find_key(node, key, &index);
+
+    if (found) {
+        remove_entry_for_index<btree_type>(sizer, node, index);
+    }
+
+    node = make_gap_in_pair_offsets<btree_type>(sizer, buf, index, 1);
+
+    const size_t insertion_offset = node.block_size;
+    node = buf->resize<main_leaf_node_t>(node.block_size + entry_size);
+    memcpy(get_entry(node, insertion_offset), entry, entry_size);
+    node.buf->pair_offsets[index] = insertion_offset;
+    add_entry_size_change<btree_type>(node.buf, entry, entry_size);
+
+    normalize<btree_type>(sizer, buf);
+}
+
+
+
+
+
 
 #ifndef NDEBUG
 template <class btree_type>
@@ -179,6 +313,8 @@ void new_leaf_t<btree_type>::validate(value_sizer_t *sizer, sized_ptr_t<const ma
 }
 #endif  // NDEBUG
 
-template struct new_leaf_t<main_btree_t>;
+
+
+template class new_leaf_t<main_btree_t>;
 
 }  // namespace new_leaf
