@@ -102,19 +102,38 @@ TPTEST(NewLeafNodeTest, InsertFind) {
     buf_write_t write(&lock);
     write.set_data_write(main_leaf_t::init());
 
-
-    scoped_malloc_t<void> entry = make_live_entry(repli_timestamp_t::distant_past,
-                                                  "a",
-                                                  "abc");
-
-    main_leaf_t::insert(&sizer, &write, entry.get());
-
+    // Check that find_key works with an empty leaf node.
     int index;
     bool found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
                                        store_key_t("a").btree_key(),
                                        &index);
+    ASSERT_FALSE(found);
+
+    {
+        scoped_malloc_t<void> entry = make_live_entry(repli_timestamp_t::distant_past,
+                                                      "b",
+                                                      "abc");
+
+        main_leaf_t::insert(&sizer, &write, entry.get());
+    }
+
+    // Now check that find_key works with the key we're looking for.
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                       store_key_t("b").btree_key(),
+                                       &index);
     ASSERT_TRUE(found);
     ASSERT_EQ(0, index);
+
+    // And also check that it works with keys that we can't find.
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("a").btree_key(),
+                                  &index);
+    ASSERT_FALSE(found);
+
+    found = main_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("c").btree_key(),
+                                  &index);
+    ASSERT_FALSE(found);
 }
 
 }  // namespace new_leaf_node_test
