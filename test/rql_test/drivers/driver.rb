@@ -41,7 +41,6 @@ else
   abort "Unable to locate the Ruby driver"
 end
 
-
 def show x
   if x.class == Err
     name = x.type.sub(/^RethinkDB::/, "")
