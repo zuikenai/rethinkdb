@@ -338,6 +338,13 @@ Sorry, the data explorer does not support your browser. Please upgrade it. See t
 </script>
 
 <script id="dataexplorer_large_result_json_tree_container-template" type="text/x-handlebars-template">
+    {{#if too_many_datums}}
+    <div class="alert displayed_alert" data-alert="alert">
+        <a class="close" href="#">&times;</a>
+        <p>Syntax highlighting was disabeld because too much data was returned by the query.</p>
+    </div>
+    {{/if}}
+
     <div class="json_tree">
         <span class="jt_arrow"></span>
         <span class="jt_b"></span>
