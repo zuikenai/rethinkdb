@@ -31,13 +31,13 @@ enum class cluster_version_t {
 
     // This exists as long as the clustering code only supports the use of one
     // version.  It uses cluster_version_t::CLUSTER wherever it uses this.
-    CLUSTER = LATEST_OVERALL,
+        CLUSTER = 0//LATEST_OVERALL,
 };
 
 // Uncomment this if cluster_version_t::LATEST_DISK != cluster_version_t::CLUSTER.
 // Comment it otherwise. This macro is used to avoid instantiating the same version
 // twice in the `INSTANTIATE_SERIALIZE_FOR_CLUSTER_AND_DISK` macro.
-#define CLUSTER_AND_DISK_VERSIONS_ARE_SAME
+//#define CLUSTER_AND_DISK_VERSIONS_ARE_SAME
 
 #ifdef CLUSTER_AND_DISK_VERSIONS_ARE_SAME
 static_assert(cluster_version_t::CLUSTER == cluster_version_t::LATEST_DISK,
