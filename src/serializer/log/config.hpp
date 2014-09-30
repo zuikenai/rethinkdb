@@ -5,7 +5,6 @@
 #include <string>
 
 #include "config/args.hpp"
-#include "containers/archive/archive.hpp"
 #include "serializer/types.hpp"
 
 /* Configuration for the serializer that can change from run to run */
