@@ -272,6 +272,11 @@ bool new_leaf_t<btree_type>::lookup_entry(sized_ptr_t<const main_leaf_node_t> no
     }
 }
 
+template <class btree_type>
+bool new_leaf_t<btree_type>::is_empty(sized_ptr_t<const main_leaf_node_t> node) {
+    return node.buf->num_pairs == 0;
+}
+
 
 
 #ifndef NDEBUG

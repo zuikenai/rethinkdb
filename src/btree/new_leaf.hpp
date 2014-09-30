@@ -34,6 +34,8 @@ public:
                                       const btree_key_t *key,
                                       const void **entry_ptr_out);
 
+    static bool is_empty(sized_ptr_t<const main_leaf_node_t> node);
+
 #ifndef NDEBUG
     static void validate(value_sizer_t *sizer, sized_ptr_t<const main_leaf_node_t> node);
 #else
