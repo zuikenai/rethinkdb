@@ -38,9 +38,9 @@ public:
         return btree_key_cmp(entry_key(left), entry_key(right));
     }
 
-    static bool entry_fits(value_sizer_t *sizer, const entry_t *entry, size_t length_available);
+    static bool entry_fits(default_block_size_t bs, const entry_t *entry, size_t length_available);
 
-    static size_t entry_size(value_sizer_t *sizer, const entry_t *entry);
+    static size_t entry_size(default_block_size_t bs, const entry_t *entry);
 
     static bool is_live(const entry_t *entry) {
         const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
@@ -60,14 +60,10 @@ public:
     }
 
 private:
-    static size_t value_size(value_sizer_t *sizer, const void *value) {
-        return sizer->size(value);
-    }
+    static size_t value_size(default_block_size_t bs, const void *value);
 
-    static size_t value_fits(value_sizer_t *sizer, const void *value,
-                             size_t length_available) {
-        return sizer->fits(value, length_available);
-    }
+    static size_t value_fits(default_block_size_t bs, const void *value,
+                             size_t length_available);
 
     static const uint8_t DELETION_ENTRY_CODE = 255;
 };

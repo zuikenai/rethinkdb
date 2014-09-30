@@ -1,6 +1,20 @@
 #include "btree/main_btree.hpp"
 
-bool main_btree_t::entry_fits(value_sizer_t *sizer, const entry_t *entry, size_t length_available) {
+#include "serializer/types.hpp"
+#include "rdb_protocol/value_sizer.hpp"
+
+size_t main_btree_t::value_size(default_block_size_t bs, const void *value) {
+    rdb_value_sizer_t sizer(bs);
+    return sizer.size(value);
+}
+
+size_t main_btree_t::value_fits(default_block_size_t bs, const void *value,
+                                size_t length_available) {
+    rdb_value_sizer_t sizer(bs);
+    return sizer.fits(value, length_available);
+}
+
+bool main_btree_t::entry_fits(default_block_size_t bs, const entry_t *entry, size_t length_available) {
     const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
     size_t stepped = sizeof(repli_timestamp_t);
     if (stepped + 1 > length_available) {
@@ -24,11 +38,11 @@ bool main_btree_t::entry_fits(value_sizer_t *sizer, const entry_t *entry, size_t
 
     rassert(length_available <= INT_MAX);
 
-    return value_fits(sizer, p + stepped, length_available - stepped);
+    return value_fits(bs, p + stepped, length_available - stepped);
 }
 
 
-size_t main_btree_t::entry_size(value_sizer_t *sizer, const entry_t *entry) {
+size_t main_btree_t::entry_size(default_block_size_t bs, const entry_t *entry) {
     const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
     size_t stepped = sizeof(repli_timestamp_t);
     if (*(p + stepped) == DELETION_ENTRY_CODE) {
@@ -37,5 +51,5 @@ size_t main_btree_t::entry_size(value_sizer_t *sizer, const entry_t *entry) {
     const btree_key_t *key = reinterpret_cast<const btree_key_t *>(p + stepped);
     rassert(key->size <= MAX_KEY_SIZE);
     stepped += key->full_size();
-    return stepped + value_size(sizer, p + stepped);
+    return stepped + value_size(bs, p + stepped);
 }

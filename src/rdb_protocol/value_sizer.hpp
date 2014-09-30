@@ -5,7 +5,7 @@
 
 struct rdb_value_t;
 
-class rdb_value_sizer_t : public value_sizer_t {
+class rdb_value_sizer_t FINAL : public value_sizer_t {
 public:
     explicit rdb_value_sizer_t(default_block_size_t bs);
 
