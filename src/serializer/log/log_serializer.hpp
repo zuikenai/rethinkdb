@@ -7,18 +7,17 @@
 #include <vector>
 #include <list>
 
-#include "serializer/serializer.hpp"
-#include "serializer/log/config.hpp"
-#include "utils.hpp"
+#include "concurrency/cond_var.hpp"
 #include "concurrency/mutex.hpp"
 #include "concurrency/mutex_assertion.hpp"
 #include "concurrency/signal.hpp"
-#include "concurrency/cond_var.hpp"
-
-#include "serializer/log/metablock_manager.hpp"
+#include "serializer/log/config.hpp"
 #include "serializer/log/extent_manager.hpp"
 #include "serializer/log/lba/lba_list.hpp"
+#include "serializer/log/metablock_manager.hpp"
 #include "serializer/log/stats.hpp"
+#include "serializer/serializer.hpp"
+#include "utils.hpp"
 
 class cond_t;
 class data_block_manager_t;

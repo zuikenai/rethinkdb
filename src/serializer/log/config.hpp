@@ -1,4 +1,4 @@
-// Copyright 2010-2012 RethinkDB, all rights reserved.
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #ifndef SERIALIZER_LOG_CONFIG_HPP_
 #define SERIALIZER_LOG_CONFIG_HPP_
 
@@ -7,7 +7,6 @@
 #include "config/args.hpp"
 #include "containers/archive/archive.hpp"
 #include "serializer/types.hpp"
-#include "rpc/serialize_macros.hpp"
 
 /* Configuration for the serializer that can change from run to run */
 
@@ -29,7 +28,10 @@ struct log_serializer_dynamic_config_t {
 /* This is equivalent to log_serializer_static_config_t below, but is an on-disk
 structure. Changes to this change the on-disk database format! */
 struct log_serializer_on_disk_static_config_t {
+    // This value is ALWAYS 4096 (the value of DEFAULT_DEFAULT_BTREE_BLOCK_SIZE).
     uint64_t default_block_size_;
+
+    // Maybe this value could vary, I don't know.
     uint64_t extent_size_;
 
     // A helper.
@@ -49,9 +51,6 @@ struct log_serializer_static_config_t : public log_serializer_on_disk_static_con
         default_block_size_ = DEFAULT_DEFAULT_BTREE_BLOCK_SIZE;
     }
 };
-
-RDB_MAKE_SERIALIZABLE_2(log_serializer_static_config_t,
-                        default_block_size_, extent_size_);
 
 #endif /* SERIALIZER_LOG_CONFIG_HPP_ */
 

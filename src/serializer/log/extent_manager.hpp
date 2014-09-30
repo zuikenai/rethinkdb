@@ -1,4 +1,4 @@
-// Copyright 2010-2013 RethinkDB, all rights reserved.
+// Copyright 2010-2014 RethinkDB, all rights reserved.
 #ifndef SERIALIZER_LOG_EXTENT_MANAGER_HPP_
 #define SERIALIZER_LOG_EXTENT_MANAGER_HPP_
 
@@ -12,13 +12,14 @@
 #include "arch/types.hpp"
 #include "config/args.hpp"
 #include "containers/scoped.hpp"
-#include "serializer/log/config.hpp"
+#include "threading.hpp"
 
 #define NULL_OFFSET int64_t(-1)
 
 class extent_zone_t;
 
 struct log_serializer_stats_t;
+struct log_serializer_on_disk_static_config_t;
 
 // A reference to an extent in the extent manager.  An extent may not be freed until
 // all of the references go away (unless the server is shutting down).
