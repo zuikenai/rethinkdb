@@ -36,12 +36,8 @@ size_t pair_offsets_back_offset(int num_pairs) {
     return offsetof(main_leaf_node_t, pair_offsets) + num_pairs * sizeof(uint16_t);
 }
 
-size_t pair_offsets_back_offset(const main_leaf_node_t *node) {
-    return pair_offsets_back_offset(node->num_pairs);
-}
-
 const entry_t *get_entry(sized_ptr_t<const main_leaf_node_t> node, size_t offset) {
-    rassert(offset >= pair_offsets_back_offset(node.buf));
+    rassert(offset >= pair_offsets_back_offset(node.buf->num_pairs));
     rassert(offset < node.block_size);
     return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node.buf) + offset);
 }
@@ -403,7 +399,7 @@ template <class btree_type>
 void new_leaf_t<btree_type>::validate(default_block_size_t bs,
                                       sized_ptr_t<const main_leaf_node_t> node) {
     rassert(node.buf->magic == main_leaf_node_t::expected_magic);
-    const size_t back_of_pair_offsets = pair_offsets_back_offset(node.buf);
+    const size_t back_of_pair_offsets = pair_offsets_back_offset(node.buf->num_pairs);
     rassert(node.block_size >= back_of_pair_offsets);
 
     rassert(node.buf->frontmost >= back_of_pair_offsets);

@@ -2,14 +2,14 @@
 #ifndef BTREE_NEW_LEAF_HPP_
 #define BTREE_NEW_LEAF_HPP_
 
+#include "containers/sized_ptr.hpp"
 #include "errors.hpp"
+#include "serializer/types.hpp"
 
-template <class> class sized_ptr_t;
 struct btree_key_t;
 class buf_write_t;
 class buf_ptr_t;
 struct main_leaf_node_t;
-class default_block_size_t;
 
 namespace new_leaf {
 
@@ -39,7 +39,7 @@ public:
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);
 #else
-    static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t>) { }
+    static void validate(default_block_size_t, sized_ptr_t<const main_leaf_node_t>) { }
 #endif
 };
 
