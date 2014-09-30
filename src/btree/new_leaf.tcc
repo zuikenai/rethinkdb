@@ -12,6 +12,7 @@
 #include "buffer_cache/alt.hpp"
 #include "containers/sized_ptr.hpp"
 #include "serializer/buf_ptr.hpp"
+#include "math.hpp"
 
 // The byte value we use to wipe entries with.
 #define ENTRY_WIPE_CODE 0
@@ -20,6 +21,14 @@
 namespace new_leaf {
 
 struct entry_t;
+
+// This is less than old_leaf::DELETION_RESERVE_FRACTION, which is 10, because... (a)
+// the number's kind of arbitrary, but also, now we try to keep the constraint
+// dead_entry_size * DEAD_RESERVE_FRACTION <= live_entry_size, as close to equality
+// as possible, instead of keeping the constraint deleted_entry_size *
+// DELETION_RESERVE_FRACTION >= live_entry_size.  So it makes sense to have a smaller
+// proportion.
+const int DEAD_RESERVE_FRACTION = 7;
 
 namespace {
 
@@ -44,6 +53,10 @@ entry_t *get_entry(sized_ptr_t<main_leaf_node_t> node, size_t offset) {
 const entry_t *entry_for_index(sized_ptr_t<const main_leaf_node_t> node, int index) {
     rassert(index >= 0 && index < node.buf->num_pairs);
     return get_entry(node, node.buf->pair_offsets[index]);
+}
+
+bool dead_entry_size_too_big(size_t live_entry_size, size_t dead_entry_size) {
+    return live_entry_size < dead_entry_size * DEAD_RESERVE_FRACTION;
 }
 
 }  // namespace
@@ -129,10 +142,19 @@ bool new_leaf_t<btree_type>::find_key(
 }
 
 template <class btree_type>
-void normalize(default_block_size_t bs, buf_write_t *buf) {
+void keep_deads_and_normalize(default_block_size_t bs, buf_write_t *buf) {
+    new_leaf_t<btree_type>::validate(bs, buf->get_sized_data_write<main_leaf_node_t>());
     // RSI: Implement.
-    new_leaf_t<btree_type>::validate(bs,
-                                     buf->get_sized_data_write<main_leaf_node_t>());
+}
+
+template <class btree_type>
+void maybe_normalize_for_space(default_block_size_t bs, buf_write_t *buf) {
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+    size_t used = offsetof(main_leaf_node_t, pair_offsets) + node.buf->live_entry_size + node.buf->dead_entry_size;
+
+    if (block_size_t::make_from_cache(used).device_block_count() < block_size_t::make_from_cache(node.block_size).device_block_count()) {
+        keep_deads_and_normalize<btree_type>(bs, buf);
+    }
 }
 
 namespace {
@@ -147,6 +169,98 @@ void recompute_frontmost(sized_ptr_t<main_leaf_node_t> node) {
 
 }  // namespace
 
+template <class btree_type>
+void remove_excess_deads_and_normalize(default_block_size_t bs, buf_write_t *buf) {
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+
+    std::vector<std::pair<repli_timestamp_t, int> > dead_entry_indices;
+    dead_entry_indices.reserve(node.buf->num_pairs);
+
+    for (int i = 0, e = node.buf->num_pairs; i < e; ++i) {
+        const entry_t *entry = entry_for_index(node, i);
+        if (!btree_type::is_live(entry)) {
+            dead_entry_indices.push_back(std::make_pair(btree_type::entry_timestamp(entry), i));
+        }
+    }
+
+    std::sort(dead_entry_indices.begin(), dead_entry_indices.end());
+
+    size_t cumulative_size = 0;
+    size_t cutoff_index = dead_entry_indices.size();
+    for (size_t i = 0; i < dead_entry_indices.size(); ++i) {
+        size_t next_cumulative_size = cumulative_size + btree_type::entry_size(bs, entry_for_index(node, dead_entry_indices[i].second));
+        if (dead_entry_size_too_big(node.buf->live_entry_size, next_cumulative_size)) {
+            cutoff_index = i;
+            break;
+        }
+
+        cumulative_size = next_cumulative_size;
+    }
+
+    // This is called by normalize after asserting that there are too many dead
+    // entries.  So some of them should be chopped off.
+    rassert(cutoff_index < dead_entry_indices.size());
+
+    if (cutoff_index < dead_entry_indices.size()) {
+        // The timestamp _after_ the first clipped dead entry is the timestamp from
+        // which point the leaf node is up-to-date.  (Because they're sorted, it's
+        // the maximum of the clipped timestamps.)  RSI: Make sure that validate
+        // makes sure dead entries have a timestamp >= partial_replicability_age.
+
+        node.buf->partial_replicability_age = dead_entry_indices[cutoff_index].first.next();
+    }
+
+    // Now let's remove the dead entries.
+    std::vector<size_t> removed_indices;
+    removed_indices.reserve(dead_entry_indices.size() - cutoff_index);
+    for (size_t i = cutoff_index; i < dead_entry_indices.size(); ++i) {
+        removed_indices.push_back(dead_entry_indices[i].second);
+    }
+
+    std::sort(removed_indices.begin(), removed_indices.end());
+
+    // Now remove entries (in linear time).
+    {
+        uint16_t new_frontmost = node.block_size;
+        size_t ri = 0;
+        size_t wi = 0;
+        for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+            if (ri < removed_indices.size() && removed_indices[ri] == i) {
+                const size_t entry_offset = node.buf->pair_offsets[i];
+                const entry_t *entry = get_entry(node, entry_offset);
+                const size_t entry_size = btree_type::entry_size(bs, entry);
+
+                subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
+                memset(get_entry(node, entry_offset), ENTRY_WIPE_CODE, entry_size);
+            } else {
+                const uint16_t entry_offset = node.buf->pair_offsets[i];
+                new_frontmost = std::min<uint16_t>(new_frontmost, entry_offset);
+                node.buf->pair_offsets[wi] = entry_offset;
+                ++wi;
+            }
+        }
+        rassert(wi == node.buf->num_pairs - removed_indices.size());
+        node.buf->num_pairs = wi;
+        node.buf->frontmost = new_frontmost;
+    }
+
+    new_leaf_t<btree_type>::validate(bs, node);
+    maybe_normalize_for_space<btree_type>(bs, buf);
+}
+
+template <class btree_type>
+void normalize(default_block_size_t bs, buf_write_t *buf) {
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+    new_leaf_t<btree_type>::validate(bs, node);
+
+    // First, we want to ask:  Can we drop some dead entries?
+    if (dead_entry_size_too_big(node.buf->live_entry_size, node.buf->dead_entry_size)) {
+        remove_excess_deads_and_normalize<btree_type>(bs, buf);
+    } else {
+        maybe_normalize_for_space<btree_type>(bs, buf);
+    }
+}
+
 // This doesn't call normalize, which you might want to do.
 template <class btree_type>
 void remove_entry_for_index(default_block_size_t bs,
@@ -160,6 +274,7 @@ void remove_entry_for_index(default_block_size_t bs,
     subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
     memmove(node.buf->pair_offsets + index, node.buf->pair_offsets + index + 1,
             (node.buf->num_pairs - (index + 1)) * sizeof(uint16_t));
+    memset(get_entry(node, entry_offset), ENTRY_WIPE_CODE, entry_size);
     node.buf->num_pairs -= 1;
     if (entry_offset == node.buf->frontmost) {
         recompute_frontmost(node);
@@ -298,6 +413,7 @@ void new_leaf_t<btree_type>::validate(default_block_size_t bs,
             <= node.block_size);
 
     std::vector<std::pair<size_t, size_t> > entry_bounds;
+    entry_bounds.reserve(node.buf->num_pairs);
 
     // First, get minimal length info (before we try to do anything fancier with entries).
     for (uint16_t i = 0; i < node.buf->num_pairs; ++i) {

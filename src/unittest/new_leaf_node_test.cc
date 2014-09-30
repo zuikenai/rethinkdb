@@ -87,6 +87,10 @@ public:
         guarantee(ret->size <= MAX_KEY_SIZE);
         return ret;
     }
+
+    static repli_timestamp_t entry_timestamp(const entry_t *) {
+        return repli_timestamp_t::distant_past;
+    }
 };
 
 

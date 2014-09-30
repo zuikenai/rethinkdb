@@ -59,6 +59,10 @@ public:
         return ret;
     }
 
+    static repli_timestamp_t entry_timestamp(const entry_t *entry) {
+        return *reinterpret_cast<const repli_timestamp_t *>(entry);
+    }
+
 private:
     static size_t value_size(default_block_size_t bs, const void *value);
 

@@ -11,6 +11,7 @@
 #include "containers/counted.hpp"
 #include "containers/scoped.hpp"
 #include "errors.hpp"
+#include "math.hpp"
 #include "valgrind.hpp"
 
 // A relatively "lightweight" header file (we wish), in a sense.
@@ -55,6 +56,11 @@ public:
     uint32_t ser_value() const {
         rassert(ser_bs_ != 0);
         return ser_bs_;
+    }
+
+    size_t device_block_count() const {
+        rassert(ser_bs_ != 0);
+        return ceil_divide<size_t>(ser_bs_, DEVICE_BLOCK_SIZE);
     }
 
     static block_size_t make_from_cache(uint32_t cache_block_size) {
