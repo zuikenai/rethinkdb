@@ -78,7 +78,7 @@ class TermBase
             # else we suppose that we have run(connection[, options][, callback])
         else if connection?.constructor is Object
             if @showRunWarning is true
-                process?.stderr.write("RethinkDB warning: This syntax is deprecated. Please use `run(connection[, options], callback)`.")
+                process?.stderr.write("RethinkDB warning: This syntax is deprecated. Please use `run(connection[, options], callback)`.\n")
                 @showRunWarning = false
             # Handle run(connectionWithOptions, callback)
             callback = options

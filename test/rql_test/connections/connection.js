@@ -2,14 +2,14 @@
 // Tests the driver API for making connections and excercising the networking code
 /////
 
-var fs = require('fs');
-var spawn = require('child_process').spawn
-
 var assert = require('assert');
+var fs = require('fs');
+var net = require('net');
+var spawn = require('child_process').spawn
 
 var r = require('../../../build/packages/js/rethinkdb');
 var build_dir = process.env.BUILD_DIR || '../../../build/debug'
-var testDefault = process.env.TEST_DEFAULT_PORT == "1"
+var testDefaultPort = process.env.TEST_DEFAULT_PORT == "1"
 
 var port = null;
 
@@ -46,6 +46,45 @@ var withConnection = function(f){
     };
 };
 
+var withRandomPort = function(nextFunction, host, withOpenPort){
+    if (!host) {
+        host = '127.0.0.1';
+    }
+    if (!withOpenPort) {
+        withOpenPort = false;
+    }
+    
+    function getRandomPort(finalFunction) {
+
+        var canidatePort = Math.floor(Math.random() * (65535 - 49152 + 1)) + 49152;
+        var server = net.createServer();
+        server.on('error', function (err) {
+            if (err.code == 'EADDRINUSE') {
+                getRandomPort(finalFunction);
+            } else {
+                throw new Error('Error while trying to find empty port: ' + err.toString())
+            }
+        })
+        server.listen(canidatePort, host, function(){
+            if (withOpenPort) {
+                nextFunction(canidatePort, function(err){
+                    server.once('close', function(){
+                        finalFunction(err);
+                    });
+                    server.close();
+                });
+            } else {
+                server.once('close', function(){
+                    nextFunction(canidatePort, finalFunction);
+                });
+                server.close();
+            }
+        });
+    }
+    
+    return getRandomPort;
+};
+
 var testSimpleQuery = function(c, done){
     r(1).run(c, function(err, res){
         assertNull(err);
@@ -69,42 +108,35 @@ var assertNotNull = function(x){
     assert.notEqual(x, null);
 }
 
-var ifTestDefault = function(f, c){
-    if(testDefault){
-        return f(c);
-    }else{
-        return c();
-    }
-}
-
 describe('Javascript connection API', function(){
-    it("times out with a server that doesn't do the handshake correctly", function(done){
-        var port = 8990;
-
-        // Setup dummy sever
-        require('net').createServer(function(c) {
-            // Do nothing
-        }).listen(port);
-
+    
+    it("times out with a server that doesn't do the handshake correctly", withRandomPort(function(port, done){
         r.connect({port:port, timeout:1}, givesError("RqlDriverError", "Handshake timedout", done));
-    });
+    }, undefined, true));
 
     describe('With no server', function(){
-        it("fails when trying to connect", function(done){
-            ifTestDefault(
-                function(cont){
-                    r.connect({}, givesError("RqlDriverError", "Could not connect to localhost:28015.\nconnect ECONNREFUSED", function(){
-                        r.connect({host:'0.0.0.0'}, givesError("RqlDriverError", "Could not connect to 0.0.0.0:28015.\nconnect ECONNREFUSED", cont))})); },
-                function(){
-                    r.connect({port:11221}, givesError("RqlDriverError", "Could not connect to localhost:11221.\nconnect ECONNREFUSED", function(){
-                        r.connect({host:'0.0.0.0', port:11221}, givesError("RqlDriverError", "Could not connect to 0.0.0.0:11221.\nconnect ECONNREFUSED", done))}))});
-        });
-
+        if(testDefaultPort){
+            it("fails when trying to connect to the default port", function(done){
+                r.connect({}, givesError("RqlDriverError", "Could not connect to localhost:28015.\nconnect ECONNREFUSED", done));
+            });
+            it("fails when trying to connect to the default port on 0.0.0.0", function(done){
+                r.connect({host:'0.0.0.0'}, givesError("RqlDriverError", "Could not connect to 0.0.0.0:28015.\nconnect ECONNREFUSED", done));
+            });
+        }
+        
+        it("fails connecting to a closed port", withRandomPort(function(port, done){
+            r.connect({port:port}, givesError("RqlDriverError", "Could not connect to localhost:" + port + ".\nconnect ECONNREFUSED", done));
+        }));
+        it("fails connecting to a closed port on 0.0.0.0", withRandomPort(function(port, done){
+            r.connect({host:'0.0.0.0', port:port}, givesError("RqlDriverError", "Could not connect to 0.0.0.0:" + port + ".\nconnect ECONNREFUSED", done));
+        }, '0.0.0.0'));
+        
         it("empty run", function(done) {
             r.expr(1).run().then(function() {
                 done(new Error("Was expecting an error"))
             }).error(givesError("RqlDriverError", "First argument to `run` must be an open connection.", done));
         });
+        
         it("run with an object", function(done) {
             r.expr(1).run({}).then(function() {
                 done(new Error("Was expecting an error"))
@@ -121,13 +153,13 @@ describe('Javascript connection API', function(){
 
         beforeEach(function(done){
             function setup() {
-                port = Math.floor(Math.random()*(65535 - 1025)+1025);
-                cluster_port = port + 1;
+                driverPort = Math.floor(Math.random()*(65535 - 1025)+1025);
+                cluster_port = driverPort + 1;
                 server_out_log = fs.openSync('run/server-log.txt', 'a');
                 server_err_log = fs.openSync('run/server-error-log.txt', 'a');
                 cpp_server = spawn(
                     build_dir + '/rethinkdb',
-                    ['--driver-port', port, '--http-port', '0', '--cluster-port', cluster_port, '--cache-size', '512'],
+                    ['--driver-port', driverPort, '--http-port', '0', '--cluster-port', cluster_port, '--cache-size', '512'],
                     {stdio: ['ignore', 'pipe', 'pipe']});
 
                 cpp_server.stderr.on('data', function(data) {
