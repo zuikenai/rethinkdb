@@ -44,7 +44,7 @@ public:
         }
         if (*p == DEAD_ENTRY_CODE) {
             const btree_key_t *key = reinterpret_cast<const btree_key_t *>(p + 1);
-            return length_available >= 1 + key->full_size();
+            return length_available >= 1u + key->full_size();
         } else {
             const btree_key_t *key = reinterpret_cast<const btree_key_t *>(p);
             size_t stepped = key->full_size();
