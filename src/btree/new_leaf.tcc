@@ -139,9 +139,8 @@ inline size_t used_size(const main_leaf_node_t *node) {
         node->live_entry_size + node->dead_entry_size;
 }
 
-// RSI: Rename normalize to compactify.
 template <class btree_type>
-void keep_deads_and_normalize(default_block_size_t bs, buf_write_t *buf) {
+void compactify_for_space(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
     const size_t used = used_size(node.buf);
 
@@ -174,12 +173,12 @@ void keep_deads_and_normalize(default_block_size_t bs, buf_write_t *buf) {
 }
 
 template <class btree_type>
-void maybe_normalize_for_space(default_block_size_t bs, buf_write_t *buf) {
+void maybe_compactify_for_space(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
     size_t used = used_size(node.buf);
 
     if (block_size_t::make_from_cache(used).device_block_count() < block_size_t::make_from_cache(node.block_size).device_block_count()) {
-        keep_deads_and_normalize<btree_type>(bs, buf);
+        compactify_for_space<btree_type>(bs, buf);
     }
 }
 
@@ -196,7 +195,7 @@ void recompute_frontmost(sized_ptr_t<main_leaf_node_t> node) {
 }  // namespace
 
 template <class btree_type>
-void remove_excess_deads_and_normalize(default_block_size_t bs, buf_write_t *buf) {
+void remove_excess_deads_and_compactify(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
 
     std::vector<std::pair<repli_timestamp_t, int> > dead_entry_indices;
@@ -223,7 +222,7 @@ void remove_excess_deads_and_normalize(default_block_size_t bs, buf_write_t *buf
         cumulative_size = next_cumulative_size;
     }
 
-    // This is called by normalize after asserting that there are too many dead
+    // This is called by compactify after asserting that there are too many dead
     // entries.  So some of them should be chopped off.
     rassert(cutoff_index < dead_entry_indices.size());
 
@@ -271,23 +270,23 @@ void remove_excess_deads_and_normalize(default_block_size_t bs, buf_write_t *buf
     }
 
     new_leaf_t<btree_type>::validate(bs, node);
-    maybe_normalize_for_space<btree_type>(bs, buf);
+    maybe_compactify_for_space<btree_type>(bs, buf);
 }
 
 template <class btree_type>
-void normalize(default_block_size_t bs, buf_write_t *buf) {
+void compactify(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
     new_leaf_t<btree_type>::validate(bs, node);
 
     // First, we want to ask:  Can we drop some dead entries?
     if (dead_entry_size_too_big(node.buf->live_entry_size, node.buf->dead_entry_size)) {
-        remove_excess_deads_and_normalize<btree_type>(bs, buf);
+        remove_excess_deads_and_compactify<btree_type>(bs, buf);
     } else {
-        maybe_normalize_for_space<btree_type>(bs, buf);
+        maybe_compactify_for_space<btree_type>(bs, buf);
     }
 }
 
-// This doesn't call normalize, which you might want to do.
+// This doesn't call compactify, which you might want to do.
 template <class btree_type>
 void remove_entry_for_index(default_block_size_t bs,
                             sized_ptr_t<main_leaf_node_t> node,
@@ -320,7 +319,6 @@ make_gap_in_pair_offsets(default_block_size_t bs, buf_write_t *buf, int index, i
         node = buf->resize<main_leaf_node_t>(new_back);
         recompute_frontmost(node);
     } else {
-        // RSI: Make validate check that frontmost is a tight bound.
         // Make room for us to make the gap.
         while (new_back > node.buf->frontmost) {
             int frontmost_index = -1;
@@ -382,7 +380,7 @@ void new_leaf_t<btree_type>::insert_entry(default_block_size_t bs,
     node.buf->pair_offsets[index] = insertion_offset;
     add_entry_size_change<btree_type>(node.buf, entry, entry_size);
 
-    normalize<btree_type>(bs, buf);
+    compactify<btree_type>(bs, buf);
 }
 
 // Removes an entry.  Asserts that the key is in the node.  TODO(2014-11): This means
@@ -399,7 +397,7 @@ void new_leaf_t<btree_type>::erase_presence(default_block_size_t bs,
     guarantee(found);
 
     remove_entry_for_index<btree_type>(bs, node, index);
-    normalize<btree_type>(bs, buf);
+    compactify<btree_type>(bs, buf);
 }
 
 template <class btree_type>
