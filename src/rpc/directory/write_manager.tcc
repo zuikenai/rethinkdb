@@ -9,7 +9,6 @@
 
 #include "arch/runtime/coroutines.hpp"
 #include "containers/archive/versioned.hpp"
-#include "debug.hpp"
 
 #define MAX_OUTSTANDING_DIRECTORY_WRITES 4
 
