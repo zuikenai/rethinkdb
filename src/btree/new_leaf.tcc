@@ -30,32 +30,29 @@ struct entry_t;
 // proportion.
 const int DEAD_RESERVE_FRACTION = 7;
 
-namespace {
 
-size_t pair_offsets_back_offset(int num_pairs) {
+inline size_t pair_offsets_back_offset(int num_pairs) {
     return offsetof(main_leaf_node_t, pair_offsets) + num_pairs * sizeof(uint16_t);
 }
 
-const entry_t *get_entry(sized_ptr_t<const main_leaf_node_t> node, size_t offset) {
+inline const entry_t *get_entry(sized_ptr_t<const main_leaf_node_t> node, size_t offset) {
     rassert(offset >= pair_offsets_back_offset(node.buf->num_pairs));
     rassert(offset < node.block_size);
     return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node.buf) + offset);
 }
 
-entry_t *get_entry(sized_ptr_t<main_leaf_node_t> node, size_t offset) {
+inline entry_t *get_entry(sized_ptr_t<main_leaf_node_t> node, size_t offset) {
     return const_cast<entry_t *>(get_entry(sized_ptr_t<const main_leaf_node_t>(node), offset));
 }
 
-const entry_t *entry_for_index(sized_ptr_t<const main_leaf_node_t> node, int index) {
+inline const entry_t *entry_for_index(sized_ptr_t<const main_leaf_node_t> node, int index) {
     rassert(index >= 0 && index < node.buf->num_pairs);
     return get_entry(node, node.buf->pair_offsets[index]);
 }
 
-bool dead_entry_size_too_big(size_t live_entry_size, size_t dead_entry_size) {
+inline bool dead_entry_size_too_big(size_t live_entry_size, size_t dead_entry_size) {
     return live_entry_size < dead_entry_size * DEAD_RESERVE_FRACTION;
 }
-
-}  // namespace
 
 template <class btree_type>
 void add_entry_size_change(main_leaf_node_t *node,
@@ -137,16 +134,49 @@ bool new_leaf_t<btree_type>::find_key(
     return false;
 }
 
+inline size_t used_size(const main_leaf_node_t *node) {
+    return offsetof(main_leaf_node_t, pair_offsets) +
+        node->live_entry_size + node->dead_entry_size;
+}
+
+// RSI: Rename normalize to compactify.
 template <class btree_type>
 void keep_deads_and_normalize(default_block_size_t bs, buf_write_t *buf) {
-    new_leaf_t<btree_type>::validate(bs, buf->get_sized_data_write<main_leaf_node_t>());
-    // RSI: Implement.
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+    const size_t used = used_size(node.buf);
+
+    // We sort offset/index pairs by offset.
+    std::vector<std::pair<uint16_t, uint16_t> > offset_and_indexes;
+    offset_and_indexes.reserve(node.buf->num_pairs);
+
+    for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+        offset_and_indexes.push_back(std::make_pair(node.buf->pair_offsets[i], i));
+    }
+
+    std::sort(offset_and_indexes.begin(), offset_and_indexes.end());
+
+    // Now we walk through the entries from left to right and move them.
+
+    size_t write_offset = pair_offsets_back_offset(node.buf->num_pairs);
+    for (const std::pair<uint16_t, uint16_t> &pair : offset_and_indexes) {
+        const entry_t *entry = get_entry(node, pair.first);
+        const size_t entry_size = btree_type::entry_size(bs, entry);
+        memmove(get_entry(node, write_offset),
+                entry,
+                entry_size);
+        node.buf->pair_offsets[pair.second] = write_offset;
+        write_offset += entry_size;
+    }
+
+    rassert(write_offset == used);
+    node = buf->resize<main_leaf_node_t>(used);
+    new_leaf_t<btree_type>::validate(bs, node);
 }
 
 template <class btree_type>
 void maybe_normalize_for_space(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
-    size_t used = offsetof(main_leaf_node_t, pair_offsets) + node.buf->live_entry_size + node.buf->dead_entry_size;
+    size_t used = used_size(node.buf);
 
     if (block_size_t::make_from_cache(used).device_block_count() < block_size_t::make_from_cache(node.block_size).device_block_count()) {
         keep_deads_and_normalize<btree_type>(bs, buf);
