@@ -229,10 +229,10 @@ void remove_excess_deads_and_compactify(default_block_size_t bs, buf_write_t *bu
     if (cutoff_index < dead_entry_indices.size()) {
         // The timestamp _after_ the first clipped dead entry is the timestamp from
         // which point the leaf node is up-to-date.  (Because they're sorted, it's
-        // the maximum of the clipped timestamps.)  RSI: Make sure that validate
-        // makes sure dead entries have a timestamp >= partial_replicability_age.
+        // the maximum of the clipped timestamps.)
 
-        node.buf->partial_replicability_age = dead_entry_indices[cutoff_index].first.next();
+        node.buf->partial_replicability_age
+            = dead_entry_indices[cutoff_index].first.next();
     }
 
     // Now let's remove the dead entries.
@@ -490,6 +490,9 @@ void new_leaf_t<btree_type>::validate(default_block_size_t bs,
         } else {
             // A dead entry.  All entries are live or dead.
             dead_size += btree_type::entry_size(bs, entry) + sizeof(uint16_t);
+            const repli_timestamp_t tstamp = btree_type::entry_timestamp(entry);
+            rassert(tstamp != repli_timestamp_t::invalid);
+            rassert(tstamp >= node.buf->partial_replicability_age);
         }
     }
 
