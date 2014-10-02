@@ -36,6 +36,9 @@ public:
 
     static bool is_empty(sized_ptr_t<const main_leaf_node_t> node);
 
+    static bool is_full(default_block_size_t bs, const main_leaf_node_t *node,
+                        const void *entry);
+
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);
 #else
