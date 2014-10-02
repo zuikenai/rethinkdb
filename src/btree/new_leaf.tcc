@@ -70,9 +70,9 @@ void subtract_entry_size_change(main_leaf_node_t *node,
                                 const entry_t *entry,
                                 size_t entry_size) {
     if (btree_type::is_live(entry)) {
-        node->live_entry_size -= entry_size - sizeof(uint16_t);
+        node->live_entry_size -= entry_size + sizeof(uint16_t);
     } else {
-        node->dead_entry_size -= entry_size - sizeof(uint16_t);
+        node->dead_entry_size -= entry_size + sizeof(uint16_t);
     }
 }
 
@@ -434,7 +434,13 @@ void new_leaf_t<btree_type>::validate(default_block_size_t bs,
 
     rassert(node.buf->frontmost +
             (node.buf->live_entry_size + node.buf->dead_entry_size - node.buf->num_pairs * sizeof(uint16_t))
-            <= node.block_size);
+            <= node.block_size,
+            "frontmost = %d, live_entry_size = %d, dead_entry_size = %d, num_pairs = %d, block_size = %" PRIu32 ", failed comparison is %zu <= %" PRIu32,
+            node.buf->frontmost, node.buf->live_entry_size, node.buf->dead_entry_size,
+            node.buf->num_pairs,
+            node.block_size,
+            node.buf->frontmost + (node.buf->live_entry_size + node.buf->dead_entry_size - node.buf->num_pairs * sizeof(uint16_t)),
+            node.block_size);
 
     std::vector<std::pair<size_t, size_t> > entry_bounds;
     entry_bounds.reserve(node.buf->num_pairs);

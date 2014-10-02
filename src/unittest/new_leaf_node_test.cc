@@ -236,6 +236,29 @@ TPTEST(NewLeafNodeTest, InsertFind) {
     ASSERT_FALSE(found);
 }
 
+TPTEST(NewLeafNodeTest, InsertErase) {
+    test_txn_t txn;
+    buf_lock_t lock(buf_parent_t(&txn), alt_create_t::create);
+    buf_write_t write(&lock);
+    write.set_data_write(test_leaf_t::init());
+
+    scoped_malloc_t<void> entry = make_live_entry("a", "abc");
+    test_leaf_t::insert_entry(bs(), &write, entry.get());
+
+    int index;
+    bool found = test_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                       store_key_t("a").btree_key(),
+                                       &index);
+    ASSERT_TRUE(found);
+    ASSERT_EQ(0, index);
+
+    test_leaf_t::erase_presence(bs(), &write, store_key_t("a").btree_key());
+    found = test_leaf_t::find_key(write.get_sized_data_write<main_leaf_node_t>(),
+                                  store_key_t("a").btree_key(),
+                                  &index);
+    ASSERT_FALSE(found);
+}
+
 }  // namespace new_leaf_node_test
 
 }  // namespace unittest
