@@ -667,8 +667,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
             }
         } else {
             // Level.
-            store_key_t replacement_key_buffer;
-            btree_key_t *replacement_key = replacement_key_buffer.btree_key();
+            store_key_t replacement_key;
 
             bool leveled;
             {
@@ -694,7 +693,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                     leveled = internal_node::level(sizer->default_block_size(),
                             static_cast<internal_node_t *>(buf_write.get_data_write()),
                             static_cast<internal_node_t *>(sib_buf_write.get_data_write()),
-                            replacement_key, parent_node, &moved_children);
+                            &replacement_key, parent_node, &moved_children);
                     // Detach children that have been removed from `sib_buf`:
                     for (size_t i = 0; i < moved_children.size(); ++i) {
                         sib_buf.detach_child(moved_children[i]);
@@ -704,7 +703,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                     leveled = leaf::level(sizer, nodecmp_node_with_sib,
                             static_cast<leaf_node_t *>(buf_write.get_data_write()),
                             static_cast<leaf_node_t *>(sib_buf_write.get_data_write()),
-                            replacement_key, &moved_values);
+                            &replacement_key, &moved_values);
                     // Detach values that have been removed from `sib_buf`:
                     for (size_t i = 0; i < moved_values.size(); ++i) {
                         detacher->delete_value(buf_parent_t(&sib_buf),
@@ -724,7 +723,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                 buf_write_t last_buf_write(last_buf);
                 internal_node::update_key(static_cast<internal_node_t *>(last_buf_write.get_data_write()),
                                           key_in_middle.btree_key(),
-                                          replacement_key);
+                                          replacement_key.btree_key());
             }
         }
     }

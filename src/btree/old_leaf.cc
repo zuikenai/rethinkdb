@@ -1037,7 +1037,7 @@ void merge(value_sizer_t *sizer, leaf_node_t *left, leaf_node_t *right) {
 // We move keys out of sibling and into node.
 bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
            leaf_node_t *node, leaf_node_t *sibling,
-           btree_key_t *replacement_key_out,
+           store_key_t *replacement_key_out,
            std::vector<const void *> *moved_values_out) {
     rassert(node != sibling);
 
@@ -1139,9 +1139,9 @@ bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
     guarantee(sibling->num_pairs > 0);
 
     if (nodecmp_node_with_sib < 0) {
-        keycpy(replacement_key_out, entry_key(get_entry(node, node->pair_offsets[node->num_pairs - 1])));
+        keycpy(replacement_key_out->btree_key(), entry_key(get_entry(node, node->pair_offsets[node->num_pairs - 1])));
     } else {
-        keycpy(replacement_key_out, entry_key(get_entry(sibling, sibling->pair_offsets[sibling->num_pairs - 1])));
+        keycpy(replacement_key_out->btree_key(), entry_key(get_entry(sibling, sibling->pair_offsets[sibling->num_pairs - 1])));
     }
 
     return true;

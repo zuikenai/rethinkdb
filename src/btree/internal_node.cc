@@ -141,7 +141,7 @@ void merge(block_size_t block_size, const internal_node_t *node, internal_node_t
 }
 
 bool level(block_size_t block_size, internal_node_t *node,
-           internal_node_t *sibling, btree_key_t *replacement_key,
+           internal_node_t *sibling, store_key_t *replacement_key_out,
            const internal_node_t *parent,
            std::vector<block_id_t> *moved_children_out) {
     validate(block_size, node);
@@ -191,7 +191,7 @@ bool level(block_size_t block_size, internal_node_t *node,
         btree_internal_pair *special_pair = get_pair(node, special_pair_offset);
         special_pair->lnode = pair_for_parent->lnode;
 
-        keycpy(replacement_key, &pair_for_parent->key);
+        keycpy(replacement_key_out->btree_key(), &pair_for_parent->key);
 
         if (moved_children_out != NULL) {
             moved_children_out->push_back(pair_for_parent->lnode);
@@ -231,7 +231,7 @@ bool level(block_size_t block_size, internal_node_t *node,
             impl::delete_offset(sibling, sibling->npairs-1);
         }
 
-        keycpy(replacement_key, &get_pair_by_index(sibling, sibling->npairs-1)->key);
+        keycpy(replacement_key_out->btree_key(), &get_pair_by_index(sibling, sibling->npairs-1)->key);
 
         impl::make_last_pair_special(sibling);
     }
