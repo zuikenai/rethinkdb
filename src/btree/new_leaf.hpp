@@ -10,6 +10,7 @@ struct btree_key_t;
 class buf_write_t;
 class buf_ptr_t;
 struct main_leaf_node_t;
+class store_key_t;
 
 namespace new_leaf {
 
@@ -40,6 +41,11 @@ public:
                         const void *entry);
 
     static bool is_underfull(default_block_size_t bs, const main_leaf_node_t *node);
+
+    static void split(default_block_size_t bs,
+                      buf_write_t *node,
+                      buf_ptr_t *rnode_out,
+                      store_key_t *median_out);
 
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);

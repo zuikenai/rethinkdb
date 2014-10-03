@@ -35,10 +35,19 @@ inline size_t pair_offsets_back_offset(int num_pairs) {
     return offsetof(main_leaf_node_t, pair_offsets) + num_pairs * sizeof(uint16_t);
 }
 
+inline const entry_t *get_entry(const main_leaf_node_t *node, size_t offset) {
+    rassert(offset >= pair_offsets_back_offset(node->num_pairs));
+    return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node) + offset);
+}
+
 inline const entry_t *get_entry(sized_ptr_t<const main_leaf_node_t> node, size_t offset) {
     rassert(offset >= pair_offsets_back_offset(node.buf->num_pairs));
-    rassert(offset < node.block_size);
-    return reinterpret_cast<const entry_t *>(reinterpret_cast<const char *>(node.buf) + offset);
+    return get_entry(node.buf, offset);
+}
+
+inline entry_t *get_entry(main_leaf_node_t *node, size_t offset) {
+    const main_leaf_node_t *const_node = node;
+    return const_cast<entry_t *>(get_entry(const_node, offset));
 }
 
 inline entry_t *get_entry(sized_ptr_t<main_leaf_node_t> node, size_t offset) {
@@ -48,6 +57,10 @@ inline entry_t *get_entry(sized_ptr_t<main_leaf_node_t> node, size_t offset) {
 inline const entry_t *entry_for_index(sized_ptr_t<const main_leaf_node_t> node, int index) {
     rassert(index >= 0 && index < node.buf->num_pairs);
     return get_entry(node, node.buf->pair_offsets[index]);
+}
+
+inline entry_t *entry_for_index(sized_ptr_t<main_leaf_node_t> node, int index) {
+    return const_cast<entry_t *>(entry_for_index(sized_ptr_t<const main_leaf_node_t>(node), index));
 }
 
 inline bool dead_entry_size_too_big(size_t live_entry_size, size_t dead_entry_size) {
@@ -134,9 +147,12 @@ bool new_leaf_t<btree_type>::find_key(
     return false;
 }
 
+inline size_t used_size_for_cost(size_t cost) {
+    return offsetof(main_leaf_node_t, pair_offsets) + cost;
+}
+
 inline size_t used_size(const main_leaf_node_t *node) {
-    return offsetof(main_leaf_node_t, pair_offsets) +
-        node->live_entry_size + node->dead_entry_size;
+    return used_size_for_cost(node->live_entry_size + node->dead_entry_size);
 }
 
 template <class btree_type>
@@ -274,7 +290,8 @@ void remove_excess_deads_and_compactify(default_block_size_t bs, buf_write_t *bu
 }
 
 template <class btree_type>
-void compactify(default_block_size_t bs, buf_write_t *buf) {
+MUST_USE sized_ptr_t<main_leaf_node_t>
+compactify(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
     new_leaf_t<btree_type>::validate(bs, node);
 
@@ -284,6 +301,7 @@ void compactify(default_block_size_t bs, buf_write_t *buf) {
     } else {
         maybe_compactify_for_space<btree_type>(bs, buf);
     }
+    return buf->get_sized_data_write<main_leaf_node_t>();
 }
 
 // This doesn't call compactify, which you might want to do.
@@ -306,7 +324,8 @@ void remove_entry_for_index(default_block_size_t bs,
     }
 }
 
-// Invalidates old buf pointers that were returned by get_data_write -- either call get_data_write again, or use this return value.
+// Invalidates old buf pointers that were returned by get_sized_data_write -- either
+// call get_sized_data_write again, or use this return value.
 template <class btree_type>
 MUST_USE sized_ptr_t<main_leaf_node_t>
 make_gap_in_pair_offsets(default_block_size_t bs, buf_write_t *buf, int index, int size) {
@@ -380,7 +399,7 @@ void new_leaf_t<btree_type>::insert_entry(default_block_size_t bs,
     node.buf->pair_offsets[index] = insertion_offset;
     add_entry_size_change<btree_type>(node.buf, entry, entry_size);
 
-    compactify<btree_type>(bs, buf);
+    node = compactify<btree_type>(bs, buf);
 }
 
 // Removes an entry.  Asserts that the key is in the node.  TODO(2014-11): This means
@@ -397,7 +416,7 @@ void new_leaf_t<btree_type>::erase_presence(default_block_size_t bs,
     guarantee(found);
 
     remove_entry_for_index<btree_type>(bs, node, index);
-    compactify<btree_type>(bs, buf);
+    node = compactify<btree_type>(bs, buf);
 }
 
 template <class btree_type>
@@ -442,6 +461,72 @@ bool new_leaf_t<btree_type>::is_underfull(default_block_size_t bs,
     const size_t free_space = bs.value() - offsetof(main_leaf_node_t, pair_offsets);
     const size_t max_entry_usage = sizeof(uint16_t) + btree_type::max_entry_size();
     return node->live_entry_size + node->dead_entry_size < free_space / 2 - (3 * max_entry_usage) / 2;
+}
+
+template <class btree_type>
+void new_leaf_t<btree_type>::split(default_block_size_t bs,
+                                   buf_write_t *buf,
+                                   buf_ptr_t *rnode_out,
+                                   store_key_t *median_out) {
+    // We're just going to compute up front how big the sibling has to be.
+
+    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+    rassert(node.buf->num_pairs >= 2);
+
+    const size_t total_cost = node.buf->live_entry_size + node.buf->dead_entry_size;
+
+    size_t splitpoint = node.buf->num_pairs;
+    size_t sib_cost = 0;
+    while (splitpoint > 1) {
+        size_t new_splitpoint = splitpoint - 1;
+        size_t new_sib_cost = sib_cost + btree_type::entry_size(bs, entry_for_index(node, new_splitpoint)) + sizeof(uint16_t);
+
+        if (new_sib_cost >= total_cost / 2) {
+            break;
+        }
+        splitpoint = new_splitpoint;
+        sib_cost = new_sib_cost;
+    }
+
+    rassert(splitpoint > 0 && splitpoint < node.buf->num_pairs);
+
+    const size_t rnode_block_size = used_size_for_cost(sib_cost);
+
+    buf_ptr_t rnode = buf_ptr_t::alloc_uninitialized(block_size_t::make_from_cache(rnode_block_size));
+    main_leaf_node_t *rnode_ptr = static_cast<main_leaf_node_t *>(rnode.cache_data());
+    const size_t rnode_num_pairs = node.buf->num_pairs - splitpoint;
+
+    rnode_ptr->magic = main_leaf_node_t::expected_magic;
+    rnode_ptr->num_pairs = rnode_num_pairs;
+    rnode_ptr->partial_replicability_age = node.buf->partial_replicability_age;
+
+    size_t write_offset = pair_offsets_back_offset(rnode_num_pairs);
+    rnode_ptr->frontmost = write_offset;
+    for (size_t i = 0; i < rnode_num_pairs; ++i) {
+        entry_t *const node_entry = entry_for_index(node, splitpoint + i);
+        const size_t entry_size = btree_type::entry_size(bs, node_entry);
+        rassert(write_offset + entry_size <= rnode_block_size);
+        memcpy(get_entry(rnode_ptr, write_offset), node_entry, entry_size);
+        subtract_entry_size_change<btree_type>(node.buf, node_entry, entry_size);
+        add_entry_size_change<btree_type>(rnode_ptr, node_entry, entry_size);
+        memset(node_entry, ENTRY_WIPE_CODE, entry_size);
+        rnode_ptr->pair_offsets[i] = write_offset;
+        write_offset += entry_size;
+    }
+
+    // TODO(2014-11): Compactify rnode?  What if excessively many wound up in rnode?
+    // That means it could have about twice the acceptable density of deletion
+    // entries.
+
+    validate(bs, sized_ptr_t<main_leaf_node_t>(rnode_ptr, rnode_block_size));
+
+    node.buf->num_pairs = splitpoint;
+    recompute_frontmost(node);
+    node = compactify<btree_type>(bs, buf);
+
+    *rnode_out = std::move(rnode);
+    keycpy(median_out->btree_key(),
+           btree_type::entry_key(entry_for_index(node, node.buf->num_pairs - 1)));
 }
 
 
