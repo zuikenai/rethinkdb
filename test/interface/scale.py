@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2010-2014 RethinkDB, all rights reserved.
-import sys, os, time, traceback, socket, pprint
+import sys, os, time, traceback, socket, pprint, tempfile, subprocess
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import driver, scenario_common, utils
 from vcoptparse import *
@@ -9,14 +9,19 @@ r = utils.import_python_driver()
 op = OptParser()
 scenario_common.prepare_option_parser_mode_flags(op)
 op["servers"] = IntFlag("--servers", 5)
+op["tables"] = IntFlag("--tables", 1)
 op["shards"] = IntFlag("--shards", 5)
 op["replicas"] = IntFlag("--replicas", 3)
 op["dump"] = BoolFlag("--dump")
+op["start_prof"] = StringFlag("--start-prof", None)
+op["stop_prof"] = StringFlag("--stop-prof", None)
+op["directory"] = StringFlag("--directory", None)
 opts = op.parse(sys.argv)
 
 with open(__file__) as this_script:
     datum = {
         "num_servers": opts["servers"],
+        "num_tables": opts["tables"],
         "num_shards": opts["shards"],
         "num_replicas": opts["replicas"],
         "host_name": socket.gethostname(),
@@ -25,6 +30,13 @@ with open(__file__) as this_script:
         "observations": { }
         }
 ob = datum["observations"]
+
+if opts["directory"] is not None:
+    assert os.path.exists(opts["directory"])
+    directory = tempfile.mkdtemp(dir = opts["directory"])
+else:
+    directory = tempfile.mkdtemp(prefix = "scale_test_")
+print "Using temporary directory %r" % directory
 
 with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
@@ -35,13 +47,15 @@ with driver.Metacluster() as metacluster:
     start = time.time()
     files = [driver.Files(metacluster,
                           log_path = "/dev/null",
+                          db_path = os.path.join(directory, "%d" % (i+1)),
                           machine_name = "s%d" % (i+1),
                           executable_path = executable_path,
                           command_prefix = command_prefix)
         for i in xrange(num_servers)]
     procs = [driver.Process(cluster,
                             files[i],
-                            log_path = "serve-output-%d" % (i+1),
+                            log_path = os.path.join(
+                                directory, "serve-output-%d" % (i+1)),
                             executable_path = executable_path,
                             command_prefix = command_prefix,
                             extra_options = serve_options)
@@ -74,87 +88,88 @@ with driver.Metacluster() as metacluster:
     ob["create_db"] = time.time() - start
     print "Done (%.2f seconds)" % ob["create_db"]
 
-    print "Creating a table..."
-    start = time.time()
-    r.table_create("test").run(conns[0])
-    ob["create_table"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["create_table"]
+    for i in xrange(opts["tables"]):
+        print "Creating a table (%d)..." % i
+        start = time.time()
+        r.table_create("test_%d" % i).run(conns[0])
+        ob["create_table_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["create_table_%d" % i]
 
-    pprint.pprint(r.table_config("test").run(conns[0])["shards"])
-    primary = int(r.table_config("test").run(conns[0])["shards"][0]["director"][1:]) - 1
+        pprint.pprint(r.table_config("test_%d" % i).run(conns[0])["shards"])
+        primary = int(r.table_config("test_%d" % i).run(conns[0])["shards"][0]["director"][1:]) - 1
 
-    print "Inserting 1000 documents..."
-    start = time.time()
-    r.table("test").insert([{"id": i} for i in xrange(1000)]).run(conns[primary])
-    ob["insert_a"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["insert_a"]
+        print "Inserting 1000 documents..."
+        start = time.time()
+        r.table("test_%d" % i).insert([{"id": j} for j in xrange(1000)]).run(conns[primary])
+        ob["insert_a_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["insert_a_%d" % i]
 
-    print "Reading all documents..."
-    start = time.time()
-    res = list(r.table("test").run(conns[primary]))
-    assert len(res) == 1000
-    ob["read_all_a"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["read_all_a"]
+        print "Reading all documents..."
+        start = time.time()
+        res = list(r.table("test_%d" % i).run(conns[primary]))
+        assert len(res) == 1000
+        ob["read_all_a_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["read_all_a_%d" % i]
 
-    print "Reading one document..."
-    start = time.time()
-    r.table("test").get(1).run(conns[primary])
-    ob["read_one_a"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["read_one_a"]
+        print "Reading one document..."
+        start = time.time()
+        r.table("test_%d" % i).get(1).run(conns[primary])
+        ob["read_one_a_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["read_one_a_%d" % i]
 
-    print "Reconfiguring table..."
-    start = time.time()
-    new = r.table("test").reconfigure(opts["shards"], opts["replicas"]).run(conns[0])
-    ob["reconfigure_a"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["reconfigure_a"]
-    pprint.pprint(new["shards"])
+        if i == opts["tables"] - 1 and opts["start_prof"] is not None:
+            print "Running %r..." % opts["start_prof"]
+            subprocess.check_call(opts["start_prof"], shell=True)
+            print "Done."
 
-    print "Waiting for reconfigure to take effect..."
-    start = time.time()
-    while True:
-        st = r.table_status("test").run(conns[0])
-        keys = ["dt", "db", "dr", "rt", "rl", "rb", "rr", "nt", "no", "ne"]
-        counts = dict((key, 0) for key in keys)
-        for shard in st["shards"]:
-            for row in shard:
-                key = row["role"][0] + row["state"][0]
-                counts[key] += 1
-        print "%6.2fs" % (time.time() - start),
-        for key in keys:
-            print key, "%3d" % counts[key],
-        print
-        if st["ready_completely"]:
-            break
-        time.sleep(0.1)
-    while True:
-        try:
-            st = r.table("test").run(conns[0])
-        except r.RqlRuntimeError:
-            pass
-        else:
-            break
-        time.sleep(1)
-    ob["reconfigure_b"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["reconfigure_b"]
+        print "Reconfiguring table..."
+        start = time.time()
+        new = r.table("test_%d" % i).reconfigure(opts["shards"], opts["replicas"]).run(conns[0])
+        ob["reconfigure_a_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["reconfigure_a_%d" % i]
+        pprint.pprint(new["shards"])
 
-    print "Inserting 1000 documents..."
-    start = time.time()
-    r.table("test").insert([{"id": i} for i in xrange(1000, 2000)]).run(conns[0])
-    ob["insert_b"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["insert_b"]
+        print "Waiting for reconfigure to take effect..."
+        start = time.time()
+        while True:
+            st = r.table_status("test_%d" % i).run(conns[0])
+            if st["ready_completely"]:
+                break
+            time.sleep(0.1)
+        while True:
+            try:
+                st = r.table("test_%d" % i).run(conns[0])
+            except r.RqlRuntimeError:
+                pass
+            else:
+                break
+            time.sleep(1)
+        ob["reconfigure_b_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["reconfigure_b_%d" % i]
 
-    print "Reading all documents..."
-    start = time.time()
-    res = list(r.table("test").run(conns[0]))
-    assert len(res) == 2000
-    ob["read_all_b"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["read_all_b"]
+        if i == opts["tables"] - 1 and opts["stop_prof"] is not None:
+            print "Running %r..." % opts["stop_prof"]
+            subprocess.check_call(opts["stop_prof"], shell=True)
+            print "Done."
 
-    print "Reading one document..."
-    start = time.time()
-    r.table("test").get(1001).run(conns[0])
-    ob["read_one_b"] = time.time() - start
-    print "Done (%.2f seconds)" % ob["read_one_b"]
+        print "Inserting 1000 documents..."
+        start = time.time()
+        r.table("test_%d" % i).insert([{"id": j} for j in xrange(1000, 2000)]).run(conns[0])
+        ob["insert_b_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["insert_b_%d" % i]
+
+        print "Reading all documents..."
+        start = time.time()
+        res = list(r.table("test_%d" % i).run(conns[0]))
+        assert len(res) == 2000
+        ob["read_all_b_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["read_all_b_%d" % i]
+
+        print "Reading one document..."
+        start = time.time()
+        r.table("test_%d" % i).get(1001).run(conns[0])
+        ob["read_one_b_%d" % i] = time.time() - start
+        print "Done (%.2f seconds)" % ob["read_one_b_%d" % i]
 
     print "Shutting down..."
     start = time.time()
