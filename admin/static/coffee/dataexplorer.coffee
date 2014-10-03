@@ -397,6 +397,9 @@ module 'DataExplorerView', ->
                     continue
                 if tag is '()' # The parentheses will be added later
                     tag = ''
+                else if tag is 'toJsonString, toJSON' # The parentheses will be added later
+                    tag = 'toJSON'
+
                 @set_doc_description command, tag, @suggestions
 
             relations = data['types']
