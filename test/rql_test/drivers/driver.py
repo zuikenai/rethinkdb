@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import atexit, collections, os, re, sys
+import atexit, itertools, os, re, sys
 from datetime import datetime, tzinfo, timedelta
 
 try:
@@ -97,14 +97,11 @@ class Lst:
         if not hasattr(other, '__iter__'):
             return False
 
-        i = 0
-        for otherItem, selfItem in zip(other, self.lst):
+        for otherItem, selfItem in itertools.izip_longest(other, self.lst):
+            if None in (otherItem, selfItem):
+                return False # mistmatched lengths
             if not eq(selfItem, **self.kwargs)(otherItem):
                 return False
-            i += 1
-
-        if i != len(self.lst):
-            return False
 
         return True
 
