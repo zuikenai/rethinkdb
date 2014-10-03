@@ -12,6 +12,9 @@
 //   [repli_timestamp][btree key][btree value]      -- a live entry
 //   [repli_timestamp][255][btree key]              -- a deletion entry
 //
+// Note that [btree value] consists of a blob reference of maxreflen
+// BLOB_BTREE_MAXREFLEN.
+//
 // Differences from old_leaf:
 //
 //   - An "entry" structure includes the timestamp (because now all entries have
