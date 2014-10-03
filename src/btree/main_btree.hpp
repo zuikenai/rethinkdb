@@ -2,6 +2,7 @@
 #define BTREE_MAIN_BTREE_HPP_
 
 #include "btree/node.hpp"
+#include "config/args.hpp"
 #include "repli_timestamp.hpp"
 
 // main_btree_t implements the leaf node type parameter trait.
@@ -61,6 +62,10 @@ public:
 
     static repli_timestamp_t entry_timestamp(const entry_t *entry) {
         return *reinterpret_cast<const repli_timestamp_t *>(entry);
+    }
+
+    static size_t max_entry_size() {
+        return sizeof(repli_timestamp_t) + 1 + MAX_KEY_SIZE + BLOB_BTREE_MAXREFLEN;
     }
 
 private:

@@ -121,6 +121,7 @@ void shrink(default_block_size_t block_size, int levels, int64_t offset, int64_t
 
 // The maxreflen value (allegedly) appropriate for use with rdb_protocol btrees.
 // It's 251.  This should be renamed.
+// RSI: Remove this, use BLOB_BTREE_MAXREFLEN.
 extern int btree_maxreflen;
 
 // The size of a blob, equivalent to blob_t(ref, maxreflen).valuesize().

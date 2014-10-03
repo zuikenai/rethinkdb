@@ -91,6 +91,10 @@ public:
     static repli_timestamp_t entry_timestamp(const entry_t *) {
         return repli_timestamp_t::distant_past;
     }
+
+    static size_t max_entry_size() {
+        return 1 + MAX_KEY_SIZE + 1 + MAX_KEY_SIZE;
+    }
 };
 
 

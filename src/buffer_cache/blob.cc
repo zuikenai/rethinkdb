@@ -215,7 +215,7 @@ int64_t value_size(const char *ref, int maxreflen) {
 }
 
 
-int btree_maxreflen = 251;
+int btree_maxreflen = BLOB_BTREE_MAXREFLEN;
 block_magic_t internal_node_magic = { { 'l', 'a', 'r', 'i' } };
 block_magic_t leaf_node_magic = { { 'l', 'a', 'r', 'l' } };
 

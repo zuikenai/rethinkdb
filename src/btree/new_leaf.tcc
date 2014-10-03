@@ -428,6 +428,21 @@ bool new_leaf_t<btree_type>::is_full(default_block_size_t bs,
     return used_size(node) + entry_size + sizeof(uint16_t) > bs.value();
 }
 
+template <class btree_type>
+bool new_leaf_t<btree_type>::is_underfull(default_block_size_t bs,
+                                          const main_leaf_node_t *node) {
+    // An underfull node is one whose mandatory fields' cost constitutes
+    // significantly less than half the free space, where "significantly" is enough
+    // to prevent really easy split-then-merge happenings.
+
+    // We omit the fixed costs from the calculation.  Also, we multiple
+    // max_entry_size by 1.5 to be extra hard about avoiding excessive
+    // split-then-merge operations.  (It's somewhat more OK to do this now because we
+    // no longer waste space _on_disk_ from having underfull entries.)
+    const size_t free_space = bs.value() - offsetof(main_leaf_node_t, pair_offsets);
+    const size_t max_entry_usage = sizeof(uint16_t) + btree_type::max_entry_size();
+    return node->live_entry_size + node->dead_entry_size < free_space / 2 - (3 * max_entry_usage) / 2;
+}
 
 
 

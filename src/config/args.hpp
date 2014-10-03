@@ -124,6 +124,9 @@
 // How large can the key be, in bytes?  This value needs to fit in a byte.
 #define MAX_KEY_SIZE                              250
 
+// The maximum blob ref size in rdb values in a b-tree.
+#define BLOB_BTREE_MAXREFLEN                      251
+
 // Special block IDs.  These don't really belong here because they're
 // more magic constants than tunable parameters.
 
