@@ -157,12 +157,15 @@ class Connection(object):
         self._sock_sendall(struct.pack("<L", p.VersionDummy.Protocol.JSON))
 
         # Read out the response from the server, which will be a null-terminated string
-        response = b""
-        while True:
-            char = self._sock_recv(1)
-            if char == b"\0":
-                break
-            response += char
+        try:
+            response = b""
+            while True:
+                char = self._sock_recv(1)
+                if char == b"\0":
+                    break
+                response += char
+        except socket.timeout:
+            raise RqlDriverError("Timed out during handshake with %s:%d." % (self.host, self.port))
 
         if response != b"SUCCESS":
             self.close(noreply_wait=False)
