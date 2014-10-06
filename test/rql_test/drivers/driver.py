@@ -239,16 +239,24 @@ class Uuid:
         return "uuid()"
 
 class Number:
-    def __init__(self, value, precision=0.0, **kwargs):
-        if not isinstance(value, (float, int, long)):
-            raise ValueError('Number got a non-numeric value: %s' % value)
+    def __init__(self, value, precision=0.0, explicit_type=None, **kwargs):
+        if explicit_type is not None:
+            if not isinstance(value, explicit_type):
+                raise ValueError('Number with an explicit type (%s) got an incorrect value: %s' % (str(explicit_type), str(value)))
+        elif not isinstance(value, (float, int, long)):
+            raise ValueError('Number got a non-numeric value: %s (%s)' % (str(value), type(value)))
         self.value = value
         self.precision = precision
+        self.explicit_type = explicit_type
 
     def __eq__(self, other):
-        if not isinstance(other, (float, int, long)):
+        testType = self.explicit_type or (float, int, long)
+        if not isinstance(other, testType):
             return False
         return abs(self.value - other) <= self.precision
+    
+    def __repr__(self):
+        return "%s: %s" & (type(self.value).__name__, str(self.value))
 
 # -- Curried output test functions --
 
@@ -420,6 +428,12 @@ def uuid():
 
 def shard(table_name):
     test_util.shard_table(CLUSTER_PORT, BUILD, table_name)
+
+def int_cmp(expected_value):
+    return Number(expected_value, explicit_type=(int, long))
+
+def float_cmp(expected_value):
+    return Number(expected_value, explicit_type=float)
 
 def the_end():
     global failure_count
