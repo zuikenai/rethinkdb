@@ -69,6 +69,37 @@ def eq_test(one, two, testopts={})
   return cmp_test(one, two, testopts) == 0
 end
 
+class Number
+  def initialize(value)
+    @value = value
+    @requiredType = value.class
+  end
+  
+  def method_missing(name, *args)
+    return @number.send(name, *args)
+  end
+  
+  def to_s
+    return @value.to_s + "(explicit" + @requiredType.name + ")"
+  end
+  
+  def inspect
+    return @value.to_s + " (explicit " + @requiredType.name + ")"
+  end
+  attr_reader :value 
+  attr_reader :requiredType 
+end
+
+def int_cmp(value)
+  raise "int_cmp got a non Fixnum input: " + value.to_s unless value.kind_of?(Fixnum)
+  return Number.new(value)
+end
+
+def float_cmp(value)
+  raise "int_cmp got a non Float input: " + value.to_s unless value.kind_of?(Float)
+  return Number.new(value)
+end
+
 def cmp_test(one, two, testopts={})
   if two.object_id == NoError.object_id
     return -1 if one.class == Err
@@ -142,11 +173,20 @@ def cmp_test(one, two, testopts={})
     return cmp_test(one.sort{ |a, b| cmp_test(a, b, testopts) },
                     two.items.sort{ |a, b| cmp_test(a, b, testopts) }, testopts)
   
-  when "Float", "Fixnum"
+  when "Float", "Fixnum", "Number"
     if not (one.kind_of? Float or one.kind_of? Fixnum)
       cmp = one.class.name <=> two.class.name
       return cmp if cmp != 0
     end
+    
+    if two.kind_of?(Number)
+      if not one.kind_of?(two.requiredType)
+        cmp = one.class.name <=> two.class.name
+        return cmp if cmp != 0 else -1
+      end
+      two = two.value
+    end
+    
     if testopts.has_key?(:precision)
       diff = one - two
       if (diff).abs < testopts[:precision]
@@ -283,7 +323,7 @@ def check_result(name, src, res, expected, testopts={})
     $stderr.puts "\tBODY: #{src}"
     $stderr.puts "\tEXPECTED: #{show expected}"
     $stderr.puts "\tFAILURE: #{e}"
-    puts; puts;
+    $stderr.puts ""
     sucessfulTest = false
   end
   if sucessfulTest
@@ -311,7 +351,7 @@ def fail_test name, src, res, expected
   $stderr.puts "\tBODY: #{src}"
   $stderr.puts "\tVALUE: #{show res}"
   $stderr.puts "\tEXPECTED: #{show expected}"
-  puts; puts;
+  $stderr.puts ""
 end
 
 def the_end
