@@ -44,8 +44,6 @@ NoError = "nope"
 AnyUUID = "<any uuid>"
 Err = Struct.new(:type, :message, :backtrace, :regex)
 Bag = Struct.new(:items)
-Int = Struct.new(:i)
-Floatable = Struct.new(:i)
 
 def bag list
   Bag.new(list)
@@ -67,24 +65,24 @@ def err_regex(type, message, backtrace=[])
   Err.new(type, message, backtrace, true)
 end
 
-def eq_test(one, two)
-  return cmp_test(one, two) == 0
+def eq_test(one, two, testopts={})
+  return cmp_test(one, two, testopts) == 0
 end
 
-def int_cmp i
-    Int.new i
-end
-
-def float_cmp i
-    Floatable.new i
-end
-
-def cmp_test(one, two)
+def cmp_test(one, two, testopts={})
   if two.object_id == NoError.object_id
     return -1 if one.class == Err
     return 0
   end
-
+  
+  if one.nil? and two.nil?
+    return 0
+  elsif one.nil?
+    return 1
+  elsif two.nil?
+    return -1
+  end
+  
   if two.object_id == AnyUUID.object_id
     return -1 if not one.kind_of? String
     return 0 if one.match /[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/
@@ -121,9 +119,11 @@ def cmp_test(one, two)
     return cmp if cmp != 0
     cmp = one.length <=> two.length
     return cmp if cmp != 0
-    return one.zip(two).reduce(0){ |acc, pair|
-      acc == 0 ? cmp_test(pair[0], pair[1]) : acc
+    one.zip(two) { |pair|
+      cmp = cmp_test(pair[0], pair[1], testopts)
+      return cmp if cmp != 0
     }
+    return 0
 
   when "Hash"
     cmp = one.class.name <=> two.class.name
@@ -132,20 +132,32 @@ def cmp_test(one, two)
     two = Hash[ two.map{ |k,v| [k.to_s, v] } ]
     cmp = one.keys.sort <=> two.keys.sort
     return cmp if cmp != 0
-    return one.keys.reduce(0){ |acc, k|
-      acc == 0 ? cmp_test(one[k], two[k]) : acc
+    one.each_key { |key|
+      cmp = cmp_test(one[key], two[key], testopts)
+      return cmp if cmp != 0
     }
+    return 0
 
   when "Bag"
-    return cmp_test(one.sort{ |a, b| cmp_test a, b },
-                    two.items.sort{ |a, b| cmp_test a, b })
-
-  when "Int"
-    return cmp_test([Fixnum.name, two.i], [one.class.name, one])
-
-  when "Floatable"
-    return cmp_test([Float, two.i], [one.class, one])
-
+    return cmp_test(one.sort{ |a, b| cmp_test(a, b, testopts) },
+                    two.items.sort{ |a, b| cmp_test(a, b, testopts) }, testopts)
+  
+  when "Float", "Fixnum"
+    if not (one.kind_of? Float or one.kind_of? Fixnum)
+      cmp = one.class.name <=> two.class.name
+      return cmp if cmp != 0
+    end
+    if testopts.has_key?(:precision)
+      diff = one - two
+      if (diff).abs < testopts[:precision]
+        return 0
+      else
+        return diff <=> 0
+      end
+    else
+      return one <=> two
+    end
+  
   else
     begin
       cmp = one <=> two
@@ -183,7 +195,7 @@ def test src, expected, name, opthash=nil, testopts=nil
       eval(src, $defines)
     rescue Exception => e
       result = err(e.class.name.sub(/^RethinkDB::/, ""), e.message.split("\n")[0], "TODO")
-      return check_result name, src, result, expected
+      return check_result(name, src, result, expected, testopts)
     end
   end
   
@@ -211,7 +223,7 @@ def test src, expected, name, opthash=nil, testopts=nil
   rescue Exception => e
     result = err(e.class.name.sub(/^RethinkDB::/, ""), e.message.split("\n")[0], "TODO")
   end
-  return check_result name, src, result, expected
+  return check_result(name, src, result, expected, testopts)
   
 end
 
@@ -258,7 +270,7 @@ at_exit do
   puts "Ruby: #{$success_count} of #{$test_count} tests passed. #{$test_count - $success_count} tests failed."
 end
 
-def check_result name, src, res, expected
+def check_result(name, src, res, expected, testopts={})
   sucessfulTest = true
   begin
     if expected && expected != ''
@@ -276,7 +288,7 @@ def check_result name, src, res, expected
   end
   if sucessfulTest
     begin
-      if ! eq_test(res, expected)
+      if ! eq_test(res, expected, testopts)
         fail_test name, src, res, expected
         sucessfulTest = false
       end
