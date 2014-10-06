@@ -147,12 +147,16 @@ bool new_leaf_t<btree_type>::find_key(
     return false;
 }
 
+inline size_t node_cost(const main_leaf_node_t *node) {
+    return node->live_entry_size + node->dead_entry_size;
+}
+
 inline size_t used_size_for_cost(size_t cost) {
     return offsetof(main_leaf_node_t, pair_offsets) + cost;
 }
 
 inline size_t used_size(const main_leaf_node_t *node) {
-    return used_size_for_cost(node->live_entry_size + node->dead_entry_size);
+    return used_size_for_cost(node_cost(node));
 }
 
 template <class btree_type>
@@ -514,9 +518,10 @@ void new_leaf_t<btree_type>::split(default_block_size_t bs,
         write_offset += entry_size;
     }
 
-    // TODO(2014-11): Compactify rnode?  What if excessively many wound up in rnode?
-    // That means it could have about twice the acceptable density of deletion
-    // entries.
+    // TODO(2014-11): Compactify rnode?  The hypothetical problem is that excessively
+    // many deletion entries could wind up in rnode.  That means it could have about
+    // twice the acceptable density of deletion entries.  (Which is not the end of
+    // the world.)
 
     validate(bs, sized_ptr_t<main_leaf_node_t>(rnode_ptr, rnode_block_size));
 
@@ -529,6 +534,77 @@ void new_leaf_t<btree_type>::split(default_block_size_t bs,
            btree_type::entry_key(entry_for_index(node, node.buf->num_pairs - 1)));
 }
 
+// We move entries out of sibling and into node.
+template <class btree_type>
+bool new_leaf_t<btree_type>::level(
+        default_block_size_t bs,
+        int nodecmp_node_with_sib,
+        buf_write_t *node_buf,
+        buf_write_t *sib_buf,
+        store_key_t *replacement_key_out,
+        std::vector<const void *> *moved_values_out) {
+    rassert(node_buf != sib_buf);
+
+    sized_ptr_t<main_leaf_node_t> node = node_buf->get_sized_data_write<main_leaf_node_t>();
+    sized_ptr_t<main_leaf_node_t> sib = sib_buf->get_sized_data_write<main_leaf_node_t>();
+
+    // If sib were underfull, we'd just merge the nodes.
+    rassert(is_underfull(bs, node.buf));
+    rassert(!is_underfull(bs, sib.buf))
+
+    // We want to balance the nodes evenly.
+
+
+    // The [beg, end) interval of sib whose entries we move.
+    size_t beg;
+    size_t end;
+
+    {
+        const size_t half_cost = (node_cost(node.buf) + node_cost(sib.buf)) / 2;
+
+        // We stop when used_size >= half_cost.  This means we'll always over-level,
+        // so that node has a greater cost than sib (ignoring the fact that we might
+        // remove some of node's dead entries).  This bias is fine -- it means we'll
+        // have fewer levelings on sequential deletion workloads.
+        if (nodecmp_node_with_sib < 0) {
+            beg = 0;
+            end = 0;
+            size_t used_size = 0;
+            const size_t e = sib.buf->num_pairs;
+            while (used_size < half_cost) {
+                if (end == e) {
+                    break;
+                }
+                const entry_t *entry = entry_for_index(sib, end);
+                const size_t entry_cost
+                    = sizeof(uint16_t) + btree_type::entry_size(bs, entry);
+                used_size += entry_cost;
+                ++end;
+            }
+        } else {
+            beg = sib.buf->num_pairs;
+            end = sib.buf->num_pairs;
+            size_t used_size = 0;
+            while (used_size < half_cost) {
+                if (beg == 0) {
+                    break;
+                }
+                --beg;
+                const entry_t *entry = entry_for_index(sib, beg);
+                const size_t entry_cost
+                    = sizeof(uint16_t) + btree_type::entry_size(bs, entry);
+                used_size += entry_cost;
+            }
+        }
+    }
+
+    // RSI: Finish implementing this.
+
+
+
+    // RSI: node's partial_replicability_age needs to become the max of its and sib's.
+
+}
 
 
 

@@ -47,6 +47,12 @@ public:
                       buf_ptr_t *rnode_out,
                       store_key_t *median_out);
 
+    static MUST_USE bool
+    level(default_block_size_t bs, int nodecmp_node_with_sib, buf_write_t *node,
+          buf_write_t *sib, store_key_t *replacement_key_out,
+          std::vector<const void *> *moved_values_out);
+
+
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);
 #else
