@@ -264,6 +264,7 @@ void remove_excess_deads_and_compactify(default_block_size_t bs, buf_write_t *bu
 
     std::sort(removed_indices.begin(), removed_indices.end());
 
+    // RSI: Maybe this is redundant with (and worse than) remove_too_old_dead_entries.
     // Now remove entries (in linear time).
     {
         uint16_t new_frontmost = node.block_size;
@@ -322,6 +323,7 @@ void remove_entry_for_index(default_block_size_t bs,
     memmove(node.buf->pair_offsets + index, node.buf->pair_offsets + index + 1,
             (node.buf->num_pairs - (index + 1)) * sizeof(uint16_t));
     memset(get_entry(node, entry_offset), ENTRY_WIPE_CODE, entry_size);
+    memset(node.buf->pair_offsets + (node.buf->num_pairs - 1), ENTRY_WIPE_CODE, sizeof(uint16_t));
     node.buf->num_pairs -= 1;
     if (entry_offset == node.buf->frontmost) {
         recompute_frontmost(node);
@@ -518,7 +520,7 @@ void new_leaf_t<btree_type>::split(default_block_size_t bs,
         write_offset += entry_size;
     }
 
-    // TODO(2014-11): Compactify rnode?  The hypothetical problem is that excessively
+    // RSI: Compactify rnode.  The hypothetical problem is that excessively
     // many deletion entries could wind up in rnode.  That means it could have about
     // twice the acceptable density of deletion entries.  (Which is not the end of
     // the world.)
@@ -532,6 +534,59 @@ void new_leaf_t<btree_type>::split(default_block_size_t bs,
     *rnode_out = std::move(rnode);
     keycpy(median_out->btree_key(),
            btree_type::entry_key(entry_for_index(node, node.buf->num_pairs - 1)));
+}
+
+template <class btree_type>
+void move_entries(default_block_size_t bs,
+                  buf_write_t *node_buf, size_t insert_point,
+                  buf_write_t *sib_buf, size_t beg, size_t end) {
+    sized_ptr_t<main_leaf_node_t> node = node_buf->get_sized_data_write<main_leaf_node_t>();
+    sized_ptr_t<main_leaf_node_t> sib = sib_buf->get_sized_data_write<main_leaf_node_t>();
+
+    node = make_gap_in_pair_offsets<btree_type>(bs, node_buf, insert_point, end - beg);
+
+    for (size_t i = 0; i < end - beg; ++i) {
+        entry_t *const sib_entry = entry_for_index(sib, beg + i);
+        const size_t sib_entry_size = btree_type::entry_size(bs, sib_entry);
+        const size_t insertion_offset = node.block_size;
+        // RSI: All these resizes.
+        node = node_buf->resize<main_leaf_node_t>(node.block_size + sib_entry_size);
+        memcpy(get_entry(node, insertion_offset), sib_entry, sib_entry_size);
+        node.buf->pair_offsets[insert_point + i] = insertion_offset;
+        subtract_entry_size_change<btree_type>(sib.buf, sib_entry, sib_entry_size);
+        add_entry_size_change<btree_type>(node.buf, sib_entry, sib_entry_size);
+        memset(sib_entry, ENTRY_WIPE_CODE, sib_entry_size);
+    }
+
+    memmove(sib.buf->pair_offsets + beg, sib.buf->pair_offsets + end, (end - beg) * sizeof(uint16_t));
+    memset(sib.buf->pair_offsets + sib.buf->num_pairs - (end - beg),
+           ENTRY_WIPE_CODE,
+           (end - beg) * sizeof(uint16_t));
+    sib.buf->num_pairs -= end - beg;
+    recompute_frontmost(sib);
+}
+
+// Removes entries that are older than partial_replicability_age (because we just
+// increased its value).
+template <class btree_type>
+void remove_too_old_dead_entries(default_block_size_t bs,
+                                 sized_ptr_t<main_leaf_node_t> node) {
+    const repli_timestamp_t cutoff = node.buf->partial_replicability_age;
+    size_t w = 0;
+    for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+        node.buf->pair_offsets[w] = node.buf->pair_offsets[i];
+        entry_t *entry = entry_for_index(node, i);
+        if (!btree_type::is_live(entry) && btree_type::entry_timestamp(entry) < cutoff) {
+            const size_t entry_size = btree_type::entry_size(bs, entry);
+            subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
+            memset(entry, ENTRY_WIPE_CODE, entry_size);
+        } else {
+            ++w;
+        }
+    }
+
+    memset(node.buf->pair_offsets + w, ENTRY_WIPE_CODE, (node.buf->num_pairs - w) * sizeof(uint16_t));
+    node.buf->num_pairs = w;
 }
 
 // We move entries out of sibling and into node.
@@ -555,23 +610,27 @@ bool new_leaf_t<btree_type>::level(
     // We want to balance the nodes evenly.
 
 
+    // The point in node at which we insert entries.
+    size_t insert_point;
     // The [beg, end) interval of sib whose entries we move.
     size_t beg;
     size_t end;
 
     {
+        const size_t base_cost = node_cost(node.buf);
         const size_t half_cost = (node_cost(node.buf) + node_cost(sib.buf)) / 2;
 
-        // We stop when used_size >= half_cost.  This means we'll always over-level,
+        // We stop when base_cost + used_size >= half_cost.  This means we'll always over-level,
         // so that node has a greater cost than sib (ignoring the fact that we might
         // remove some of node's dead entries).  This bias is fine -- it means we'll
         // have fewer levelings on sequential deletion workloads.
         if (nodecmp_node_with_sib < 0) {
+            insert_point = node.buf->num_pairs;
             beg = 0;
             end = 0;
             size_t used_size = 0;
             const size_t e = sib.buf->num_pairs;
-            while (used_size < half_cost) {
+            while (base_cost + used_size < half_cost) {
                 if (end == e) {
                     break;
                 }
@@ -582,10 +641,11 @@ bool new_leaf_t<btree_type>::level(
                 ++end;
             }
         } else {
+            insert_point = 0;
             beg = sib.buf->num_pairs;
             end = sib.buf->num_pairs;
             size_t used_size = 0;
-            while (used_size < half_cost) {
+            while (base_cost + used_size < half_cost) {
                 if (beg == 0) {
                     break;
                 }
@@ -598,12 +658,26 @@ bool new_leaf_t<btree_type>::level(
         }
     }
 
-    // RSI: Finish implementing this.
+    move_entries<btree_type>(bs, node_buf, insert_point, sib_buf, beg, end);
+    node = node_buf->get_sized_data_write<main_leaf_node_t>();
+    sib = sib_buf->get_sized_data_write<main_leaf_node_t>();
 
+    const repli_timestamp_t superceding =
+        superceding_recency(node.buf->partial_replicability_age,
+                            sib.buf->partial_replicability_age);
+    if (node.buf->partial_replicability_age < superceding) {
+        node.buf->partial_replicability_age = superceding;
+        remove_too_old_dead_entries<btree_type>(bs, node);
+    }
 
-
-    // RSI: node's partial_replicability_age needs to become the max of its and sib's.
-
+    node = compactify<btree_type>(bs, node_buf);
+    sib = compactify<btree_type>(bs, sib_buf);
+    // RSI: What do we return true for?
+    // RSI: Set moved_values_out.
+    (void)moved_values_out;
+    // RSI: Set replacement_key_out.
+    (void)replacement_key_out;
+    return true;
 }
 
 
