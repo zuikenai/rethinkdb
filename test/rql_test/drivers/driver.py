@@ -256,7 +256,7 @@ class Number:
         return abs(self.value - other) <= self.precision
     
     def __repr__(self):
-        return "%s: %s" & (type(self.value).__name__, str(self.value))
+        return "%s: %s" % (type(self.value).__name__, str(self.value))
 
 # -- Curried output test functions --
 
