@@ -2,6 +2,8 @@
 #ifndef BTREE_NEW_LEAF_HPP_
 #define BTREE_NEW_LEAF_HPP_
 
+#include <vector>
+
 #include "containers/sized_ptr.hpp"
 #include "errors.hpp"
 #include "serializer/types.hpp"
@@ -10,7 +12,7 @@ struct btree_key_t;
 class buf_write_t;
 class buf_ptr_t;
 struct main_leaf_node_t;
-class store_key_t;
+struct store_key_t;
 
 namespace new_leaf {
 

@@ -550,7 +550,7 @@ bool new_leaf_t<btree_type>::level(
 
     // If sib were underfull, we'd just merge the nodes.
     rassert(is_underfull(bs, node.buf));
-    rassert(!is_underfull(bs, sib.buf))
+    rassert(!is_underfull(bs, sib.buf));
 
     // We want to balance the nodes evenly.
 
