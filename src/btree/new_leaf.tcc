@@ -539,12 +539,14 @@ void new_leaf_t<btree_type>::split(default_block_size_t bs,
 template <class btree_type>
 void move_entries(default_block_size_t bs,
                   buf_write_t *node_buf, size_t insert_point,
-                  buf_write_t *sib_buf, size_t beg, size_t end) {
+                  buf_write_t *sib_buf, size_t beg, size_t end,
+                  std::vector<scoped_malloc_t<void> > *moved_live_entries_out) {
     sized_ptr_t<main_leaf_node_t> node = node_buf->get_sized_data_write<main_leaf_node_t>();
     sized_ptr_t<main_leaf_node_t> sib = sib_buf->get_sized_data_write<main_leaf_node_t>();
 
     node = make_gap_in_pair_offsets<btree_type>(bs, node_buf, insert_point, end - beg);
 
+    std::vector<scoped_malloc_t<void> > moved_live_entries;
     for (size_t i = 0; i < end - beg; ++i) {
         entry_t *const sib_entry = entry_for_index(sib, beg + i);
         const size_t sib_entry_size = btree_type::entry_size(bs, sib_entry);
@@ -552,6 +554,12 @@ void move_entries(default_block_size_t bs,
         // RSI: All these resizes.
         node = node_buf->resize<main_leaf_node_t>(node.block_size + sib_entry_size);
         memcpy(get_entry(node, insertion_offset), sib_entry, sib_entry_size);
+        if (btree_type::is_live(sib_entry)) {
+            // TODO(2014-11): These could be moved values and it would be faster.
+            scoped_malloc_t<void> m(sib_entry_size);
+            memcpy(m.get(), sib_entry, sib_entry_size);
+            moved_live_entries.push_back(std::move(m));
+        }
         node.buf->pair_offsets[insert_point + i] = insertion_offset;
         subtract_entry_size_change<btree_type>(sib.buf, sib_entry, sib_entry_size);
         add_entry_size_change<btree_type>(node.buf, sib_entry, sib_entry_size);
@@ -564,6 +572,7 @@ void move_entries(default_block_size_t bs,
            (end - beg) * sizeof(uint16_t));
     sib.buf->num_pairs -= end - beg;
     recompute_frontmost(sib);
+    *moved_live_entries_out = std::move(moved_live_entries);
 }
 
 // Removes entries that are older than partial_replicability_age (because we just
@@ -597,7 +606,7 @@ bool new_leaf_t<btree_type>::level(
         buf_write_t *node_buf,
         buf_write_t *sib_buf,
         store_key_t *replacement_key_out,
-        std::vector<const void *> *moved_values_out) {
+        std::vector<scoped_malloc_t<void> > *moved_live_entries_out) {
     rassert(node_buf != sib_buf);
 
     sized_ptr_t<main_leaf_node_t> node = node_buf->get_sized_data_write<main_leaf_node_t>();
@@ -658,7 +667,7 @@ bool new_leaf_t<btree_type>::level(
         }
     }
 
-    move_entries<btree_type>(bs, node_buf, insert_point, sib_buf, beg, end);
+    move_entries<btree_type>(bs, node_buf, insert_point, sib_buf, beg, end, moved_live_entries_out);
     node = node_buf->get_sized_data_write<main_leaf_node_t>();
     sib = sib_buf->get_sized_data_write<main_leaf_node_t>();
 
@@ -672,11 +681,15 @@ bool new_leaf_t<btree_type>::level(
 
     node = compactify<btree_type>(bs, node_buf);
     sib = compactify<btree_type>(bs, sib_buf);
+
+    // RSI: I'd like proof that node or sib is now non-empty.
+    keycpy(replacement_key_out->btree_key(),
+           btree_type::entry_key(nodecmp_node_with_sib < 0
+                                 ? entry_for_index(node, node.buf->num_pairs - 1)
+                                 : entry_for_index(sib, sib.buf->num_pairs - 1)));
+
+
     // RSI: What do we return true for?
-    // RSI: Set moved_values_out.
-    (void)moved_values_out;
-    // RSI: Set replacement_key_out.
-    (void)replacement_key_out;
     return true;
 }
 
