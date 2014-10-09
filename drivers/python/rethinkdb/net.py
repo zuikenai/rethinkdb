@@ -151,13 +151,16 @@ class Connection(object):
             self.socket = socket.create_connection((self.host, self.port), self.timeout)
         except Exception as err:
             raise RqlDriverError("Could not connect to %s:%s. Error: %s" % (self.host, self.port, err))
-
-        self._sock_sendall(struct.pack("<L", p.VersionDummy.Version.V0_3))
-        self._sock_sendall(struct.pack("<L", len(self.auth_key)) + str.encode(self.auth_key, 'ascii'))
-        self._sock_sendall(struct.pack("<L", p.VersionDummy.Protocol.JSON))
-
-        # Read out the response from the server, which will be a null-terminated string
+        
         try:
+            # Send our inial handshake
+            
+            self._sock_sendall(struct.pack("<L", p.VersionDummy.Version.V0_3))
+            self._sock_sendall(struct.pack("<L", len(self.auth_key)) + str.encode(self.auth_key, 'ascii'))
+            self._sock_sendall(struct.pack("<L", p.VersionDummy.Protocol.JSON))
+    
+            # Read out the response from the server, which will be a null-terminated string
+        
             response = b""
             while True:
                 char = self._sock_recv(1)
@@ -166,6 +169,8 @@ class Connection(object):
                 response += char
         except socket.timeout:
             raise RqlDriverError("Timed out during handshake with %s:%d." % (self.host, self.port))
+        except socket.error as err:
+            raise RqlDriverError("Error during handshake with %s:%d - %s" % (self.host, self.port, err))
 
         if response != b"SUCCESS":
             self.close(noreply_wait=False)
