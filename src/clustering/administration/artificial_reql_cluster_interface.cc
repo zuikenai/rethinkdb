@@ -153,8 +153,7 @@ admin_artificial_tables_t::admin_artificial_tables_t(
             auth_semilattice_metadata_t> > _auth_view,
         clone_ptr_t< watchable_t< change_tracking_map_t<peer_id_t,
             cluster_directory_metadata_t> > > _directory_view,
-        server_name_client_t *_name_client,
-        last_seen_tracker_t *_last_seen_tracker) {
+        server_name_client_t *_name_client) {
     std::map<name_string_t, artificial_table_backend_t*> backends;
 
     debug_scratch_backend.init(new in_memory_artificial_table_backend_t);
@@ -172,6 +171,11 @@ admin_artificial_tables_t::admin_artificial_tables_t(
     backends[name_string_t::guarantee_valid("db_config")] =
         db_config_backend.get();
 
+    issues_backend.init(new issues_artificial_table_backend_t(
+        _semilattice_view, _directory_view));
+    backends[name_string_t::guarantee_valid("issues")] =
+        issues_backend.get();
+
     server_config_backend.init(new server_config_artificial_table_backend_t(
         metadata_field(&cluster_semilattice_metadata_t::machines,
             _semilattice_view),
@@ -187,8 +191,7 @@ admin_artificial_tables_t::admin_artificial_tables_t(
         metadata_field(&cluster_semilattice_metadata_t::rdb_namespaces,
             _semilattice_view),
         metadata_field(&cluster_semilattice_metadata_t::databases,
-            _semilattice_view),
-        _last_seen_tracker));
+            _semilattice_view)));
     backends[name_string_t::guarantee_valid("server_status")] =
         server_status_backend.get();
 
