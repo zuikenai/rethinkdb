@@ -536,6 +536,7 @@ void new_leaf_t<btree_type>::split(default_block_size_t bs,
            btree_type::entry_key(entry_for_index(node, node.buf->num_pairs - 1)));
 }
 
+// Moves entries from sib into node.
 template <class btree_type>
 void move_entries(default_block_size_t bs,
                   buf_write_t *node_buf, size_t insert_point,
@@ -682,16 +683,14 @@ void new_leaf_t<btree_type>::level(
     const repli_timestamp_t superceding =
         superceding_recency(node.buf->partial_replicability_age,
                             sib.buf->partial_replicability_age);
-    if (node.buf->partial_replicability_age < superceding) {
-        node.buf->partial_replicability_age = superceding;
-        remove_too_old_dead_entries<btree_type>(bs, node);
-    }
+    node.buf->partial_replicability_age = superceding;
+    remove_too_old_dead_entries<btree_type>(bs, node);
 
     node = compactify<btree_type>(bs, node_buf);
     sib = compactify<btree_type>(bs, sib_buf);
 
-    // TODO(2014-11): I'd like proof that doesn't rely on math that node or sib is
-    // now non-empty.
+    // TODO(2014-11): I'd like proof that doesn't rely on entry size vs. block size
+    // math that node or sib is now non-empty.
     keycpy(replacement_key_out->btree_key(),
            btree_type::entry_key(nodecmp_node_with_sib < 0
                                  ? entry_for_index(node, node.buf->num_pairs - 1)
@@ -699,6 +698,33 @@ void new_leaf_t<btree_type>::level(
 }
 
 
+// Moves elements from left, to right.
+template <class btree_type>
+void new_leaf_t<btree_type>::merge(default_block_size_t bs,
+                                   buf_write_t *left, buf_write_t *right) {
+    // RSI: Update partial_replicability_age appropriately and remove elements appropriately.
+    // RSI: Be sure to wipe down left.
+
+    sized_ptr_t<main_leaf_node_t> left_node = left->get_sized_data_write<main_leaf_node_t>();
+    std::vector<scoped_malloc_t<void> > moved_live_entries;
+
+    move_entries<btree_type>(bs, right, 0, left, 0, left_node.buf->num_pairs, &moved_live_entries);
+
+    left_node = left->get_sized_data_write<main_leaf_node_t>();
+    sized_ptr_t<main_leaf_node_t> right_node = right->get_sized_data_write<main_leaf_node_t>();
+
+    const repli_timestamp_t superceding =
+        superceding_recency(left_node.buf->partial_replicability_age,
+                            right_node.buf->partial_replicability_age);
+    right_node.buf->partial_replicability_age = superceding;
+    remove_too_old_dead_entries<btree_type>(bs, right_node);
+    right_node = compactify<btree_type>(bs, right);
+
+    // left_node should be emptied out and discarded, but it should also be a valid
+    // empty (albeit oversized) leaf node.
+    rassert(left_node.buf->num_pairs == 0);
+    new_leaf_t<btree_type>::validate(bs, left_node);
+}
 
 
 
