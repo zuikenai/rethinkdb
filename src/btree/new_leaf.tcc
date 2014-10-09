@@ -600,7 +600,7 @@ void remove_too_old_dead_entries(default_block_size_t bs,
 
 // We move entries out of sibling and into node.
 template <class btree_type>
-bool new_leaf_t<btree_type>::level(
+void new_leaf_t<btree_type>::level(
         default_block_size_t bs,
         int nodecmp_node_with_sib,
         buf_write_t *node_buf,
@@ -682,16 +682,15 @@ bool new_leaf_t<btree_type>::level(
     node = compactify<btree_type>(bs, node_buf);
     sib = compactify<btree_type>(bs, sib_buf);
 
-    // RSI: I'd like proof that node or sib is now non-empty.
+    // TODO(2014-11): I'd like proof that doesn't rely on math that node or sib is
+    // now non-empty.
     keycpy(replacement_key_out->btree_key(),
            btree_type::entry_key(nodecmp_node_with_sib < 0
                                  ? entry_for_index(node, node.buf->num_pairs - 1)
                                  : entry_for_index(sib, sib.buf->num_pairs - 1)));
-
-
-    // RSI: What do we return true for?
-    return true;
 }
+
+
 
 
 
