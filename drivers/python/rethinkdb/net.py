@@ -153,7 +153,7 @@ class Connection(object):
             raise RqlDriverError("Could not connect to %s:%s. Error: %s" % (self.host, self.port, err))
         
         try:
-            # Send our inial handshake
+            # Send our initial handshake
             
             self._sock_sendall(struct.pack("<L", p.VersionDummy.Version.V0_3))
             self._sock_sendall(struct.pack("<L", len(self.auth_key)) + str.encode(self.auth_key, 'ascii'))
