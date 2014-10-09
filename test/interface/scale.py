@@ -13,6 +13,7 @@ op["tables"] = IntFlag("--tables", 1)
 op["shards"] = IntFlag("--shards", 5)
 op["replicas"] = IntFlag("--replicas", 3)
 op["dump"] = BoolFlag("--dump")
+op["prof"] = ChoiceFlag("--prof", ["reconfigure", "create"], default="reconfigure")
 op["start_prof"] = StringFlag("--start-prof", None)
 op["stop_prof"] = StringFlag("--stop-prof", None)
 op["directory"] = StringFlag("--directory", None)
@@ -89,11 +90,23 @@ with driver.Metacluster() as metacluster:
     print "Done (%.2f seconds)" % ob["create_db"]
 
     for i in xrange(opts["tables"]):
+        if i == opts["tables"] - 1 and opts["start_prof"] is not None and \
+                opts["prof"] == "create": 
+            print "Running %r..." % opts["start_prof"]
+            subprocess.check_call(opts["start_prof"], shell=True)
+            print "Done."
+
         print "Creating a table (%d)..." % i
         start = time.time()
         r.table_create("test_%d" % i).run(conns[0])
         ob["create_table_%d" % i] = time.time() - start
         print "Done (%.2f seconds)" % ob["create_table_%d" % i]
+
+        if i == opts["tables"] - 1 and opts["stop_prof"] is not None and \
+                opts["prof"] == "create":
+            print "Running %r..." % opts["stop_prof"]
+            subprocess.check_call(opts["stop_prof"], shell=True)
+            print "Done."
 
         pprint.pprint(r.table_config("test_%d" % i).run(conns[0])["shards"])
         primary = int(r.table_config("test_%d" % i).run(conns[0])["shards"][0]["director"][1:]) - 1
@@ -117,7 +130,8 @@ with driver.Metacluster() as metacluster:
         ob["read_one_a_%d" % i] = time.time() - start
         print "Done (%.2f seconds)" % ob["read_one_a_%d" % i]
 
-        if i == opts["tables"] - 1 and opts["start_prof"] is not None:
+        if i == opts["tables"] - 1 and opts["start_prof"] is not None and \
+                opts["prof"] == "reconfigure":
             print "Running %r..." % opts["start_prof"]
             subprocess.check_call(opts["start_prof"], shell=True)
             print "Done."
@@ -147,7 +161,8 @@ with driver.Metacluster() as metacluster:
         ob["reconfigure_b_%d" % i] = time.time() - start
         print "Done (%.2f seconds)" % ob["reconfigure_b_%d" % i]
 
-        if i == opts["tables"] - 1 and opts["stop_prof"] is not None:
+        if i == opts["tables"] - 1 and opts["stop_prof"] is not None and \
+                opts["prof"] == "reconfigure":
             print "Running %r..." % opts["stop_prof"]
             subprocess.check_call(opts["stop_prof"], shell=True)
             print "Done."
