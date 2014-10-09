@@ -54,7 +54,6 @@ public:
                       store_key_t *replacement_key_out,
                       std::vector<scoped_malloc_t<void> > *moved_live_entries_out);
 
-
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);
 #else

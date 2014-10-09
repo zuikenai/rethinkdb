@@ -546,13 +546,20 @@ void move_entries(default_block_size_t bs,
 
     node = make_gap_in_pair_offsets<btree_type>(bs, node_buf, insert_point, end - beg);
 
+    size_t total_entry_size = 0;
+    for (size_t i = 0; i < end - beg; ++i) {
+        const entry_t *const sib_entry = entry_for_index(sib, beg + i);
+        const size_t sib_entry_size = btree_type::entry_size(bs, sib_entry);
+        total_entry_size += sib_entry_size;
+    }
+
+    size_t insertion_offset = node.block_size;
+    node = node_buf->resize<main_leaf_node_t>(insertion_offset + total_entry_size);
+
     std::vector<scoped_malloc_t<void> > moved_live_entries;
     for (size_t i = 0; i < end - beg; ++i) {
         entry_t *const sib_entry = entry_for_index(sib, beg + i);
         const size_t sib_entry_size = btree_type::entry_size(bs, sib_entry);
-        const size_t insertion_offset = node.block_size;
-        // RSI: All these resizes.
-        node = node_buf->resize<main_leaf_node_t>(node.block_size + sib_entry_size);
         memcpy(get_entry(node, insertion_offset), sib_entry, sib_entry_size);
         if (btree_type::is_live(sib_entry)) {
             // TODO(2014-11): These could be moved values and it would be faster.
@@ -564,6 +571,7 @@ void move_entries(default_block_size_t bs,
         subtract_entry_size_change<btree_type>(sib.buf, sib_entry, sib_entry_size);
         add_entry_size_change<btree_type>(node.buf, sib_entry, sib_entry_size);
         memset(sib_entry, ENTRY_WIPE_CODE, sib_entry_size);
+        insertion_offset += sib_entry_size;
     }
 
     memmove(sib.buf->pair_offsets + beg, sib.buf->pair_offsets + end, (end - beg) * sizeof(uint16_t));
