@@ -57,6 +57,10 @@ public:
     static void merge(default_block_size_t bs,
                       buf_write_t *left, buf_write_t *right);
 
+    static bool is_mergable(default_block_size_t bs,
+                            const main_leaf_node_t *node,
+                            const main_leaf_node_t *sibling);
+
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);
 #else
