@@ -702,9 +702,6 @@ void new_leaf_t<btree_type>::level(
 template <class btree_type>
 void new_leaf_t<btree_type>::merge(default_block_size_t bs,
                                    buf_write_t *left, buf_write_t *right) {
-    // RSI: Update partial_replicability_age appropriately and remove elements appropriately.
-    // RSI: Be sure to wipe down left.
-
     sized_ptr_t<main_leaf_node_t> left_node = left->get_sized_data_write<main_leaf_node_t>();
     std::vector<scoped_malloc_t<void> > moved_live_entries;
 
