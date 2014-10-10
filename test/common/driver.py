@@ -1,17 +1,6 @@
 #!/usr/bin/env python
 # Copyright 2010-2014 RethinkDB, all rights reserved.
 
-from __future__ import print_function
-
-import atexit, os, random, re, shutil, signal, socket, subprocess, sys, tempfile, time
-
-try:
-    import urlparse
-except ImportError:
-    import urllib.parse as urlparse
-
-import utils
-
 """`driver.py` is a module for starting groups of RethinkDB cluster nodes and
 connecting them to each other. It also supports netsplits.
 
@@ -24,6 +13,12 @@ test it; if you want to do strange things like tell RethinkDB to `--join` an
 invalid port, or delete the files out from under a running RethinkDB process,
 or so on, you should start a RethinkDB process manually using some other
 module. """
+
+from __future__ import print_function
+
+import atexit, os, random, re, shutil, signal, socket, subprocess, sys, tempfile, time, traceback
+
+import utils
 
 def block_path(source_port, dest_port):
     # `-A` means list all processes. `-www` prevents `ps` from truncating the output at
@@ -88,7 +83,6 @@ class Metacluster(object):
         self.closed = True
         while self.clusters:
             iter(self.clusters).next().check_and_stop()
-        self.clusters = None
         shutil.rmtree(self.dbs_path)
 
     def __enter__(self):
@@ -171,24 +165,25 @@ class Cluster(object):
     def _block_process(self, process):
         assert process not in self.processes
         for other_process in self.processes:
-            block_path(process.cluster_port, other_process.local_cluster_port)
-            block_path(other_process.local_cluster_port, process.cluster_port)
-            block_path(process.local_cluster_port, other_process.cluster_port)
-            block_path(other_process.cluster_port, process.local_cluster_port)
+            block_path(process.cluster_port, other_process.outgoing_cluster_port)
+            block_path(other_process.outgoing_cluster_port, process.cluster_port)
+            block_path(process.outgoing_cluster_port, other_process.cluster_port)
+            block_path(other_process.cluster_port, process.outgoing_cluster_port)
 
     def _unblock_process(self, process):
         assert process not in self.processes
         for other_process in self.processes:
-            unblock_path(process.cluster_port, other_process.local_cluster_port)
-            unblock_path(other_process.local_cluster_port, process.cluster_port)
-            unblock_path(process.local_cluster_port, other_process.cluster_port)
-            unblock_path(other_process.cluster_port, process.local_cluster_port)
+            unblock_path(process.cluster_port, other_process.outgoing_cluster_port)
+            unblock_path(other_process.outgoing_cluster_port, process.cluster_port)
+            unblock_path(process.outgoing_cluster_port, other_process.cluster_port)
+            unblock_path(other_process.cluster_port, process.outgoing_cluster_port)
 
 class Files(object):
     """A `Files` object is a RethinkDB data directory. Each `Process` needs a
     `Files`. To "restart" a server, create a `Files`, create a `Process`, stop
     the process, and then start a new `Process` on the same `Files`. """
-
+    
+    id_number = None
     db_path = None
     machine_name = None
     
@@ -205,6 +200,8 @@ class Files(object):
             executable_path = find_rethinkdb_executable()
         assert os.access(executable_path, os.X_OK), "no such executable: %r" % executable_path
         
+        self.id_number = metacluster.get_new_unique_id()
+        
         if db_path is None:
             self.db_path = os.path.join(metacluster.dbs_path, str(self.id_number))
         elif not os.path.exists(db_path):
@@ -215,8 +212,6 @@ class Files(object):
             return
         
         # -- create files
-        
-        self.id_number = metacluster.get_new_unique_id()
         
         if machine_name is None:
             self.machine_name = "node_%d" % self.id_number
@@ -241,6 +236,7 @@ class _Process(object):
     
     cluster = None
     files = None
+    log_path = None
     log_file = None # console output (stderr/stdout)
     logfile_path = None # server log file
     
@@ -265,14 +261,14 @@ class _Process(object):
         
         self.cluster = cluster or Cluster()
         assert isinstance(self.cluster, Cluster)
-        assert cluster.metacluster is not None
+        assert self.cluster.metacluster is not None
         
         self.executable_path = executable_path or find_rethinkdb_executable()
         assert os.access(self.executable_path, os.X_OK), "no such executable: %r" % executable_path
         
         self.command_prefix = command_prefix or []
         
-        self.files = files or Files(metacluster=cluster.metacluster, log_path=log_path, executable_path=self.executable_path, command_prefix=self.command_prefix)
+        self.files = files or Files(metacluster=self.cluster.metacluster, log_path=log_path, executable_path=self.executable_path, command_prefix=self.command_prefix)
         # ToDo: unify the log_path behavior here with what we do for the rest of the logs
         assert isinstance(self.files, Files)
         
@@ -282,7 +278,7 @@ class _Process(object):
         else:
             self.log_file = sys.stdout
         
-        self.logfile_path = logfile_path or os.path.join(files.db_path, "log_file")
+        self.logfile_path = logfile_path or os.path.join(self.files.db_path, "log_file")
     
     def start(self):
         global runningServers
@@ -316,6 +312,9 @@ class _Process(object):
                 args += ['--http-port', '0']
             else:
                 args += ['--http-port', str(self.http_port)]
+        
+        if self.logfile_path is not None and '--log-file' not in args:
+             args += ['--log-file', self.logfile_path]
         
         # - join all other machines in cluster (overkill)
         
@@ -467,13 +466,14 @@ class _Process(object):
         if self in runningServers:
             runningServers.remove(self)
         self.process = None
+        self.running = False
 
         if self.log_path is not None:
             self.log_file.close()
 
         # `self.cluster` might be `None` if we crash in the middle of
         # `move_processes()`.
-        if self.cluster is not None:
+        if self.cluster is not None and self.cluster.metacluster is not None:
             for other_cluster in self.cluster.metacluster.clusters:
                 if other_cluster is not self.cluster:
                     other_cluster._unblock_process(self)
@@ -500,8 +500,8 @@ class Process(_Process):
 class ExistingProcess(_Process):
     """An already running instance of RethinkDB"""
     
-    def __init__(self, cluster=None, files=None, log_path=None, executable_path=None, command_prefix=None, extra_options=None):
-        pass
+    def __init__(self, cluster=None, files=None, logfile_path=None, log_path=None, executable_path=None, command_prefix=None, extra_options=None):
+        super(ExistingProcess, self).__init__(cluster=cluster, files=files, log_path=log_path, logfile_path=logfile_path, executable_path=executable_path, command_prefix=command_prefix)
         
 
 class ProxyProcess(_Process):
@@ -514,13 +514,13 @@ class ProxyProcess(_Process):
         # create an empty folder files for the log file (if needed)
         if files is None:
             emptyFolder = tempfile.mkdtemp(prefix='proxy-files-', dir=cluster.metacluster.dbs_path)
-            files =  Files(metacluster=cluster.metacluster, db_path=emptyFolder)
+            files = Files(metacluster=cluster.metacluster, db_path=emptyFolder)
         
         super(ProxyProcess, self).__init__(cluster=cluster, files=files, logfile_path=logfile_path, log_path=log_path, executable_path=executable_path, command_prefix=command_prefix)
         
         if extra_options is None:
             extra_options = []
         
-        options = ["proxy", "--log-file", self.logfile_path, ] + extra_options
+        self.command_line_options = ["proxy"] + extra_options
         
         self.start()
