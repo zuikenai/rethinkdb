@@ -280,7 +280,7 @@ class _Process(object):
         
         self.logfile_path = logfile_path or os.path.join(self.files.db_path, "log_file")
     
-    def start(self):
+    def _start(self):
         global runningServers
         
         # -- setup default args
@@ -344,7 +344,7 @@ class _Process(object):
             self.process_group_id = self.process.pid
             self.running = True
             
-            self.read_ports_from_log()
+            self._read_ports_from_log()
 
         except Exception:
             # `close()` won't be called because we haven't put ourself into
@@ -358,8 +358,8 @@ class _Process(object):
             self.cluster.processes.add(self)
 
     def wait_until_started_up(self, timeout=30):
-        time_limit = time.time() + timeout
-        while time.time() < time_limit:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             self.check()
             s = socket.socket()
             try:
@@ -373,9 +373,9 @@ class _Process(object):
         else:
             raise RuntimeError("Process was not responding to HTTP traffic within %d seconds." % timeout)
 
-    def read_ports_from_log(self, timeout=30):
-        time_limit = time.time() + timeout
-        while time.time() < time_limit:
+    def _read_ports_from_log(self, timeout=30):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             self.check()
             try:
                 log = open(self.logfile_path, 'r').read()
@@ -444,13 +444,19 @@ class _Process(object):
         except OSError:
             pass
         deadline = time.time() + 5
-        while time.time() < deadline:
-            if self.process.poll() is not None:
-                break
-        assert self.process.poll() is not None, 'timed out waiting for server to be killed'
+        while time.time() < deadline and self.process.poll() is None:
+            time.sleep(.1)
+        else:
+            raise Exception('timed out waiting for server to be killed')
+        
         self.running = False
+        self.process = None
+        
         if self in runningServers:
             runningServers.remove(self)
+        
+        if self.log_path is not None:
+            self.log_file.close()
     
     def close(self):
         """Kills the process, removes it from the cluster, and invalidates the `Process` object. """
@@ -458,21 +464,9 @@ class _Process(object):
         global runningServers
         
         if self.process.poll() is None:
-            try:
-                os.killpg(self.process_group_id, signal.SIGKILL)
-            except OSError:
-                pass
+            self.kill()
         
-        if self in runningServers:
-            runningServers.remove(self)
-        self.process = None
-        self.running = False
-
-        if self.log_path is not None:
-            self.log_file.close()
-
-        # `self.cluster` might be `None` if we crash in the middle of
-        # `move_processes()`.
+        # `self.cluster` might be `None` if we crash in the middle of `move_processes()`.
         if self.cluster is not None and self.cluster.metacluster is not None:
             for other_cluster in self.cluster.metacluster.clusters:
                 if other_cluster is not self.cluster:
@@ -495,14 +489,35 @@ class Process(_Process):
         
         self.command_line_options = ["serve", "--directory", self.files.db_path] + extra_options
         
-        self.start()
+        self._start()
 
 class ExistingProcess(_Process):
     """An already running instance of RethinkDB"""
     
-    def __init__(self, cluster=None, files=None, logfile_path=None, log_path=None, executable_path=None, command_prefix=None, extra_options=None):
-        super(ExistingProcess, self).__init__(cluster=cluster, files=files, log_path=log_path, logfile_path=logfile_path, executable_path=executable_path, command_prefix=command_prefix)
+    def __init__(self, cluster_port, driver_port, http_port, outgoing_cluster_port=None, logfile_path=None):
         
+        # -- input validation
+        
+        if not isinstance(cluster_port, int):
+            raise ValueError('ExistingProcess given non-integer value for cluster_port: %s' % str(cluster_port))
+        
+        if not isinstance(driver_port, int):
+            raise ValueError('ExistingProcess given non-integer value for driver_port: %s' % str(driver_port))
+        
+        if not isinstance(http_port, int):
+            raise ValueError('ExistingProcess given non-integer value for http_port: %s' % str(http_port))
+        
+        if outgoing_cluster_port is not None and not isinstance(outgoing_cluster_port, int):
+            raise ValueError('ExistingProcess given non-integer value for outgoing_cluster_port: %s' % str(outgoing_cluster_port))
+        
+        # --
+        
+        self.cluster_port = cluster_port
+        self.driver_port = driver_port
+        self.http_port = http_port
+        self.outgoing_cluster_port = outgoing_cluster_port
+        
+        self.logfile_path = logfile_path        
 
 class ProxyProcess(_Process):
     """New instance of a RethinkDB proxy. It cannot be restarted; stop it and then create a new one instead."""
@@ -523,4 +538,4 @@ class ProxyProcess(_Process):
         
         self.command_line_options = ["proxy"] + extra_options
         
-        self.start()
+        self._start()
