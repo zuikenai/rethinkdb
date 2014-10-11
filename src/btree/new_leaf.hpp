@@ -4,6 +4,9 @@
 
 #include <vector>
 
+#include "errors.hpp"
+#include <boost/optional.hpp>
+
 #include "containers/sized_ptr.hpp"
 #include "errors.hpp"
 #include "serializer/types.hpp"
@@ -11,10 +14,16 @@
 struct btree_key_t;
 class buf_write_t;
 class buf_ptr_t;
+class entry_reception_callback_t;
 struct main_leaf_node_t;
 struct store_key_t;
 
 namespace new_leaf {
+
+enum class dump_result_t {
+    exact_live_and_dead_entries,
+    all_live_entries,
+};
 
 template <class btree_type>
 class new_leaf_t {
@@ -60,6 +69,14 @@ public:
     static bool is_mergable(default_block_size_t bs,
                             const main_leaf_node_t *node,
                             const main_leaf_node_t *sibling);
+
+    static
+    dump_result_t
+    dump_entries_since_time(default_block_size_t bs,
+                            sized_ptr_t<const main_leaf_node_t> node,
+                            repli_timestamp_t minimum_tstamp,
+                            repli_timestamp_t maximum_possible_timestamp,
+                            std::vector<const void *> *entries_out);
 
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);

@@ -731,6 +731,32 @@ bool new_leaf_t<btree_type>::is_mergable(default_block_size_t bs,
 }
 
 
+// Returning `all_live_entries` means that we can't give precise information about
+// the (dead) entries added since time `minimum_tstamp`, because some dead entries
+// were dropped.  Instead we return (to entries_out) just all the live entries in the
+// entire leaf node.
+template <class btree_type>
+dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
+        UNUSED default_block_size_t bs,
+        UNUSED sized_ptr_t<const main_leaf_node_t> node,
+        UNUSED repli_timestamp_t minimum_tstamp,
+        UNUSED repli_timestamp_t maximum_possible_timestamp,
+        std::vector<const void *> *entries_out) {
+    const bool exact = minimum_tstamp >= node.buf->partial_replicability_age;
+
+    std::vector<const void *> entries;
+    for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+        const entry_t *entry = entry_for_index(node, i);
+        if (exact
+            ? (btree_type::entry_timestamp(entry) >= minimum_tstamp)
+            : (btree_type::is_live(entry))) {
+            entries.push_back(entry);
+        }
+    }
+    *entries_out = std::move(entries);
+    return exact ? dump_result_t::exact_live_and_dead_entries : dump_result_t::all_live_entries;
+}
+
 #ifndef NDEBUG
 template <class btree_type>
 void new_leaf_t<btree_type>::validate(default_block_size_t bs,

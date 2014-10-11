@@ -104,6 +104,7 @@ void remove(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, rep
 
 void erase_presence(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key);
 
+// RSI: Taking a callback, the way this is written, is just stupid.
 class entry_reception_callback_t {
 public:
     /* Note: If any of these callbacks throw exceptions, then
