@@ -757,6 +757,40 @@ dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
     return exact ? dump_result_t::exact_live_and_dead_entries : dump_result_t::all_live_entries;
 }
 
+template <class btree_type>
+new_leaf_t<btree_type>::live_iter_t::live_iter_t(sized_ptr_t<const main_leaf_node_t> node, int index)
+    : node_(node), index_(index) {
+    advance_index();
+}
+
+template <class btree_type>
+void new_leaf_t<btree_type>::live_iter_t::advance_index() {
+    while (index_ < node_.buf->num_pairs && !btree_type::is_live(entry_for_index(node_, index_))) {
+        ++index_;
+    }
+}
+
+template <class btree_type>
+void new_leaf_t<btree_type>::live_iter_t::step() {
+    rassert(index_ < node_.buf->num_pairs);
+    ++index_;
+    advance_index();
+}
+
+template <class btree_type>
+void new_leaf_t<btree_type>::live_iter_t::step_backward() {
+    do {
+        rassert(index_ > 0);
+        --index_;
+    } while (!btree_type::is_live(entry_for_index(node_, index_)));
+}
+
+template <class btree_type>
+const void *new_leaf_t<btree_type>::live_iter_t::entry() const {
+    rassert(index_ >= 0);
+    return entry_for_index(node_, index_);
+}
+
 #ifndef NDEBUG
 template <class btree_type>
 void new_leaf_t<btree_type>::validate(default_block_size_t bs,

@@ -78,6 +78,25 @@ public:
                             repli_timestamp_t maximum_possible_timestamp,
                             std::vector<const void *> *entries_out);
 
+    // Iterates over live entries in the leaf node (in key order).
+    class live_iter_t {
+    public:
+        live_iter_t(sized_ptr_t<const main_leaf_node_t> node, int index = 0);
+        void step();
+        void step_backward();
+
+        const void *entry() const;
+
+    private:
+        // Moves index forward, if at all, until it's at a live entry or num_pairs.
+        void advance_index();
+
+        // 0 <= index <= node.buf->num_pairs (ideally).  If index != node.buf->num_pairs, then index is
+        // the index of a live entry.
+        sized_ptr_t<const main_leaf_node_t> node_;
+        int index_;
+    };
+
 #ifndef NDEBUG
     static void validate(default_block_size_t bs, sized_ptr_t<const main_leaf_node_t> node);
 #else
