@@ -1,6 +1,8 @@
 // Copyright 2010-2014 RethinkDB, all rights reserved.
 #include "arch/runtime/coroutines.hpp"
 
+// TODO! Check if we're compiling with TCMalloc
+#include <google/malloc_extension.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -154,10 +156,16 @@ void coro_t::return_coro_to_free_list(coro_t *coro) {
 
 void coro_t::maybe_evict_from_free_list() {
     coro_globals_t *cglobals = TLS_get_cglobals();
+    bool evicted_any = false;
     while (cglobals->free_coros.size() > COROUTINE_FREE_LIST_SIZE) {
         coro_t *coro_to_delete = cglobals->free_coros.tail();
         cglobals->free_coros.remove(coro_to_delete);
         delete coro_to_delete;
+        evicted_any = true;
+    }
+    if (evicted_any) {
+        // TODO! Check if we're compiling with TCMalloc here as well
+        MallocExtension::instance()->ReleaseFreeMemory();
     }
 }
 
