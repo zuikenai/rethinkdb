@@ -160,9 +160,10 @@ inline size_t used_size(const main_leaf_node_t *node) {
 }
 
 template <class btree_type>
-void compactify_for_space(default_block_size_t bs, buf_write_t *buf) {
-    sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
+size_t make_entries_contiguous(default_block_size_t bs, sized_ptr_t<main_leaf_node_t> node) {
+#ifndef NDEBUG
     const size_t used = used_size(node.buf);
+#endif
 
     // We sort offset/index pairs by offset.
     std::vector<std::pair<uint16_t, uint16_t> > offset_and_indexes;
@@ -188,7 +189,14 @@ void compactify_for_space(default_block_size_t bs, buf_write_t *buf) {
     }
 
     rassert(write_offset == used);
-    node = buf->resize<main_leaf_node_t>(used);
+
+    return write_offset;
+}
+
+template <class btree_type>
+void compactify_for_space(default_block_size_t bs, buf_write_t *buf) {
+    size_t used = make_entries_contiguous<btree_type>(bs, buf->get_sized_data_write<main_leaf_node_t>());
+    sized_ptr_t<main_leaf_node_t> node = buf->resize<main_leaf_node_t>(used);
     new_leaf_t<btree_type>::validate(bs, node);
 }
 
