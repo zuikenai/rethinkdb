@@ -72,10 +72,8 @@ public:
 
     static
     dump_result_t
-    dump_entries_since_time(default_block_size_t bs,
-                            sized_ptr_t<const main_leaf_node_t> node,
+    dump_entries_since_time(sized_ptr_t<const main_leaf_node_t> node,
                             repli_timestamp_t minimum_tstamp,
-                            repli_timestamp_t maximum_possible_timestamp,
                             std::vector<const void *> *entries_out);
 
     // Iterates over live entries in the leaf node (in key order).

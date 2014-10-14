@@ -718,10 +718,8 @@ bool new_leaf_t<btree_type>::is_mergable(default_block_size_t bs,
 // entire leaf node.
 template <class btree_type>
 dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
-        UNUSED default_block_size_t bs,
-        UNUSED sized_ptr_t<const main_leaf_node_t> node,
-        UNUSED repli_timestamp_t minimum_tstamp,
-        UNUSED repli_timestamp_t maximum_possible_timestamp,
+        sized_ptr_t<const main_leaf_node_t> node,
+        repli_timestamp_t minimum_tstamp,
         std::vector<const void *> *entries_out) {
     const bool exact = minimum_tstamp >= node.buf->partial_replicability_age;
 
