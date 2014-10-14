@@ -214,6 +214,34 @@ void recompute_frontmost(sized_ptr_t<main_leaf_node_t> node) {
 
 }  // namespace
 
+// Removes entries that are older than partial_replicability_age (because we just
+// increased its value).  Touches frontmost and num_pairs.
+template <class btree_type>
+void remove_too_old_dead_entries(default_block_size_t bs,
+                                 sized_ptr_t<main_leaf_node_t> node) {
+    const repli_timestamp_t cutoff = node.buf->partial_replicability_age;
+    size_t w = 0;
+    uint16_t new_frontmost = node.block_size;
+    for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
+        const uint16_t offset = node.buf->pair_offsets[i];
+        node.buf->pair_offsets[w] = offset;
+        entry_t *entry = get_entry(node, offset);
+        if (!btree_type::is_live(entry) && btree_type::entry_timestamp(entry) < cutoff) {
+            const size_t entry_size = btree_type::entry_size(bs, entry);
+            subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
+            memset(entry, ENTRY_WIPE_CODE, entry_size);
+        } else {
+            new_frontmost = std::min<uint16_t>(new_frontmost, offset);
+            ++w;
+        }
+    }
+
+    memset(node.buf->pair_offsets + w, ENTRY_WIPE_CODE, (node.buf->num_pairs - w) * sizeof(uint16_t));
+    node.buf->num_pairs = w;
+    node.buf->frontmost = new_frontmost;
+}
+
+
 template <class btree_type>
 void remove_excess_deads_and_compactify(default_block_size_t bs, buf_write_t *buf) {
     sized_ptr_t<main_leaf_node_t> node = buf->get_sized_data_write<main_leaf_node_t>();
@@ -256,39 +284,7 @@ void remove_excess_deads_and_compactify(default_block_size_t bs, buf_write_t *bu
     }
 
     // Now let's remove the dead entries.
-    std::vector<size_t> removed_indices;
-    removed_indices.reserve(dead_entry_indices.size() - cutoff_index);
-    for (size_t i = cutoff_index; i < dead_entry_indices.size(); ++i) {
-        removed_indices.push_back(dead_entry_indices[i].second);
-    }
-
-    std::sort(removed_indices.begin(), removed_indices.end());
-
-    // RSI: Maybe this is redundant with (and worse than) remove_too_old_dead_entries.
-    // Now remove entries (in linear time).
-    {
-        uint16_t new_frontmost = node.block_size;
-        size_t ri = 0;
-        size_t wi = 0;
-        for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
-            if (ri < removed_indices.size() && removed_indices[ri] == i) {
-                const size_t entry_offset = node.buf->pair_offsets[i];
-                const entry_t *entry = get_entry(node, entry_offset);
-                const size_t entry_size = btree_type::entry_size(bs, entry);
-
-                subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
-                memset(get_entry(node, entry_offset), ENTRY_WIPE_CODE, entry_size);
-            } else {
-                const uint16_t entry_offset = node.buf->pair_offsets[i];
-                new_frontmost = std::min<uint16_t>(new_frontmost, entry_offset);
-                node.buf->pair_offsets[wi] = entry_offset;
-                ++wi;
-            }
-        }
-        rassert(wi == node.buf->num_pairs - removed_indices.size());
-        node.buf->num_pairs = wi;
-        node.buf->frontmost = new_frontmost;
-    }
+    remove_too_old_dead_entries<btree_type>(bs, node);
 
     new_leaf_t<btree_type>::validate(bs, node);
     maybe_compactify_for_space<btree_type>(bs, buf);
@@ -582,29 +578,6 @@ void move_entries(default_block_size_t bs,
     sib.buf->num_pairs -= end - beg;
     recompute_frontmost(sib);
     *moved_live_entries_out = std::move(moved_live_entries);
-}
-
-// Removes entries that are older than partial_replicability_age (because we just
-// increased its value).
-template <class btree_type>
-void remove_too_old_dead_entries(default_block_size_t bs,
-                                 sized_ptr_t<main_leaf_node_t> node) {
-    const repli_timestamp_t cutoff = node.buf->partial_replicability_age;
-    size_t w = 0;
-    for (size_t i = 0, e = node.buf->num_pairs; i < e; ++i) {
-        node.buf->pair_offsets[w] = node.buf->pair_offsets[i];
-        entry_t *entry = entry_for_index(node, i);
-        if (!btree_type::is_live(entry) && btree_type::entry_timestamp(entry) < cutoff) {
-            const size_t entry_size = btree_type::entry_size(bs, entry);
-            subtract_entry_size_change<btree_type>(node.buf, entry, entry_size);
-            memset(entry, ENTRY_WIPE_CODE, entry_size);
-        } else {
-            ++w;
-        }
-    }
-
-    memset(node.buf->pair_offsets + w, ENTRY_WIPE_CODE, (node.buf->num_pairs - w) * sizeof(uint16_t));
-    node.buf->num_pairs = w;
 }
 
 // We move entries out of sibling and into node.
