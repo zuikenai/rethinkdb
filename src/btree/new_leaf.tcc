@@ -160,7 +160,7 @@ inline size_t used_size(const main_leaf_node_t *node) {
 }
 
 template <class btree_type>
-size_t make_entries_contiguous(default_block_size_t bs, sized_ptr_t<main_leaf_node_t> node) {
+MUST_USE size_t make_entries_contiguous(default_block_size_t bs, sized_ptr_t<main_leaf_node_t> node) {
 #ifndef NDEBUG
     const size_t used = used_size(node.buf);
 #endif
