@@ -30,7 +30,6 @@ old_leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node
 old_leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
 
 
-
 // We must maintain timestamps and deletion entries as best we can,
 // with the following limitations.  The number of timestamps stored
 // need not be more than the most `MANDATORY_TIMESTAMPS` recent
@@ -93,8 +92,6 @@ bool level(value_sizer_t *sizer, int nodecmp_node_with_sib, leaf_node_t *node,
            std::vector<const void *> *moved_values_out);
 
 bool is_mergable(value_sizer_t *sizer, const leaf_node_t *node, const leaf_node_t *sibling);
-
-bool find_key(const leaf_node_t *node, const btree_key_t *key, int *index_out);
 
 bool lookup(value_sizer_t *sizer, const leaf_node_t *node, const btree_key_t *key, void *value_out);
 
