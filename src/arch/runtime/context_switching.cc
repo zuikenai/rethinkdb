@@ -43,6 +43,12 @@ artificial_stack_t::artificial_stack_t(void (*initial_fun)(void), size_t _stack_
     /* Allocate the stack */
     stack = malloc_aligned(stack_size, getpagesize());
 
+    /* Tell the operating system that it can unmap the stack space
+    (except for the first page, which we are definitely going to need).
+    This is an optimization to keep memory consumption in check. */
+    guarantee(stack_size >= static_cast<size_t>(getpagesize()));
+    madvise(reinterpret_cast<uint8_t*>(stack) + getpagesize(), stack_size - getpagesize(), MADV_DONTNEED);
+
     /* Protect the end of the stack so that we crash when we get a stack
     overflow instead of corrupting memory. */
 #ifndef THREADED_COROUTINES
