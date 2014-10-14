@@ -1,6 +1,10 @@
 // Copyright 2010-2013 RethinkDB, all rights reserved.
 #include <sys/resource.h>
 
+#ifndef NO_TCMALLOC
+#include <google/malloc_extension.h>
+#endif
+
 #include <set>
 
 #include "clustering/administration/main/command_line.hpp"
@@ -8,12 +12,25 @@
 #include "utils.hpp"
 #include "config/args.hpp"
 
+/* Controls how quickly TCMAlloc returns a memory page to the operating system
+after it has been freed.
+The time TCMalloc waits before releasing pages to the OS is anti-proportional to
+this value. The default is 1. */
+#ifndef NO_TCMALLOC
+const double TCMALLOC_RELEASE_RATE = 2.0;
+#endif
+
+
 int main(int argc, char *argv[]) {
 #ifndef NDEBUG
     rlimit core_limit;
     core_limit.rlim_cur = 100 * MEGABYTE;
     core_limit.rlim_max = 200 * MEGABYTE;
     setrlimit(RLIMIT_CORE, &core_limit);
+#endif
+
+#ifndef NO_TCMALLOC
+    MallocExtension::instance()->SetMemoryReleaseRate(TCMALLOC_RELEASE_RATE);
 #endif
 
     startup_shutdown_t startup_shutdown;

@@ -140,6 +140,10 @@ ifeq ($(AGRESSIVE_BUF_UNLOADING),1)
   RT_CXXFLAGS += -DAGRESSIVE_BUF_UNLOADING=1
 endif
 
+ifeq ($(NO_TCMALLOC),1)
+  RT_CXXFLAGS += -DNO_TCMALLOC=1
+endif
+
 RT_CXXFLAGS += -DWEBRESDIR='"$(web_res_dir)"'
 
 # TODO: >() only works on bash >= 4
