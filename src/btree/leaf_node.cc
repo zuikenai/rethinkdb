@@ -39,6 +39,18 @@ inline sized_ptr_t<main_leaf_node_t> as_new(sized_ptr_t<leaf_node_t> node) {
     return sized_reinterpret_cast<main_leaf_node_t>(node);
 }
 
+// RSI: Implement this.
+#if 0
+void convert_to_new_leaf_if_necessary(buf_write_t *buf) {
+    sized_ptr_t<leaf_node_t> node = buf->get_sized_data_write<leaf_node_t>();
+    if (is_new(node)) {
+        return;
+    }
+    rassert(is_old(node));
+}
+#endif  // 0
+
+
 void validate(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node) {
     if (is_old(node)) {
         old_leaf::validate(sizer, node.buf);

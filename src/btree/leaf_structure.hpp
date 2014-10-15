@@ -63,6 +63,7 @@ struct main_leaf_node_t {
 
     // The timestamp for which we aren't missing any "dead" entries >= that
     // timestamp.  (Initialized to distant_past when we have 0 entries.)
+    // RSI: What?  Initialized to distant_past?  Maybe for the root node, but otherwise we're always splitting a node and it gets set to some other value.
     repli_timestamp_t partial_replicability_age;
 
     // The pair offsets.

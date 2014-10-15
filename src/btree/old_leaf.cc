@@ -1577,6 +1577,14 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
     }
 }
 
+// RSI: Implement this.
+#if 0
+leaf_state_t full_state_description(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t maximum_possible_timestamp) {
+
+
+}
+#endif
+
 iterator::iterator()
     : node_(NULL), index_(-1) { }
 

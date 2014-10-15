@@ -8,6 +8,7 @@
 
 #include "buffer_cache/types.hpp"
 #include "errors.hpp"
+#include "repli_timestamp.hpp"
 
 class value_sizer_t;
 struct btree_key_t;
@@ -105,7 +106,25 @@ protected:
     virtual ~entry_reception_callback_t() { }
 };
 
-void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp,  entry_reception_callback_t *cb);
+void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp, entry_reception_callback_t *cb);
+
+// A complete description of an old_leaf node's state.  Used for constructing a
+// new_leaf.
+struct leaf_state_t {
+    // The timestamp for which we aren't missing any deletion entries >= that
+    // timestamp.  (Maybe distant_past when we have 0 entries.)
+    repli_timestamp_t partial_replicability_age;
+
+    // All the node's entries, with timestamp and pointers into the leaf node for key
+    // and (if applicable) value.  Deletion entries don't have values and have a NULL
+    // pointer instead.
+    std::vector<std::tuple<repli_timestamp_t,
+                           const btree_key_t *,
+                           const void *> > entries;
+};
+
+leaf_state_t full_state_description(value_sizer_t *sizer, const leaf_node_t *node,
+                                    repli_timestamp_t maximum_possible_timestamp);
 
 class iterator {
 public:
