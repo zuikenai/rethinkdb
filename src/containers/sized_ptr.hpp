@@ -19,8 +19,8 @@ public:
 };
 
 template <class T, class U>
-sized_ptr_t<U> sized_reinterpret_cast(sized_ptr_t<T> castee) {
-    return sized_ptr_t<U>(reinterpret_cast<U *>(castee.buf), castee.block_size);
+sized_ptr_t<T> sized_reinterpret_cast(sized_ptr_t<U> castee) {
+    return sized_ptr_t<T>(reinterpret_cast<T *>(castee.buf), castee.block_size);
 }
 
 

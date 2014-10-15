@@ -577,8 +577,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
         bool node_is_mergable;
         {
             buf_read_t sib_buf_read(&sib_buf);
-            const node_t *sib_node
-                = static_cast<const node_t *>(sib_buf_read.get_data_read());
+            sized_ptr_t<const node_t> sib_node = sib_buf_read.get_sized_data_read<node_t>();
 
 #ifndef NDEBUG
             node::validate(sizer, sib_node);
@@ -591,7 +590,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
             const internal_node_t *parent_node
                 = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
 
-            node_is_mergable = node::is_mergable(sizer, node, sib_node, parent_node);
+            node_is_mergable = node::is_mergable(sizer, node, sib_node.buf, parent_node);
         }
 
         if (node_is_mergable) {
@@ -922,7 +921,7 @@ void find_keyvalue_location_for_read(
 #ifndef NDEBUG
     {
         buf_read_t read(&buf);
-        node::validate(sizer, static_cast<const node_t *>(read.get_data_read()));
+        node::validate(sizer, read.get_sized_data_read<node_t>());
     }
 #endif  // NDEBUG
 
@@ -950,7 +949,7 @@ void find_keyvalue_location_for_read(
 #ifndef NDEBUG
         {
             buf_read_t read(&buf);
-            node::validate(sizer, static_cast<const node_t *>(read.get_data_read()));
+            node::validate(sizer, read.get_sized_data_read<node_t>());
         }
 #endif  // NDEBUG
     }

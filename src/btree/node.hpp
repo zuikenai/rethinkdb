@@ -15,6 +15,8 @@
 #include "serializer/types.hpp"
 #include "version.hpp"
 
+template <class> class sized_ptr_t;
+
 class value_sizer_t {
 public:
     value_sizer_t() { }
@@ -98,7 +100,7 @@ void split(value_sizer_t *sizer, node_t *node, node_t *rnode, store_key_t *media
 
 void merge(value_sizer_t *sizer, node_t *node, node_t *rnode, const internal_node_t *parent);
 
-void validate(value_sizer_t *sizer, const node_t *node);
+void validate(value_sizer_t *sizer, sized_ptr_t<const node_t> node);
 
 }  // namespace node
 

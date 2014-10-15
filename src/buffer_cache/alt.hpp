@@ -314,11 +314,19 @@ public:
     ~buf_read_t();
 
     const void *get_data_read(uint32_t *block_size_out);
+    // RSI: Rename to get_data_read_default.
     const void *get_data_read() {
         uint32_t block_size;
         const void *data = get_data_read(&block_size);
         guarantee(block_size == lock_->cache()->default_block_size().value());
         return data;
+    }
+
+    template <class T>
+    sized_ptr_t<const T> get_sized_data_read() {
+        uint32_t block_size;
+        const void *data = get_data_read(&block_size);
+        return sized_ptr_t<const T>(static_cast<const T *>(data), block_size);
     }
 
 private:

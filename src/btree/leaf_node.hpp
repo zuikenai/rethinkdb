@@ -3,6 +3,7 @@
 #define BTREE_LEAF_NODE_HPP_
 
 #include "btree/old_leaf.hpp"
+#include "containers/sized_ptr.hpp"
 
 namespace leaf {
 
@@ -15,8 +16,8 @@ using ::old_leaf::inclusive_lower_bound;
 using ::old_leaf::inclusive_upper_bound;
 
 
+void validate(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node);
 
-using ::old_leaf::validate;
 using ::old_leaf::init;
 using ::old_leaf::is_empty;
 using ::old_leaf::is_full;

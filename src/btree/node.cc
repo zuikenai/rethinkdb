@@ -3,6 +3,7 @@
 
 #include "btree/leaf_node.hpp"
 #include "btree/internal_node.hpp"
+#include "containers/sized_ptr.hpp"
 
 const block_magic_t btree_superblock_t::expected_magic = { { 's', 'u', 'p', 'e' } };
 const block_magic_t internal_node_t::expected_magic = { { 'i', 'n', 't', 'e' } };
@@ -60,13 +61,13 @@ void merge(value_sizer_t *sizer, node_t *node, node_t *rnode, const internal_nod
     }
 }
 
-void validate(DEBUG_VAR value_sizer_t *sizer, DEBUG_VAR const node_t *node) {
+void validate(DEBUG_VAR value_sizer_t *sizer, DEBUG_VAR sized_ptr_t<const node_t> node) {
 #ifndef NDEBUG
-    if (is_leaf(node)) {
-        leaf::validate(sizer, reinterpret_cast<const leaf_node_t *>(node));
-    } else if (node->magic == internal_node_t::expected_magic) {
+    if (is_leaf(node.buf)) {
+        leaf::validate(sizer, sized_reinterpret_cast<const leaf_node_t>(node));
+    } else if (node.buf->magic == internal_node_t::expected_magic) {
         internal_node::validate(sizer->default_block_size(),
-                                reinterpret_cast<const internal_node_t *>(node));
+                                reinterpret_cast<const internal_node_t *>(node.buf));
     } else {
         unreachable("Invalid leaf node type.");
     }
