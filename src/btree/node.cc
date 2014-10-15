@@ -8,12 +8,11 @@
 const block_magic_t btree_superblock_t::expected_magic = { { 's', 'u', 'p', 'e' } };
 const block_magic_t internal_node_t::expected_magic = { { 'i', 'n', 't', 'e' } };
 
-void btree_superblock_ct_asserts() {
-    // Just some place to put the CT_ASSERTs
-    CT_ASSERT(btree_superblock_t::METAINFO_BLOB_MAXREFLEN > 0);
-    CT_ASSERT(from_cache_block_size_t<sizeof(btree_superblock_t)>::ser_size
-              == DEVICE_BLOCK_SIZE);
-}
+static_assert(btree_superblock_t::METAINFO_BLOB_MAXREFLEN > 0,
+              "Metainfo blobs should be of non-zero size.");
+static_assert(from_cache_block_size_t<sizeof(btree_superblock_t)>::ser_size == DEVICE_BLOCK_SIZE,
+              "btree_superblock_t should be exactly DEVICE_BLOCK_SIZE (you can't "
+              "get smaller/better than that).");
 
 namespace node {
 
