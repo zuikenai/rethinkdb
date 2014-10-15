@@ -22,7 +22,7 @@
 //
 //   - There are no "skip" entries (because we don't care to enumerate the entries
 //     efficiently in physical order, because there's no meaning to their physical
-//     order).  Unused space in the block SHOULD be zeroed to avoid having garbage
+//     order).  Unused space in the block is zeroed to avoid having garbage
 //     data on disk.
 
 namespace new_leaf {
