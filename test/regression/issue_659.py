@@ -3,21 +3,15 @@
 import sys, os, time, tempfile, subprocess
 rethinkdb_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir))
 sys.path.append(os.path.join(rethinkdb_root, "test", "common"))
-import http_admin, driver
-from vcoptparse import *
-import rdb_workload_common
+import driver, http_admin, rdb_workload_common
 
 with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
     print "Starting cluster..."
     num_nodes = 2
-    files = [driver.Files(metacluster, db_path = "db-%d" % i, log_path = "create-output-%d" % i)
+    files = [driver.Files(metacluster, db_path="db-%d" % i, console_output="create-output-%d" % i)
         for i in xrange(num_nodes)]
-    processes = [driver.Process(
-            cluster,
-            files[i],
-            log_path = "serve-output-%d" % i,
-            executable_path = driver.find_rethinkdb_executable())
+    processes = [driver.Process(cluster, files[i], console_output="serve-output-%d" % i)
         for i in xrange(num_nodes)]
     time.sleep(3)
     print "Creating table..."
@@ -26,7 +20,7 @@ with driver.Metacluster() as metacluster:
     dc = http.add_datacenter()
     for machine_id in http.machines:
         http.move_server_to_datacenter(machine_id, dc)
-    ns = http.add_table(primary = dc, name = "stress", database = db)
+    ns = http.add_table(primary=dc, name="stress", database=db)
     time.sleep(3)
     host, port = driver.get_table_host(processes)
     cluster.check()

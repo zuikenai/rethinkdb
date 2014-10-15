@@ -4,15 +4,14 @@ import sys, os, time, tempfile
 rethinkdb_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir))
 sys.path.append(os.path.join(rethinkdb_root, "test", "common"))
 import http_admin, driver
-from vcoptparse import *
 
 with driver.Metacluster() as metacluster:
     cluster = driver.Cluster(metacluster)
     print "Starting cluster..."
     num_nodes = 2
-    files = [driver.Files(metacluster, db_path="db-%d" % i, log_path="create-output-%d" % i) for i in xrange(num_nodes)]
+    files = [driver.Files(metacluster, db_path="db-%d" % i, console_output="create-output-%d" % i) for i in xrange(num_nodes)]
     processes = [
-        driver.Process(cluster, files[i], log_path="serve-output-%d" % i, executable_path=driver.find_rethinkdb_executable())
+        driver.Process(cluster, files[i], console_output="serve-output-%d" % i)
         for i in xrange(num_nodes)
     ]
     time.sleep(10)
