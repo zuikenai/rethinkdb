@@ -18,8 +18,9 @@ using ::old_leaf::inclusive_upper_bound;
 
 void validate(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node);
 
+bool is_empty(sized_ptr_t<const leaf_node_t> node);
+
 using ::old_leaf::init;
-using ::old_leaf::is_empty;
 using ::old_leaf::is_full;
 using ::old_leaf::is_underfull;
 using ::old_leaf::split;
