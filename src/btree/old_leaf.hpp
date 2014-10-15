@@ -54,22 +54,6 @@ std::string strprint_leaf(value_sizer_t *sizer, const leaf_node_t *node);
 
 void print(FILE *fp, value_sizer_t *sizer, const leaf_node_t *node);
 
-class key_value_fscker_t {
-public:
-    key_value_fscker_t() { }
-
-    // Returns true if there are no problems.
-    virtual bool fsck(value_sizer_t *sizer, const btree_key_t *key,
-                      const void *value, std::string *msg_out) = 0;
-
-protected:
-    virtual ~key_value_fscker_t() { }
-
-    DISABLE_COPYING(key_value_fscker_t);
-};
-
-bool fsck(value_sizer_t *sizer, const btree_key_t *left_exclusive_or_null, const btree_key_t *right_inclusive_or_null, const leaf_node_t *node, key_value_fscker_t *fscker, std::string *msg_out);
-
 void validate(value_sizer_t *sizer, const leaf_node_t *node);
 
 void init(value_sizer_t *sizer, leaf_node_t *node);

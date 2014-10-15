@@ -16,7 +16,6 @@ using ::old_leaf::inclusive_upper_bound;
 
 
 
-using ::old_leaf::fsck;
 using ::old_leaf::validate;
 using ::old_leaf::init;
 using ::old_leaf::is_empty;

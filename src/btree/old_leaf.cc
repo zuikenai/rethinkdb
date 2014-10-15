@@ -282,6 +282,20 @@ void print(FILE *fp, value_sizer_t *sizer, const leaf_node_t *node) {
 }
 
 
+class key_value_fscker_t {
+public:
+    key_value_fscker_t() { }
+
+    // Returns true if there are no problems.
+    virtual bool fsck(value_sizer_t *sizer, const btree_key_t *key,
+                      const void *value, std::string *msg_out) = 0;
+
+protected:
+    virtual ~key_value_fscker_t() { }
+
+    DISABLE_COPYING(key_value_fscker_t);
+};
+
 class do_nothing_fscker_t : public key_value_fscker_t {
     bool fsck(UNUSED value_sizer_t *sizer, UNUSED const btree_key_t *key,
               UNUSED const void *value, UNUSED std::string *msg_out) {
