@@ -53,3 +53,9 @@ size_t main_btree_t::entry_size(default_block_size_t bs, const entry_t *entry) {
     stepped += key->full_size();
     return stepped + value_size(bs, p + stepped);
 }
+
+size_t main_btree_t::live_entry_size_from_keyvalue(default_block_size_t bs,
+                                                   const btree_key_t *key,
+                                                   const void *value) {
+    return sizeof(repli_timestamp_t) + key->full_size() + value_size(bs, value);
+}

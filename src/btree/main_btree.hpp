@@ -46,6 +46,10 @@ public:
 
     static size_t entry_size(default_block_size_t bs, const entry_t *entry);
 
+    static size_t live_entry_size_from_keyvalue(default_block_size_t bs,
+                                                const btree_key_t *key,
+                                                const void *value);
+
     static bool is_live(const entry_t *entry) {
         const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
         return *(p + sizeof(repli_timestamp_t)) != DELETION_ENTRY_CODE;

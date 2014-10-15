@@ -452,8 +452,7 @@ bool new_leaf_t<btree_type>::is_empty(sized_ptr_t<const main_leaf_node_t> node) 
 template <class btree_type>
 bool new_leaf_t<btree_type>::is_full(default_block_size_t bs,
                                      const main_leaf_node_t *node,
-                                     const void *entry) {
-    const size_t entry_size = btree_type::entry_size(bs, static_cast<const entry_t *>(entry)) ;
+                                     size_t entry_size) {
     return used_size(node) + entry_size + sizeof(uint16_t) > bs.value();
 }
 
