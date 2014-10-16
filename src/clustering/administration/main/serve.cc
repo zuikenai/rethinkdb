@@ -38,6 +38,135 @@
 #include "rpc/semilattice/semilattice_manager.hpp"
 #include "rpc/semilattice/view/field.hpp"
 
+template <typename T>
+void mark_id_deleted(T *map, const uuid_u &id) {
+    auto id_it = map->find(id);
+    id_it->second.mark_deleted();
+}
+
+machine_id_t add_server(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata, const std::string &name) {
+    auto view = cluster_metadata->get_root_view();
+    cluster_semilattice_metadata_t metadata = view->get();
+    machine_id_t new_machine_id = generate_uuid();
+    machine_semilattice_metadata_t new_machine;
+    new_machine.name.set(name_string_t::guarantee_valid(name.c_str()));
+    *metadata.machines.machines[new_machine_id].get_mutable() = new_machine;
+    view->join(metadata);
+    return new_machine_id;
+}
+
+void delete_server(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata, const machine_id_t &id) {
+    auto view = cluster_metadata->get_root_view();
+    cluster_semilattice_metadata_t metadata = view->get();
+    mark_id_deleted(&metadata.machines.machines, id);
+    view->join(metadata);
+}
+
+database_id_t add_database(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata, const std::string &name) {
+    auto view = cluster_metadata->get_root_view();
+    cluster_semilattice_metadata_t metadata = view->get();
+    database_id_t new_db_id = generate_uuid();
+    database_semilattice_metadata_t new_database;
+    new_database.name.set(name_string_t::guarantee_valid(name.c_str()));
+    *metadata.databases.databases[new_db_id].get_mutable() = new_database;
+    view->join(metadata);
+    return new_db_id;
+}
+
+void delete_database(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata, const database_id_t &id) {
+    auto view = cluster_metadata->get_root_view();
+    cluster_semilattice_metadata_t metadata = view->get();
+    mark_id_deleted(&metadata.databases.databases, id);
+    view->join(metadata);
+}
+
+namespace_id_t add_table(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata,
+                         const std::string &name,
+                         const database_id_t &db,
+                         const machine_id_t &director) {
+    auto view = cluster_metadata->get_root_view();
+    cluster_semilattice_metadata_t metadata = view->get();
+    namespace_id_t new_table_id = generate_uuid();
+    {
+        cow_ptr_t<namespaces_semilattice_metadata_t>::change_t
+            namespaces_change(&metadata.rdb_namespaces);
+        namespace_semilattice_metadata_t new_table;
+        new_table.name.set(name_string_t::guarantee_valid(name.c_str()));
+        new_table.database.set(db);
+        new_table.primary_key.set("dummy");
+        table_replication_info_t rep_info;
+        table_config_t::shard_t shard;
+        shard.director = director;
+        rep_info.config.shards.push_back(shard);
+        new_table.replication_info.set(rep_info);
+        *namespaces_change.get()->namespaces[new_table_id].get_mutable() = new_table;
+    }
+    view->join(metadata);
+    return new_table_id;
+}
+
+void delete_table(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata, const namespace_id_t &id) {
+    auto view = cluster_metadata->get_root_view();
+    cluster_semilattice_metadata_t metadata = view->get();
+    {
+        cow_ptr_t<namespaces_semilattice_metadata_t>::change_t
+            namespaces_change(&metadata.rdb_namespaces);
+        mark_id_deleted(&namespaces_change.get()->namespaces, id);
+    }
+    view->join(metadata);
+}
+
+class issue_factory_t {
+public:
+    issue_factory_t(semilattice_manager_t<cluster_semilattice_metadata_t> *cluster_metadata,
+                    const clone_ptr_t<watchable_t<change_tracking_map_t<peer_id_t, machine_id_t> > >
+                        &machine_to_peer) :
+        ghost_server_id(str_to_uuid("b9730d67-062d-4499-b65e-9fd562602452")),
+        local_issues(),
+        outdated_index_tracker(&local_issues),
+        log_write_tracker(&local_issues),
+        server_tracker(&local_issues,
+                       cluster_metadata->get_root_view(),
+                       machine_to_peer),
+        server1_id(add_server(cluster_metadata, "foo_server")),
+        server2_id(add_server(cluster_metadata, "foo_server")),
+        db1_id(add_database(cluster_metadata, "foo_db")),
+        db2_id(add_database(cluster_metadata, "foo_db")),
+        table1_id(add_table(cluster_metadata, "foo_table", db1_id, server1_id)),
+        table2_id(add_table(cluster_metadata, "foo_table", db1_id, server1_id)),
+        index_report1(outdated_index_tracker.create_report(table1_id)),
+        index_report2(outdated_index_tracker.create_report(table2_id))
+    {
+        // Trigger all local issues
+        index_report1->set_outdated_indexes(std::set<std::string>({"stadium", "cube"}));
+        index_report2->set_outdated_indexes(std::set<std::string>({"decorator", "stable", "spine", "noun"}));
+        log_write_tracker.report_error("cannot write to log file: No such file or directory");
+        server_tracker.report_ghost(ghost_server_id);
+        // Down issues will already occur because of the fake servers we made
+    }
+    ~issue_factory_t() {
+        index_report1->destroy();
+        index_report2->destroy();
+    }
+
+    const machine_id_t ghost_server_id;
+
+    local_issue_aggregator_t local_issues;
+    outdated_index_issue_tracker_t outdated_index_tracker;
+    log_write_issue_tracker_t log_write_tracker;
+    server_issue_tracker_t server_tracker;
+
+    machine_id_t server1_id;
+    machine_id_t server2_id;
+    database_id_t db1_id;
+    database_id_t db2_id;
+    namespace_id_t table1_id;
+    namespace_id_t table2_id;
+
+    outdated_index_report_t *index_report1;
+    outdated_index_report_t *index_report2;
+};
+
 peer_address_set_t look_up_peers_addresses(const std::vector<host_and_port_t> &names) {
     peer_address_set_t peers;
     for (size_t i = 0; i < names.size(); ++i) {
@@ -87,9 +216,7 @@ bool do_serve(io_backender_t *io_backender,
     try {
         extproc_pool_t extproc_pool(get_num_threads());
 
-        local_issue_aggregator_t local_issue_aggregator;
-
-        thread_pool_log_writer_t log_writer(&local_issue_aggregator);
+        thread_pool_log_writer_t log_writer;
 
         cluster_semilattice_metadata_t cluster_metadata;
         auth_semilattice_metadata_t auth_metadata;
@@ -179,9 +306,8 @@ bool do_serve(io_backender_t *io_backender,
             metadata_field(&cluster_semilattice_metadata_t::machines,
                            semilattice_manager_cluster.get_root_view()));
 
-        server_issue_tracker_t server_issue_tracker(
-            &local_issue_aggregator,
-            semilattice_manager_cluster.get_root_view(),
+        issue_factory_t issue_factory(
+            &semilattice_manager_cluster,
             directory_read_manager.get_root_view()->incremental_subview(
                 incremental_field_getter_t<machine_id_t, cluster_directory_metadata_t>(
                     &cluster_directory_metadata_t::machine_id)));
@@ -222,7 +348,7 @@ bool do_serve(io_backender_t *io_backender,
 
         field_copier_t<local_issues_t, cluster_directory_metadata_t> copy_local_issues_to_cluster(
             &cluster_directory_metadata_t::local_issues,
-            local_issue_aggregator.get_issues_watchable(),
+            issue_factory.local_issues.get_issues_watchable(),
             &our_root_directory_variable);
 
         perfmon_collection_t proc_stats_collection;
@@ -315,7 +441,7 @@ bool do_serve(io_backender_t *io_backender,
             if (i_am_a_server) {
                 rdb_svs_source.init(new file_based_svs_by_namespace_t(
                     io_backender, cache_balancer.get(), base_path,
-                    &local_issue_aggregator));
+                    &issue_factory.outdated_index_tracker));
                 rdb_reactor_driver.init(new reactor_driver_t(
                         base_path,
                         io_backender,

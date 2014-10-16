@@ -23,8 +23,12 @@ public:
     static void combine(local_issues_t *local_issues,
                         std::vector<scoped_ptr_t<issue_t> > *issues_out);
 
+    void report_ghost(const machine_id_t &server_id);
+
 private:
     void recompute();
+
+    std::vector<machine_id_t> ghosts;
 
     watchable_variable_t<std::vector<server_down_issue_t> > down_issues;
     watchable_variable_t<std::vector<server_ghost_issue_t> > ghost_issues;

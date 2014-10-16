@@ -141,7 +141,7 @@ server_issue_tracker_t::~server_issue_tracker_t() {
 
 void server_issue_tracker_t::recompute() {
     std::vector<machine_id_t> down_servers;
-    std::vector<machine_id_t> ghost_servers;
+    std::vector<machine_id_t> ghost_servers(ghosts);
 
     cluster_semilattice_metadata_t metadata = cluster_sl_view->get();
     for (auto const &machine : metadata.machines.machines) {
@@ -170,6 +170,11 @@ void server_issue_tracker_t::recompute() {
             }
             return true;
         });
+}
+
+void server_issue_tracker_t::report_ghost(const machine_id_t &server_id) {
+    ghosts.push_back(server_id);
+    recompute();
 }
 
 void server_issue_tracker_t::combine(
