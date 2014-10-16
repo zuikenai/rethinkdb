@@ -1577,13 +1577,40 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
     }
 }
 
-// RSI: Implement this.
-#if 0
-leaf_state_t full_state_description(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t maximum_possible_timestamp) {
+leaf_state_t full_state_description(value_sizer_t *sizer,
+                                    const leaf_node_t *node,
+                                    repli_timestamp_t maximum_possible_timestamp) {
+    std::vector<entry_ptrs_t> entries;
+    entries.reserve(node->num_pairs);
 
+    repli_timestamp_t last_tstamp = maximum_possible_timestamp;
+    for (entry_iter_t iter = entry_iter_t::make(node);
+         !iter.done(sizer);
+         iter.step(sizer, node)) {
+        entry_ptrs_t entry_ptrs;
+        if (iter.offset < node->tstamp_cutpoint) {
+            repli_timestamp_t tstamp = get_timestamp(node, iter.offset);
+            entry_ptrs.tstamp = tstamp;
+            last_tstamp = tstamp;
+        } else {
+            entry_ptrs.tstamp = last_tstamp;
+        }
 
+        const entry_t *entry = get_entry(node, iter.offset);
+        entry_ptrs.key = entry_key(entry);
+        entry_ptrs.value = entry_value(entry);  // (This is NULL for deletions.)
+        entries.push_back(entry_ptrs);
+    }
+
+    // partial_replicability_age is set to last_tstamp.next(), because we cannot
+    // guarantee that there wasn't a deletion entry with the _same_ timestamp as the
+    // last timestamp we saw.  This corresponds to the "If we haven't found a ..."
+    // sentence in dump_entries_since_time.
+    leaf_state_t ret;
+    ret.partial_replicability_age = last_tstamp.next();
+    ret.entry_ptrs = std::move(entries);
+    return ret;
 }
-#endif
 
 iterator::iterator()
     : node_(NULL), index_(-1) { }
