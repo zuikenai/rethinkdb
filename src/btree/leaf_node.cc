@@ -3,6 +3,7 @@
 #include "btree/leaf_structure.hpp"
 #include "btree/main_btree.hpp"
 #include "btree/new_leaf.hpp"
+#include "buffer_cache/alt.hpp"
 
 namespace leaf {
 
@@ -39,16 +40,21 @@ inline sized_ptr_t<main_leaf_node_t> as_new(sized_ptr_t<leaf_node_t> node) {
     return sized_reinterpret_cast<main_leaf_node_t>(node);
 }
 
-// RSI: Implement this.
-#if 0
-void convert_to_new_leaf_if_necessary(buf_write_t *buf) {
+void convert_to_new_leaf_if_necessary(value_sizer_t *sizer, buf_write_t *buf,
+                                      repli_timestamp_t buf_original_recency) {
     sized_ptr_t<leaf_node_t> node = buf->get_sized_data_write<leaf_node_t>();
     if (is_new(node)) {
         return;
     }
     rassert(is_old(node));
+    rassert(node.block_size == sizer->default_block_size().value());
+
+    const leaf::state_description_t desc
+        = old_leaf::full_state_description(sizer, node.buf, buf_original_recency);
+
+    buf_ptr_t buf_ptr = main_leaf_t::reconstruct(sizer->default_block_size(), desc);
+    buf->set_data_write(std::move(buf_ptr));
 }
-#endif  // 0
 
 
 void validate(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node) {

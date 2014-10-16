@@ -59,3 +59,7 @@ size_t main_btree_t::live_entry_size_from_keyvalue(default_block_size_t bs,
                                                    const void *value) {
     return sizeof(repli_timestamp_t) + key->full_size() + value_size(bs, value);
 }
+
+size_t main_btree_t::dead_entry_size_from_key(const btree_key_t *key) {
+    return sizeof(repli_timestamp_t) + 1 + key->full_size();
+}

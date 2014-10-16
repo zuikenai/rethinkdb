@@ -17,6 +17,10 @@ struct store_key_t;
 
 struct leaf_node_t;
 
+namespace leaf {
+struct state_description_t;
+}  // namespace leaf
+
 namespace old_leaf {
 class iterator;
 class reverse_iterator;
@@ -108,28 +112,9 @@ protected:
 
 void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp, entry_reception_callback_t *cb);
 
-// A complete description of an old_leaf node's state.  Used for constructing a
-// new_leaf.
-struct leaf_state_t {
-    // The timestamp for which we aren't missing any deletion entries >= that
-    // timestamp.  (Maybe distant_past when we have 0 entries.)
-    repli_timestamp_t partial_replicability_age;
-
-    struct entry_ptrs_t {
-        repli_timestamp_t tstamp;
-        const btree_key_t *key;
-        // Deletion entries don't have values and have a NULL pointer instead.
-        const void *value_or_null;
-    };
-
-    // All the node's entries, with timestamp and pointers into the leaf node for key
-    // and (if applicable) value.  Deletion entries don't have values and have a NULL
-    // pointer instead.
-    std::vector<entry_ptrs_t> entries;
-};
-
-leaf_state_t full_state_description(value_sizer_t *sizer, const leaf_node_t *node,
-                                    repli_timestamp_t maximum_possible_timestamp);
+leaf::state_description_t full_state_description(
+        value_sizer_t *sizer, const leaf_node_t *node,
+        repli_timestamp_t maximum_possible_timestamp);
 
 class iterator {
 public:

@@ -8,7 +8,6 @@
 #include <boost/optional.hpp>
 
 #include "containers/sized_ptr.hpp"
-#include "errors.hpp"
 #include "serializer/types.hpp"
 
 struct btree_key_t;
@@ -17,6 +16,10 @@ class buf_ptr_t;
 class entry_reception_callback_t;
 struct main_leaf_node_t;
 struct store_key_t;
+
+namespace leaf {
+struct state_description_t;
+}
 
 namespace new_leaf {
 
@@ -76,10 +79,12 @@ public:
                             repli_timestamp_t minimum_tstamp,
                             std::vector<const void *> *entries_out);
 
+    static buf_ptr_t reconstruct(default_block_size_t bs, const leaf::state_description_t &desc);
+
     // Iterates over live entries in the leaf node (in key order).
     class live_iter_t {
     public:
-        live_iter_t(sized_ptr_t<const main_leaf_node_t> node, int index = 0);
+        explicit live_iter_t(sized_ptr_t<const main_leaf_node_t> node, int index = 0);
         void step();
         void step_backward();
 

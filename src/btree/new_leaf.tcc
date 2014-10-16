@@ -736,6 +736,13 @@ dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
 }
 
 template <class btree_type>
+buf_ptr_t new_leaf_t<btree_type>::reconstruct(UNUSED default_block_size_t bs,
+                                              UNUSED const leaf::state_description_t &desc) {
+    crash("RSI: unimplemented");
+}
+
+
+template <class btree_type>
 new_leaf_t<btree_type>::live_iter_t::live_iter_t(sized_ptr_t<const main_leaf_node_t> node, int index)
     : node_(node), index_(index) {
     advance_index();

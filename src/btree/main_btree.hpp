@@ -50,6 +50,8 @@ public:
                                                 const btree_key_t *key,
                                                 const void *value);
 
+    static size_t dead_entry_size_from_key(const btree_key_t *key);
+
     static bool is_live(const entry_t *entry) {
         const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
         return *(p + sizeof(repli_timestamp_t)) != DELETION_ENTRY_CODE;
