@@ -1580,14 +1580,14 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
 leaf_state_t full_state_description(value_sizer_t *sizer,
                                     const leaf_node_t *node,
                                     repli_timestamp_t maximum_possible_timestamp) {
-    std::vector<entry_ptrs_t> entries;
+    std::vector<leaf_state_t::entry_ptrs_t> entries;
     entries.reserve(node->num_pairs);
 
     repli_timestamp_t last_tstamp = maximum_possible_timestamp;
     for (entry_iter_t iter = entry_iter_t::make(node);
          !iter.done(sizer);
          iter.step(sizer, node)) {
-        entry_ptrs_t entry_ptrs;
+        leaf_state_t::entry_ptrs_t entry_ptrs;
         if (iter.offset < node->tstamp_cutpoint) {
             repli_timestamp_t tstamp = get_timestamp(node, iter.offset);
             entry_ptrs.tstamp = tstamp;
@@ -1598,7 +1598,7 @@ leaf_state_t full_state_description(value_sizer_t *sizer,
 
         const entry_t *entry = get_entry(node, iter.offset);
         entry_ptrs.key = entry_key(entry);
-        entry_ptrs.value = entry_value(entry);  // (This is NULL for deletions.)
+        entry_ptrs.value_or_null = entry_value(entry);
         entries.push_back(entry_ptrs);
     }
 
@@ -1608,7 +1608,7 @@ leaf_state_t full_state_description(value_sizer_t *sizer,
     // sentence in dump_entries_since_time.
     leaf_state_t ret;
     ret.partial_replicability_age = last_tstamp.next();
-    ret.entry_ptrs = std::move(entries);
+    ret.entries = std::move(entries);
     return ret;
 }
 
