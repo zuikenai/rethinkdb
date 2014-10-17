@@ -364,20 +364,20 @@ public:
     }
 };
 
-template <class... Ts>
-json_adapter_if_t::json_adapter_map_t get_json_subfields(boost::variant<Ts...> *target) {
+template <BOOST_VARIANT_ENUM_PARAMS(class T)>
+json_adapter_if_t::json_adapter_map_t get_json_subfields(boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *target) {
     noctx_variant_json_subfield_getter_t visitor;
     return boost::apply_visitor(visitor, *target);
 }
 
-template <class... Ts>
-cJSON *render_as_json(boost::variant<Ts...> *target) {
+template <BOOST_VARIANT_ENUM_PARAMS(class T)>
+cJSON *render_as_json(boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *target) {
     noctx_variant_json_renderer_t visitor;
     return boost::apply_visitor(visitor, *target);
 }
 
-template <class... Ts>
-void apply_json_to(cJSON *, boost::variant<Ts...> *) {
+template <BOOST_VARIANT_ENUM_PARAMS(class T)>
+void apply_json_to(cJSON *, boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *) {
     throw permission_denied_exc_t("Can't write to a boost::variant.");
 }
 

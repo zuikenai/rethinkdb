@@ -455,14 +455,14 @@ std::string to_string_for_json_key(const uuid_u *);
 namespace boost {
 
 // ctx-less JSON adapter for boost::variant
-template <class... Ts>
-json_adapter_if_t::json_adapter_map_t get_json_subfields(boost::variant<Ts...> *);
+    template <BOOST_VARIANT_ENUM_PARAMS(class T)>
+    json_adapter_if_t::json_adapter_map_t get_json_subfields(boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *);
 
-template <class... Ts>
-cJSON *render_as_json(boost::variant<Ts...> *);
+template <BOOST_VARIANT_ENUM_PARAMS(class T)>
+cJSON *render_as_json(boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *);
 
-template <class... Ts>
-void apply_json_to(cJSON *, boost::variant<Ts...> *);
+template <BOOST_VARIANT_ENUM_PARAMS(class T)>
+void apply_json_to(cJSON *, boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *);
 
 } //namespace boost
 

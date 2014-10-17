@@ -67,9 +67,9 @@ struct variant_serializer_t<W, N> {
 
 };
 
-template <cluster_version_t W, class... Ts>
-void serialize(write_message_t *wm, const boost::variant<Ts...> &x) {
-    variant_serializer_t<W, 1, Ts...> visitor(wm);
+template <cluster_version_t W, BOOST_VARIANT_ENUM_PARAMS(class T)>
+void serialize(write_message_t *wm, const boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> &x) {
+    variant_serializer_t<W, 1, BOOST_VARIANT_ENUM_PARAMS(T)> visitor(wm);
     rassert(sizeof(visitor) == sizeof(write_message_t *));
 
     boost::apply_visitor(visitor, x);
@@ -108,13 +108,13 @@ struct variant_deserializer<W, N, Variant> {
     }
 };
 
-template <cluster_version_t W, class... Ts>
-MUST_USE archive_result_t deserialize(read_stream_t *s, boost::variant<Ts...> *x) {
+template <cluster_version_t W, BOOST_VARIANT_ENUM_PARAMS(class T)>
+MUST_USE archive_result_t deserialize(read_stream_t *s, boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> *x) {
     uint8_t n;
     archive_result_t res = deserialize<W>(s, &n);
     if (bad(res)) { return res; }
 
-    return variant_deserializer<W, 1, boost::variant<Ts...>, Ts...>::deserialize_variant(n, s, x);
+    return variant_deserializer<W, 1, boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)>, BOOST_VARIANT_ENUM_PARAMS(T)>::deserialize_variant(n, s, x);
 }
 
 
