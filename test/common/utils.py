@@ -43,51 +43,43 @@ def find_rethinkdb_executable(mode=None):
 def latest_build_dir(check_executable=True, mode=None):
     '''Look for the most recently built version of this project'''
     
-    masterBuildDir = os.path.join(project_root_dir(), 'build')
-    if mode in (None, ''):
-        mode = ['release', 'debug']
-    elif not hasattr(mode, '__iter__'):
-        mode = [str(mode)]
+    canidatePath = None
     
-    if not os.path.isdir(masterBuildDir):
-        raise test_exceptions.NotBuiltException(detail='no version of this project have yet been built')
-    
-    # -- find the build directory with the most recent mtime
-    
-    canidatePath    = None
-    canidateMtime   = None
-    for name in os.listdir(masterBuildDir):
-        path = os.path.join(masterBuildDir, name)
-        if os.path.isdir(path) and any(map(lambda x: name.startswith(x + '_') or name.lower() == x, mode)):
-            if check_executable == True:
-                if not os.path.isfile(os.path.join(path, 'rethinkdb')):
-                    continue
-            
-            mtime = os.path.getmtime(path)
-            if canidateMtime is None or mtime > canidateMtime:
-                canidateMtime = mtime
-                canidatePath = path
-    
-    if canidatePath is None:
-        raise test_exceptions.NotBuiltException(detail='no version of this project have yet been built')
-    else:
-        return canidatePath
-
-def rethinkdb_binary_path(buildDir=None):
-    '''Return the path to the rethinkdb executable to use'''
-    
-    path = None
-    if buildDir is not None:
-        path = os.path.realpath(os.path.join(buildDir, 'rethinkdb'))
     if os.getenv('RETHINKDB_BUILD_DIR') is not None:
-        path = os.path.realpath(os.path.join(os.getenv('RETHINKDB_BUILD_DIR'), 'rethinkdb'))
+        canidatePath = os.path.realpath(os.getenv('RETHINKDB_BUILD_DIR'))
+    
     else:
-        path = os.path.join(latest_build_dir(check_executable=True), 'rethinkdb')
+        masterBuildDir = os.path.join(project_root_dir(), 'build')
+        if not os.path.isdir(masterBuildDir):
+            raise test_exceptions.NotBuiltException(detail='no version of this project has yet been built')
+        
+        if mode in (None, ''):
+            mode = ['release', 'debug']
+        elif not hasattr(mode, '__iter__'):
+            mode = [str(mode)]
+        
+        # -- find the build directory with the most recent mtime
+        
+        canidateMtime = None
+        for name in os.listdir(masterBuildDir):
+            path = os.path.join(masterBuildDir, name)
+            if os.path.isdir(path) and any(map(lambda x: name.startswith(x + '_') or name.lower() == x, mode)):
+                if check_executable == True:
+                    if not os.path.isfile(os.path.join(path, 'rethinkdb')):
+                        continue
+                
+                mtime = os.path.getmtime(path)
+                if canidateMtime is None or mtime > canidateMtime:
+                    canidateMtime = mtime
+                    canidatePath = path
+        
+        if canidatePath is None:
+            raise test_exceptions.NotBuiltException(detail='no built version of the server could be found')
     
-    if not os.path.isfile(path):
-        raise test_exceptions.TestingFrameworkException(detail='There was not a binary at the expected path: %s' % str(path))
+    if canidatePath is None or (check_executable is True and not os.access(os.path.join(canidatePath, 'rethinkdb'), os.X_OK)):
+        raise test_exceptions.NotBuiltException(detail='the rethinkdb server executable was not present/runable in: %s' % canidatePath)
     
-    return path
+    return canidatePath
 
 def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, buildOptions=None):
     '''Call `make -C` on a folder to build it. If waitNotification is given wait notificationTimeout seconds and then print the notificaiton'''

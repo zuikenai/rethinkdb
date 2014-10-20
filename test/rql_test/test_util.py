@@ -178,7 +178,7 @@ class RethinkDBTestServer(object):
         
         self.log_file = open(os.path.join(self.server_data_dir, 'server-log.txt'), 'a+')
         
-        self.executable = os.path.join(self.server_build_dir, 'rethinkdb') if self.server_build_dir else utils.rethinkdb_binary_path()
+        self.executable = os.path.join(self.server_build_dir, 'rethinkdb') if self.server_build_dir else utils.find_rethinkdb_executable()
         check_call([self.executable, 'create', '--directory', self.rdbfile_path], stdout=self.log_file, stderr=STDOUT)
 
     def stop(self):
