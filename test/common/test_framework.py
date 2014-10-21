@@ -81,10 +81,13 @@ def run(all_tests, all_groups, configure, args):
     if args.groups and not args.list:
         list_groups_mode(all_groups, args.filter, args.verbose)
         return
-    filter = TestFilter.parse(args.filter, all_groups)
+    expect_fail_filter = TestFilter.parse(["expect_fail"], all_groups)
+    expect_fail = set(name for name, test in all_tests.filter(expect_fail_filter))
+    print("expect fail", expect_fail)
     if args.load or args.tree or args.examine:
-        old_tests_mode(all_tests, args.load, filter, args.verbose, args.list, args.only_failed, args.tree, args.examine, args.html_report)
+        old_tests_mode(all_tests, all_groups, args.load, args.filter, args.verbose, args.list, args.only_failed, args.tree, args.examine, args.html_report, expect_fail)
         return
+    filter = TestFilter.parse(args.filter or ['default'], all_groups)
     tests = all_tests.filter(filter)
     reqs = tests.requirements()
     conf = configure(reqs)
@@ -106,10 +109,11 @@ def run(all_tests, all_groups, configure, args):
             verbose=args.verbose,
             repeat=args.repeat,
             kontinue=args.kontinue,
-            abort_fast=args.abort_fast)
+            abort_fast=args.abort_fast,
+            expect_fail=expect_fail)
         testrunner.run()
         if args.html_report:
-            test_report.gen_report(testrunner.dir, load_test_results_as_tests(testrunner.dir))
+            test_report.gen_report(testrunner.dir, load_test_results_as_tests(testrunner.dir), expect_fail)
         if testrunner.failed():
             return 'FAILED'
 
@@ -146,19 +150,19 @@ def list_groups_mode(groups, filters, verbose):
                 print(' ', pattern)
 
 # This mode loads previously run tests instead of running any tests
-def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tree, examine, html_report):
+def old_tests_mode(all_tests, all_groups, load, filter_arg, verbose, list_tests, only_failed, tree, examine, html_report, expect_fail):
     if isinstance(load, "".__class__):
         load_path = load
     else:
         all_dirs = [join(default_test_results_dir, d) for d in os.listdir(default_test_results_dir)]
         load_path = max([d for d in all_dirs if os.path.isdir(d)], key=getmtime)
         print("Loading tests from", load_path)
+    filter = TestFilter.parse(filter_arg or ['*'], all_groups)
     tests = load_test_results_as_tests(load_path).filter(filter)
-    filter.check_use()
     if only_failed:
         tests = tests.filter(PredicateFilter(lambda test: not test.passed()))
     if html_report:
-        test_report.gen_report(load_path, tests)
+        test_report.gen_report(load_path, tests, expect_fail)
         return
     if list_tests:
         list_tests_mode(tests, verbose, False)
@@ -166,7 +170,10 @@ def old_tests_mode(all_tests, load, filter, verbose, list_tests, only_failed, tr
     view = TextView()
     for name, test in tests:
         if not test.passed():
-            status = 'FAILED'
+            if name in expect_fail:
+                status = 'FAILED_AS_EXPECTED'
+            else:
+                status = 'FAILED'
         elif test.killed():
             status = 'KILLED'
         else:
@@ -200,8 +207,9 @@ class TestRunner(object):
     TIMED_OUT = 'TIMED_OUT'
     STARTED   = 'STARTED'
     KILLED    = 'KILLED'
+    FAILED_AS_EXPECTED = 'FAILED_AS_EXPECTED'
 
-    def __init__(self, tests, conf, tasks=1, timeout=600, output_dir=None, verbose=False, repeat=1, kontinue=False, abort_fast = False, run_dir=None):
+    def __init__(self, tests, conf, tasks=1, timeout=600, output_dir=None, verbose=False, repeat=1, kontinue=False, abort_fast = False, run_dir=None, expect_fail=[]):
         self.tests = tests
         self.semaphore = multiprocessing.Semaphore(tasks)
         self.processes = []
@@ -213,7 +221,8 @@ class TestRunner(object):
         self.failed_set = set()
         self.aborting = False
         self.abort_fast = abort_fast
-        self.all_passed = False
+        self.all_passed_except_expected = False
+        self.expect_fail = expect_fail
 
         timestamp = time.strftime('%Y-%m-%dT%H:%M:%S.')
 
@@ -301,9 +310,14 @@ class TestRunner(object):
                 print("%d tests killed" % len(tests_killed))
             print("%d tests skipped" % (tests_count - len(tests_launched)))
         elif len(self.failed_set):
+            expected_failures = filter(lambda test: test in self.expect_fail, self.failed_set)
+            if len(expected_failures) == len(self.failed_set):
+                self.all_passed_except_expected = True
             print("%d of %d tests failed" % (len(self.failed_set), tests_count))
+            if expected_failures:
+                print("%d expected failures" % (len(expected_failures),))
         else:
-            self.all_passed = True
+            self.all_passed_except_expected = True
             print("All tests passed successfully")
         print("Saved test results to %s" % self.dir)
 
@@ -328,7 +342,9 @@ class TestRunner(object):
         name = id[0]
         args = {}
         if status == 'FAILED':
-            if not self.aborting and not self.verbose:
+            if name in self.expect_fail:
+                status = 'FAILED_AS_EXPECTED'
+            elif not self.aborting and not self.verbose:
                 args = dict(error = testprocess.tail_error())
             if self.abort_fast:
                 self.aborting = True
@@ -346,7 +362,7 @@ class TestRunner(object):
             return len(running)
 
     def failed(self):
-        return not self.all_passed
+        return not self.all_passed_except_expected
 
 # For printing the status of TestRunner to stdout
 class TextView(object):
@@ -377,10 +393,11 @@ class TextView(object):
         if str == 'LOG':
             return name
         short = dict(
-            FAILED    = (self.red    , "FAIL"),
-            SUCCESS   = (self.green  , "OK  "),
-            TIMED_OUT = (self.red    , "TIME"),
-            KILLED    = (self.yellow , "KILL")
+            FAILED             = (self.red    , "FAIL "),
+            SUCCESS            = (self.green  , "OK   "),
+            TIMED_OUT          = (self.red    , "TIME "),
+            KILLED             = (self.yellow , "KILL "),
+            FAILED_AS_EXPECTED = (self.yellow , "EFAIL")
         )[str]
         buf = ''
         if self.use_color:

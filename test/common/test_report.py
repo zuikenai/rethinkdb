@@ -7,13 +7,15 @@ import json, os, subprocess, re
 import test_framework
 import utils
 
-def format_tests(test_root, test_tree):
+def format_tests(test_root, test_tree, expect_fail):
   tests = []
   for name, test in test_tree:
       command_line = test.read_file('description')
       failed = test.read_file('fail_message')
       if failed is None:
         status = 'pass'
+      elif name in expect_fail:
+        status = 'efail'
       else:
         status = 'fail'
 
@@ -40,7 +42,7 @@ def generate_html(output_file, reportData):
   pageHTML = test_report_template % {"pagedata": json.dumps(reportData, separators=(',', ':')), 'mustacheContents': mustacheContent}
   file_out.write(pageHTML)
 
-def gen_report(test_root, tests):
+def gen_report(test_root, tests, expect_fail):
   buildbot = False
   if "BUILD_NUMBER" in os.environ:
     buildbot = {
@@ -54,22 +56,24 @@ def gen_report(test_root, tests):
     'message': subprocess.check_output(['git', 'show', '-s', '--format=%B'])
   }
 
-  tests_param = format_tests(test_root, tests)
+  tests_param = format_tests(test_root, tests, expect_fail)
   passed = sum(1 for test in tests_param if test['status'] == 'pass')
+  expected_failures = sum(1 for test in tests_param if test['status'] == 'efail')
   total = len(tests_param)
 
   # TODO: use `rethinkdb --version' instead
   rethinkdb_version = subprocess.check_output([os.path.dirname(__file__) + "/../../scripts/gen-version.sh"])
-  
+
   reportData = {
     "buildbot": buildbot,
     "tests": tests_param,
     "rethinkdb_version": rethinkdb_version,
     "git_info": git_info,
-    "passed_test_count": passed,
-    "total_test_count": total
+    "passed": passed,
+    "expected_failures": expected_failures,
+    "total": total
   }
-  
+
   generate_html(test_root + "/test_results.html", reportData)
   print('Wrote test report to "%s/test_results.html"' % os.path.realpath(test_root))
 
@@ -81,6 +85,7 @@ test_report_template = """
         td {border:1px solid grey}
         .test { background: red }
         .test.pass { background: green }
+        .test.efail { background: yellow }
     </style>
     <script>
 %(mustacheContents)s
@@ -96,9 +101,9 @@ test_report_template = """
                 }
             }
         }
-        
+
         pageData = %(pagedata)s;
-        
+
         function displayData() {
             var template = document.getElementById("handlebars-template").textContent;
             document.body.innerHTML = Mustache.to_html(template, pageData);
@@ -117,12 +122,13 @@ test_report_template = """
         <p>Commit message:
           <pre>{{ git_info.message }}</pre>
         <p>Passed {{ passed }} of  {{ total }} tests</p>
+        <p>{{ expected_failures }} expected failures</p>
         <table style='width:100%%'>
-          {{#tests}}
+          {{ #tests }}
           <tr>
-            <td>{{name}}</td>
+            <td>{{ name }}</td>
             <td class="test {{ status }}">
-              <a href='#{{ id }}' onclick='toggleVisibility("{{ id }}")'>{{status}}</a>
+              <a href='#{{ id }}' onclick='toggleVisibility("{{ id }}")'>{{ status }}</a>
             </td>
             <td width='100%%'></td></tr>
           <tr id='{{ id }}' style='display:none'>
