@@ -5,34 +5,7 @@ require 'pp'
 
 # -- import the rethinkdb driver
 
-expectedDriverPath = ''
-if ENV['RUBY_DRIVER_DIR']
-  expectedDriverPath = ENV['RUBY_DRIVER_DIR']
-else
-  # look for the source directory
-  targetPath = File.expand_path(File.dirname(__FILE__))
-  while targetPath != File::Separator
-    sourceDir = File.join(targetPath, 'drivers', 'ruby')
-    if File.directory?(sourceDir)
-      expectedDriverPath = File.join(sourceDir, 'lib')
-      break
-    end
-    targetPath = File.dirname(targetPath)
-  end
-end
-if Dir.exists?(expectedDriverPath)
-  $LOAD_PATH.unshift expectedDriverPath
-  require 'rethinkdb'
-  $LOAD_PATH.shift
-  include RethinkDB::Shortcuts
-  
-  actualDirverPath = File.dirname(r.method(:connect).source_location[0])
-  if actualDirverPath != expectedDriverPath
-    abort "Wrong Ruby driver loaded, expected from: " + expectedDriverPath + " but got :" + actualDirverPath
-  end
-else
-  abort "Unable to locate the Ruby driver"
-end
+require_relative './importRethinkDB.rb'
 
 # --
 
