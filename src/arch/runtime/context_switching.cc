@@ -47,7 +47,15 @@ artificial_stack_t::artificial_stack_t(void (*initial_fun)(void), size_t _stack_
     (except for the first page, which we are definitely going to need).
     This is an optimization to keep memory consumption in check. */
     guarantee(stack_size >= static_cast<size_t>(getpagesize()));
-    madvise(reinterpret_cast<uint8_t*>(stack) + getpagesize(), stack_size - getpagesize(), MADV_DONTNEED);
+    /* On OS X we use MADV_FREE. On Linux MADV_FREE is not available,
+    and we use MADV_DONTNEED instead. */
+#ifdef __MACH__
+    madvise(reinterpret_cast<uint8_t*>(stack) + getpagesize(),
+            stack_size - getpagesize(), MADV_FREE);
+#else
+    madvise(reinterpret_cast<uint8_t*>(stack) + getpagesize(),
+            stack_size - getpagesize(), MADV_DONTNEED);
+#endif
 
     /* Protect the end of the stack so that we crash when we get a stack
     overflow instead of corrupting memory. */
