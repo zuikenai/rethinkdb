@@ -18,7 +18,7 @@ tests = TestTree({
     'unit': AllUnitTests()
 })
 
-# helper function for loading tests from full_test/*.test
+# helper function for loading tests from list/*.test
 def generate_test(tree):
     def gen(test_command, name):
         i = 1
@@ -29,9 +29,9 @@ def generate_test(tree):
         tree[new_name] = ShellCommandTest(test_command)
     return gen
 
-# load the tests from full_test/*.test
+# load the tests from list/*.test
 def load_tests():
-    dirpath = join(dirname(__file__), "full_test")
+    dirpath = join(dirname(__file__), "list")
     for filename in os.listdir(dirpath):
         base_name, ext = splitext(filename)
         if ext == '.test':
@@ -43,9 +43,9 @@ def load_tests():
 # Test groups
 groups = {}
 
-# Load the test groups from full_test/*.group
+# Load the test groups from list/*.group
 def load_groups():
-    dirpath = join(dirname(__file__), "full_test")
+    dirpath = join(dirname(__file__), "list")
     for filename in os.listdir(dirpath):
         base_name, ext = splitext(filename)
         if ext == '.group':
