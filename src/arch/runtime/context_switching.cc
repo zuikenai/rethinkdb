@@ -50,11 +50,9 @@ artificial_stack_t::artificial_stack_t(void (*initial_fun)(void), size_t _stack_
     /* On OS X we use MADV_FREE. On Linux MADV_FREE is not available,
     and we use MADV_DONTNEED instead. */
 #ifdef __MACH__
-    madvise(reinterpret_cast<uint8_t*>(stack) + getpagesize(),
-            stack_size - getpagesize(), MADV_FREE);
+    madvise(stack, stack_size - getpagesize(), MADV_FREE);
 #else
-    madvise(reinterpret_cast<uint8_t*>(stack) + getpagesize(),
-            stack_size - getpagesize(), MADV_DONTNEED);
+    madvise(stack, stack_size - getpagesize(), MADV_DONTNEED);
 #endif
 
     /* Protect the end of the stack so that we crash when we get a stack
