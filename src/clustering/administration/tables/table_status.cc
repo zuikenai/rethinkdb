@@ -293,25 +293,32 @@ ql::datum_t convert_table_status_shard_to_datum(
     return std::move(array_builder).to_datum();
 }
 
-ql::datum_t convert_table_status_to_datum(
+bool table_status_artificial_table_backend_t::format_row(
+        namespace_id_t table_id,
         name_string_t table_name,
         name_string_t db_name,
-        namespace_id_t uuid,
-        const table_replication_info_t &repli_info,
-        const change_tracking_map_t<peer_id_t, namespaces_directory_metadata_t> &dir,
-        server_name_client_t *name_client) {
+        const namespace_semilattice_metadata_t &metadata,
+        UNUSED signal_t *interruptor,
+        ql::datum_t *row_out,
+        UNUSED std::string *error_out) {
+    assert_thread();
+
     ql::datum_object_builder_t builder;
+
     builder.overwrite("name", convert_name_to_datum(table_name));
     builder.overwrite("db", convert_name_to_datum(db_name));
-    builder.overwrite("uuid", convert_uuid_to_datum(uuid));
+    builder.overwrite("uuid", convert_uuid_to_datum(table_id));
 
     table_readiness_t readiness = table_readiness_t::finished;
     ql::datum_array_builder_t array_builder((ql::configured_limits_t::unlimited));
+    const table_replication_info_t &repli_info = metadata.replication_info.get_ref();
+    const change_tracking_map_t<peer_id_t, namespaces_directory_metadata_t> &dir =
+         directory_view->get();
     for (size_t i = 0; i < repli_info.config.shards.size(); ++i) {
         table_readiness_t this_shard_readiness;
         array_builder.add(
             convert_table_status_shard_to_datum(
-                uuid,
+                table_id,
                 repli_info.shard_scheme.get_shard_range(i),
                 repli_info.config.shards[i],
                 dir,
@@ -330,25 +337,8 @@ ql::datum_t convert_table_status_to_datum(
     builder.overwrite("ready_completely", ql::datum_t::boolean(
         readiness == table_readiness_t::finished));
 
-    return std::move(builder).to_datum();
-}
+    *row_out = std::move(builder).to_datum();
 
-bool table_status_artificial_table_backend_t::read_row_impl(
-        namespace_id_t table_id,
-        name_string_t table_name,
-        name_string_t db_name,
-        const namespace_semilattice_metadata_t &metadata,
-        UNUSED signal_t *interruptor,
-        ql::datum_t *row_out,
-        UNUSED std::string *error_out) {
-    assert_thread();
-    *row_out = convert_table_status_to_datum(
-        table_name,
-        db_name,
-        table_id,
-        metadata.replication_info.get_ref(),
-        directory_view->get(),
-        name_client);
     return true;
 }
 
