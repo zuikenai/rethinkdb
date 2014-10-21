@@ -350,12 +350,12 @@ class TestRunner(object):
 
 # For printing the status of TestRunner to stdout
 class TextView(object):
-    
+
     red = ''
     green = ''
     yellow = ''
     nocolor = ''
-    
+
     def __init__(self):
         self.use_color = utils.supportsTerminalColors()
         if self.use_color:
@@ -363,7 +363,7 @@ class TextView(object):
                 curses.setupterm()
                 setf = curses.tigetstr('setaf') or ''
                 bold = curses.tigetstr('bold') or ''
-                self.red = (curses.tparm(setf, 1) if setf != '' else '') + bold 
+                self.red = (curses.tparm(setf, 1) if setf != '' else '') + bold
                 self.green = (curses.tparm(setf, 2) if setf != '' else '') + bold
                 self.yellow = (curses.tparm(setf, 3) if setf != '' else '') + bold
                 self.nocolor = curses.tigetstr('sgr0') or ''
@@ -396,11 +396,11 @@ class TextView(object):
 
 # For printing the status to a terminal
 class TermView(TextView):
-    
+
     statusPadding = 5 # some padding to the right of the status lines to allow for a little buffer for window resizing
     columns = 80
     clear_line = "\n"
-    
+
     def __init__(self, total):
         super(TermView, self).__init__()
         self.running_list = []
@@ -410,14 +410,14 @@ class TermView(TextView):
         self.total = total
         self.start_time = time.time()
         self.printingQueue = Queue.Queue()
-        
+
         try:
             # curses.setupterm is already called in super's init
             self.columns = struct.unpack('hh', fcntl.ioctl(1, termios.TIOCGWINSZ, '1234'))[1]
             signal.signal(signal.SIGWINCH, lambda *args: self.tell('SIGWINCH', args))
             self.clear_line = curses.tigetstr('cr') + (curses.tigetstr('dl1') or curses.tigetstr('el'))
         except Exception: pass
-        
+
         self.thread = threading.Thread(target=self.run, name='TermView')
         self.thread.daemon = True
         self.thread.start()
@@ -470,10 +470,10 @@ class TermView(TextView):
     def show_status(self):
         if self.running_list:
             running = len(self.running_list)
-            
+
             remaining = self.total - self.passed - self.failed - running
             duration = self.format_duration(time.time() - self.start_time)
-            
+
             def format(names, useColor=self.use_color):
                 strPassed = str(self.passed)
                 strFailed = str(self.failed)
@@ -482,9 +482,9 @@ class TermView(TextView):
                         strPassed = self.green + strPassed + self.nocolor
                     if self.failed:
                         strFailed = self.red + strFailed + self.nocolor
-                
+
                 return '[%s/%s/%d/%d %s%s]' % (strPassed, strFailed, running, remaining, duration, names)
-            
+
             names = ''
             charsAvailable = self.columns - self.statusPadding - len(format('', useColor=False))
             testsToList = 0
@@ -493,9 +493,9 @@ class TermView(TextView):
                 if len(canidateNames) <= charsAvailable:
                     names = canidateNames
                 else:
-                    break 
+                    break
                 testsToList += 1
-            
+
             self.buffer += format(names)
 
     def format_duration(self, elapsed):
