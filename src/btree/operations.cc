@@ -479,10 +479,14 @@ void check_and_handle_split(value_sizer_t *sizer,
     {
         buf_write_t buf_write(buf);
         buf_write_t rbuf_write(&rbuf);
-        node::split(sizer,
-                    static_cast<node_t *>(buf_write.get_data_write()),
-                    static_cast<node_t *>(rbuf_write.get_data_write()),
-                    &median);
+        {
+            buf_ptr_t rbuf_ptr;
+            node::split(sizer,
+                        &buf_write,
+                        &rbuf_ptr,
+                        &median);
+            rbuf_write.set_data_write(std::move(rbuf_ptr));
+        }
 
         // We must detach all entries that we have removed from `buf`.
         buf_read_t rbuf_read(&rbuf);

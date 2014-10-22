@@ -69,6 +69,7 @@ bool is_full(value_sizer_t *sizer, const leaf_node_t *node, const btree_key_t *k
 
 bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node);
 
+// RSI: This is dead code.
 void split(value_sizer_t *sizer, leaf_node_t *node, leaf_node_t *sibling,
            store_key_t *median_out);
 

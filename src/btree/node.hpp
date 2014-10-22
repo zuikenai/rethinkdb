@@ -15,6 +15,7 @@
 #include "serializer/types.hpp"
 #include "version.hpp"
 
+class buf_write_t;
 template <class> class sized_ptr_t;
 
 class value_sizer_t {
@@ -96,7 +97,8 @@ bool is_mergable(value_sizer_t *sizer, const node_t *node, const node_t *sibling
 
 bool is_underfull(value_sizer_t *sizer, const node_t *node);
 
-void split(value_sizer_t *sizer, node_t *node, node_t *rnode, store_key_t *median_out);
+void split(value_sizer_t *sizer, buf_write_t *node,
+           buf_ptr_t *rnode_out, store_key_t *median_out);
 
 void merge(value_sizer_t *sizer, node_t *node, node_t *rnode, const internal_node_t *parent);
 

@@ -3,6 +3,7 @@
 
 #include "btree/leaf_node.hpp"
 #include "btree/internal_node.hpp"
+#include "buffer_cache/alt.hpp"
 #include "containers/sized_ptr.hpp"
 
 const block_magic_t btree_superblock_t::expected_magic = { { 's', 'u', 'p', 'e' } };
@@ -38,14 +39,19 @@ bool is_mergable(value_sizer_t *sizer, const node_t *node, const node_t *sibling
     }
 }
 
-
-void split(value_sizer_t *sizer, node_t *node, node_t *rnode, store_key_t *median_out) {
-    if (is_leaf(node)) {
-        leaf::split(sizer, reinterpret_cast<leaf_node_t *>(node),
-                    reinterpret_cast<leaf_node_t *>(rnode), median_out);
+void split(value_sizer_t *sizer, buf_write_t *node,
+           buf_ptr_t *rnode_out, store_key_t *median_out) {
+    sized_ptr_t<node_t> node_ptr = node->get_sized_data_write<node_t>();
+    if (is_leaf(node_ptr.buf)) {
+        leaf::split(sizer, node, rnode_out, median_out);
     } else {
-        internal_node::split(sizer->default_block_size(), reinterpret_cast<internal_node_t *>(node),
-                             reinterpret_cast<internal_node_t *>(rnode), median_out);
+        guarantee(node_ptr.block_size == sizer->default_block_size().value());
+        buf_ptr_t ptr = buf_ptr_t::alloc_zeroed(sizer->default_block_size());
+        internal_node::split(sizer->default_block_size(),
+                             reinterpret_cast<internal_node_t *>(node_ptr.buf),
+                             static_cast<internal_node_t *>(ptr.cache_data()),
+                             median_out);
+        *rnode_out = std::move(ptr);
     }
 }
 

@@ -6,6 +6,8 @@
 #include "containers/sized_ptr.hpp"
 #include "repli_timestamp.hpp"
 
+class buf_write_t;
+
 namespace leaf {
 
 // A complete description of an old_leaf node's state.  Used for constructing a
@@ -48,8 +50,13 @@ bool is_full(value_sizer_t *sizer, const leaf_node_t *node,
 
 bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node);
 
+void split(value_sizer_t *sizer,
+           buf_write_t *node,
+           buf_ptr_t *rnode_out,
+           store_key_t *median_out);
+
+
 using ::old_leaf::init;
-using ::old_leaf::split;
 using ::old_leaf::merge;
 using ::old_leaf::level;
 using ::old_leaf::is_mergable;

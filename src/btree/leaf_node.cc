@@ -93,6 +93,16 @@ bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node) {
     }
 }
 
+void split(value_sizer_t *sizer,
+           buf_write_t *node,
+           buf_ptr_t *rnode_out,
+           store_key_t *median_out) {
+    convert_to_new_leaf_if_necessary(sizer, node);
+    main_leaf_t::split(sizer->default_block_size(), node, rnode_out, median_out);
+}
+
+
+
 
 
 }  // namespace leaf
