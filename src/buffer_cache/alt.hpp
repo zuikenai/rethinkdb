@@ -345,6 +345,9 @@ public:
     // RSI: Remove this.
     void *get_data_write(uint32_t block_size);
 
+    // Waits for ownership.
+    repli_timestamp_t get_recency();
+
     // Equivalent to passing the default_block_size.
     // RSI: Remove this or rename this.
     void *get_data_write();

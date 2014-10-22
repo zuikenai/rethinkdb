@@ -793,6 +793,10 @@ void buf_write_t::set_data_write(buf_ptr_t buf) {
     page_acq_.set_buf_write(std::move(buf));
 }
 
+repli_timestamp_t buf_write_t::get_recency() {
+    return lock_->get_recency();
+}
+
 void *buf_write_t::get_data_write(uint32_t block_size) {
     page_t *page = lock_->get_held_page_for_write();
     if (!page_acq_.has()) {
