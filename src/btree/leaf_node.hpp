@@ -55,14 +55,22 @@ void split(value_sizer_t *sizer,
            buf_ptr_t *rnode_out,
            store_key_t *median_out);
 
+// RSI: Remove assertions in merge and level and such about stuff being underfull or
+// not -- leaf::is_mergable will run old_leaf underfull code.  Make those functions
+// be super-rigorous about avoiding empty nodes, gracefully failing.
 void merge(value_sizer_t *sizer,
            buf_write_t *left,
            buf_write_t *right);
 
 bool is_mergable(value_sizer_t *sizer, const leaf_node_t *node, const leaf_node_t *sibling);
 
+bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
+           buf_write_t *node, buf_write_t *sib,
+           store_key_t *replacement_key_out,
+           std::vector<scoped_malloc_t<void> > *moved_live_values_out);
+
+
 using ::old_leaf::init;
-using ::old_leaf::level;
 using ::old_leaf::lookup;
 using ::old_leaf::insert;
 using ::old_leaf::remove;

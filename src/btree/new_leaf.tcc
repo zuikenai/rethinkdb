@@ -590,7 +590,7 @@ void move_entries(default_block_size_t bs,
 
 // We move entries out of sibling and into node.
 template <class btree_type>
-void new_leaf_t<btree_type>::level(
+bool new_leaf_t<btree_type>::level(
         default_block_size_t bs,
         int nodecmp_node_with_sib,
         buf_write_t *node_buf,
@@ -676,6 +676,9 @@ void new_leaf_t<btree_type>::level(
            btree_type::entry_key(nodecmp_node_with_sib < 0
                                  ? entry_for_index(node, node.buf->num_pairs - 1)
                                  : entry_for_index(sib, sib.buf->num_pairs - 1)));
+
+    // Return true because we did in fact level.  We always level though... who cares?
+    return true;
 }
 
 

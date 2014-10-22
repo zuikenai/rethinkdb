@@ -78,6 +78,8 @@ public:
         return ret;
     }
 
+    static const void *live_entry_value(const entry_t *entry);
+
     static repli_timestamp_t entry_timestamp(const entry_t *entry) {
         return *reinterpret_cast<const repli_timestamp_t *>(entry);
     }
@@ -86,9 +88,9 @@ public:
         return sizeof(repli_timestamp_t) + 1 + MAX_KEY_SIZE + BLOB_BTREE_MAXREFLEN;
     }
 
-private:
     static size_t value_size(default_block_size_t bs, const void *value);
 
+private:
     static size_t value_fits(default_block_size_t bs, const void *value,
                              size_t length_available);
 

@@ -55,6 +55,15 @@ size_t main_btree_t::entry_size(default_block_size_t bs, const entry_t *entry) {
     return stepped + value_size(bs, p + stepped);
 }
 
+const void *main_btree_t::live_entry_value(const entry_t *entry) {
+    const uint8_t *p = reinterpret_cast<const uint8_t *>(entry);
+    size_t stepped = sizeof(repli_timestamp_t);
+    rassert(*(p + stepped) != DELETION_ENTRY_CODE);
+    const btree_key_t *key = reinterpret_cast<const btree_key_t *>(p + stepped);
+    stepped += key->full_size();
+    return p + stepped;
+}
+
 size_t main_btree_t::live_entry_size_from_keyvalue(default_block_size_t bs,
                                                    const btree_key_t *key,
                                                    const void *value) {

@@ -116,6 +116,28 @@ bool is_mergable(value_sizer_t *sizer,
     return is_underfull(sizer, node) && is_underfull(sizer, sibling);
 }
 
+bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
+           buf_write_t *node, buf_write_t *sib,
+           store_key_t *replacement_key_out,
+           std::vector<scoped_malloc_t<void> > *moved_live_values_out) {
+    convert_to_new_leaf_if_necessary(sizer, node);
+    convert_to_new_leaf_if_necessary(sizer, sib);
+    std::vector<scoped_malloc_t<void> > entries;
+    bool leveled = main_leaf_t::level(sizer->default_block_size(), nodecmp_node_with_sib,
+                                      node, sib, replacement_key_out, &entries);
+
+    // RSI: Maybe we should just have new_leaf output the values, not entries.
+    for (scoped_malloc_t<void> &entry : entries) {
+        const void *value = main_btree_t::live_entry_value(static_cast<const main_btree_t::entry_t *>(entry.get()));
+        scoped_malloc_t<void> v(main_btree_t::value_size(sizer->default_block_size(),
+                                                         value));
+        entry = std::move(v);
+    }
+    *moved_live_values_out = std::move(entries);
+
+    return leveled;
+}
+
 
 
 }  // namespace leaf

@@ -704,15 +704,15 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                         sib_buf.detach_child(moved_children[i]);
                     }
                 } else {
-                    std::vector<const void *> moved_values;
+                    std::vector<scoped_malloc_t<void> > moved_values;
                     leveled = leaf::level(sizer, nodecmp_node_with_sib,
-                            static_cast<leaf_node_t *>(buf_write.get_data_write()),
-                            static_cast<leaf_node_t *>(sib_buf_write.get_data_write()),
+                            &buf_write,
+                            &sib_buf_write,
                             &replacement_key, &moved_values);
                     // Detach values that have been removed from `sib_buf`:
-                    for (size_t i = 0; i < moved_values.size(); ++i) {
+                    for (const scoped_malloc_t<void> &value : moved_values) {
                         detacher->delete_value(buf_parent_t(&sib_buf),
-                                               moved_values[i]);
+                                               value.get());
                     }
                 }
             }

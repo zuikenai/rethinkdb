@@ -61,7 +61,7 @@ public:
                       buf_ptr_t *rnode_out,
                       store_key_t *median_out);
 
-    static void level(default_block_size_t bs, int nodecmp_node_with_sib,
+    static bool level(default_block_size_t bs, int nodecmp_node_with_sib,
                       buf_write_t *node, buf_write_t *sib,
                       store_key_t *replacement_key_out,
                       std::vector<scoped_malloc_t<void> > *moved_live_entries_out);
