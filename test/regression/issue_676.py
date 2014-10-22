@@ -16,8 +16,8 @@ with driver.Metacluster() as metacluster:
     
     print("Starting cluster...")
     num_nodes = 2
-    files = [driver.Files(metacluster, db_path="db-%d" % i, console_output ="create-output-%d" % i) for i in range(num_nodes)]
-    processes = [driver.Process(cluster, files[i], console_output ="serve-output-%d" % i) for i in range(num_nodes)]
+    files = [driver.Files(metacluster, db_path="db-%d" % i, console_output="create-output-%d" % i) for i in range(num_nodes)]
+    processes = [driver.Process(cluster, files[i], console_output="serve-output-%d" % i) for i in range(num_nodes)]
     time.sleep(10)
     
     print("Creating table...")
