@@ -86,6 +86,15 @@ bool is_full(value_sizer_t *sizer, const leaf_node_t *node,
     }
 }
 
+bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node) {
+    if (is_old(node)) {
+        return old_leaf::is_underfull(sizer, node);
+    } else {
+        return main_leaf_t::is_underfull(sizer->default_block_size(), as_new(node));
+    }
+}
+
+
 
 }  // namespace leaf
 
