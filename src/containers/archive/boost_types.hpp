@@ -28,8 +28,8 @@ struct variant_serializer_t;
 template <cluster_version_t W, int N, class... Ts>
 struct variant_serializer_t<W, N, boost::detail::variant::void_, Ts...> : public variant_serializer_t<W, N> {
 
-    variant_serializer_t (write_message_t *wm_)
-        : variant_serializer_t<W, N>(wm_) { }
+    variant_serializer_t(write_message_t *wm)
+        : variant_serializer_t<W, N>(wm) { }
 
     using variant_serializer_t<W, N>::operator();
 };
@@ -37,15 +37,15 @@ struct variant_serializer_t<W, N, boost::detail::variant::void_, Ts...> : public
 template <cluster_version_t W, int N, class T, class... Ts>
 struct variant_serializer_t<W, N, T, Ts...> : public variant_serializer_t<W, N + 1, Ts...> {
 
-    variant_serializer_t (write_message_t *wm_)
-        : variant_serializer_t<W, N + 1, Ts...>(wm_) { }
+    variant_serializer_t(write_message_t *wm)
+        : variant_serializer_t<W, N + 1, Ts...>(wm) { }
 
     using variant_serializer_t<W, N + 1, Ts...>::operator();
-    using variant_serializer_t<W, N + 1, Ts...>::wm;
+    using variant_serializer_t<W, N + 1, Ts...>::wm_;
 
     typedef void result_type;
 
-    void operator() (const T &x) {
+    void operator()(const T &x) {
         uint8_t n = N;
         serialize<W>(wm, n);
         serialize<W>(wm, x);
@@ -56,14 +56,14 @@ template <cluster_version_t W, int N>
 struct variant_serializer_t<W, N> {
     struct end_of_variant { };
 
-    variant_serializer_t (write_message_t *wm_) : wm(wm_) { }
+    variant_serializer_t(write_message_t *wm) : wm_(wm) { }
 
-    void operator() (const end_of_variant&){
+    void operator()(const end_of_variant&){
         unreachable();
     }
 
     static const uint8_t size = N;
-    write_message_t *wm;
+    write_message_t *wm_;
 
 };
 
@@ -80,14 +80,14 @@ struct variant_deserializer;
 
 template <cluster_version_t W, int N, class Variant, class... Ts>
 struct variant_deserializer<W, N, Variant, boost::detail::variant::void_, Ts...> {
-    static MUST_USE archive_result_t deserialize_variant (int, read_stream_t *, Variant *) {
+    static MUST_USE archive_result_t deserialize_variant(int, read_stream_t *, Variant *) {
         return archive_result_t::RANGE_ERROR;
     }
 };
 
 template <cluster_version_t W, int N, class Variant, class T, class... Ts>
 struct variant_deserializer<W, N, Variant, T, Ts...> {
-    static MUST_USE archive_result_t deserialize_variant (int n, read_stream_t *s, Variant *x) {
+    static MUST_USE archive_result_t deserialize_variant(int n, read_stream_t *s, Variant *x) {
         if (n == N) {
             T v;
             archive_result_t res = deserialize<W>(s, &v);
