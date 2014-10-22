@@ -9,7 +9,7 @@
 namespace leaf {
 
 // A complete description of an old_leaf node's state.  Used for constructing a
-// new_leaf.
+// new_leaf.  (The old leaf must not be modified!)
 struct state_description_t {
     // The timestamp for which we aren't missing any deletion entries >= that
     // timestamp.  (Maybe distant_past when we have 0 entries.)
