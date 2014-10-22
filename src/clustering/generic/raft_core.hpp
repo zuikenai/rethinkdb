@@ -381,6 +381,28 @@ private:
     boost::variant<request_vote_t, install_snapshot_t, append_entries_t> reply;
 };
 
+/* This implementation deviates from the Raft paper in that the Raft members communicate
+via two mechanisms: via RPCs as in the paper, and also by each one broadcasting a piece
+of state from one to the others. The latter mechanism is implemented using the directory.
+`raft_network_state_t` describes that piece of state. */
+class raft_network_state_t {
+private:
+    template<class state2_t> friend class raft_member_t;
+
+    /* `mode_t` describes the three states that a Raft member can be in, as described in
+    Section 5.1 of the Raft paper. */
+    enum class mode_t {
+        follower,
+        candidate,
+        leader
+    };
+
+    /* We broadcast our current mode to all the other members of the cluster. We deviate
+    from the Raft paper in that we use this mechanism in place of heartbeats to detect
+    when it's time to elect a new leader. */
+    mode_t mode;
+};
+
 /* `raft_network_interface_t` is the abstract class that `raft_member_t` uses to send
 messages over the network. */
 template<class state_t>
@@ -402,12 +424,11 @@ public:
         signal_t *interruptor,
         raft_rpc_reply_t *reply_out) = 0;
 
-    /* `get_connected_members()` returns the set of all Raft members for which an RPC is
-    likely to succeed. The values in the map should always be `nullptr`; the only reason
-    it's a map at all is that we don't have a `watchable_set_t` type. `std::nullptr_t`
-    was chosen because it has exactly one legal value (`nullptr`) and it's already
-    defined. */
-    virtual watchable_map_t<raft_member_id_t, std::nullptr_t>
+    /* `get_connected_members()` has an entry for every member of the Raft cluster that's
+    currently "visible" from this member, meaning that an RPC is likely to succeed. The
+    values of the `raft_network_state_t`s in the map must be the value of that member's
+    `get_network_state()` watchable. */
+    virtual watchable_map_t<raft_member_id_t, raft_network_state_t>
         *get_connected_members() = 0;
 
 protected:
@@ -521,6 +542,13 @@ public:
         signal_t *interruptor,
         raft_rpc_reply_t *reply_out);
 
+    /* The value of this watchable must be transmitted across the network to the other
+    members in the Raft cluster and exposed through `get_connected_members()` on their
+    `raft_network_interface_t`s. */
+    clone_ptr_t<watchable_t<raft_network_state_t> > get_network_state() {
+        return network_state.get_watchable();
+    }
+
     /* `check_invariants()` asserts that the given collection of Raft cluster members are
     in a valid, consistent state. This may block, because it needs to acquire each
     member's mutex, but it will not modify anything. Since this requires direct access to
@@ -529,28 +557,14 @@ public:
         const std::set<raft_member_t<state_t> *> &members);
 
 private:
-    enum class mode_t {
-        follower,
-        candidate,
-        leader
-    };
-
-    /* These are the minimum and maximum election timeouts. In section 5.6, the Raft
-    paper suggests that a typical election timeout should be somewhere between 10ms and
-    500ms. We use somewhat larger numbers to reduce server traffic, at the cost of longer
-    periods of unavailability when a master dies. */
-    static const int32_t election_timeout_min_ms = 1000,
-                         election_timeout_max_ms = 2000;
-
-    /* TODO: We should probably deviate from the Raft paper by using the network layer's
-    disconnect detection instead of timeouts to detect a dead leader. This will make
-    elections much faster and also make us less sensitive to timing. However, this will
-    involve adding a new RPC, for a master to inform followers that it is stepping down.
-    */
-
-    /* This is the amount of time the server waits between sending heartbeats. It should
-    be much shorter than the election timeout. */
-    static const int32_t heartbeat_interval_ms = 500;
+    /* We deviate from the Raft paper in that we use the `raft_network_state_t` instead
+    of heartbeats to determine when it's necessary to elect a new leader. However, we
+    still use timeouts to break election ties. When a member sees that there is no active
+    leader or candidate, it waits a random amount of time up to `election_random_ms` and
+    then starts a new election. It will retry the election if no member is elected within
+    a random amount of time between `election_timeout_ms` and
+    `election_timeout_ms + election_random_ms`. */
+    static const int election_timeout_ms = 1000, election_random_ms = 1000;
 
     /* Note: Methods prefixed with `follower_`, `candidate_`, or `leader_` are methods
     that are only used when in that state. This convention will hopefully make the code
@@ -791,7 +805,7 @@ private:
     election. It's in a `scoped_ptr_t` so that the destructor can destroy it early. */
     scoped_ptr_t<repeating_timer_t> watchdog_timer;
 
-    /* This calls `update_readiness_for_change()` whenever a peer connects or
+    /* This calls `on_connected_members_change()` whenever a peer connects or
     disconnects. */
     scoped_ptr_t<watchable_map_t<raft_member_id_t, std::nullptr_t>::all_subs_t>
         connected_members_subs;
