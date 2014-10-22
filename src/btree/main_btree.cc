@@ -1,7 +1,8 @@
 #include "btree/main_btree.hpp"
 
-#include "serializer/types.hpp"
+#include "containers/scoped.hpp"
 #include "rdb_protocol/value_sizer.hpp"
+#include "serializer/types.hpp"
 
 size_t main_btree_t::value_size(default_block_size_t bs, const void *value) {
     rdb_value_sizer_t sizer(bs);
@@ -62,4 +63,30 @@ size_t main_btree_t::live_entry_size_from_keyvalue(default_block_size_t bs,
 
 size_t main_btree_t::dead_entry_size_from_key(const btree_key_t *key) {
     return sizeof(repli_timestamp_t) + 1 + key->full_size();
+}
+
+scoped_malloc_t<main_btree_t::entry_t>
+main_btree_t::combine_live_entry(default_block_size_t bs,
+                                 repli_timestamp_t tstamp,
+                                 const btree_key_t *key,
+                                 const void *value) {
+    const size_t k = key->full_size();
+    const size_t v = value_size(bs, value);
+    scoped_malloc_t<entry_t> m(sizeof(repli_timestamp_t) + k + v);
+    *reinterpret_cast<repli_timestamp_t *>(m.get()) = tstamp;
+    char *p = reinterpret_cast<char *>(m.get());
+    memcpy(p + sizeof(repli_timestamp_t), key, k);
+    memcpy(p + sizeof(repli_timestamp_t) + k, value, v);
+    return m;
+}
+
+scoped_malloc_t<main_btree_t::entry_t>
+main_btree_t::combine_dead_entry(repli_timestamp_t tstamp, const btree_key_t *key) {
+    const size_t k = key->full_size();
+    scoped_malloc_t<entry_t> m(sizeof(repli_timestamp_t) + 1 + k);
+    *reinterpret_cast<repli_timestamp_t *>(m.get()) = tstamp;
+    uint8_t *p = reinterpret_cast<uint8_t *>(m.get());
+    *(p + sizeof(repli_timestamp_t)) = DELETION_ENTRY_CODE;
+    memcpy(p + sizeof(repli_timestamp_t) + 1, key, k);
+    return m;
 }

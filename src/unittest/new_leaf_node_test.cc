@@ -75,6 +75,33 @@ public:
         return *p != DEAD_ENTRY_CODE;
     }
 
+    static size_t live_entry_size_from_keyvalue(UNUSED default_block_size_t bs,
+                                                const btree_key_t *key,
+                                                const void *value) {
+        return key->full_size() + static_cast<const btree_key_t *>(value)->full_size();
+    }
+
+    static size_t dead_entry_size_from_key(const btree_key_t *key) {
+        return 1 + key->full_size();
+    }
+
+
+    static scoped_malloc_t<entry_t> combine_live_entry(UNUSED default_block_size_t bs,
+                                                       UNUSED repli_timestamp_t tstamp,
+                                                       UNUSED const btree_key_t *key,
+                                                       UNUSED const void *value) {
+        // Nothing calls this because these unit tests don't deal with old-version
+        // leaf nodes.
+        unreachable();
+    }
+
+    static scoped_malloc_t<entry_t> combine_dead_entry(UNUSED repli_timestamp_t tstamp,
+                                                       UNUSED const btree_key_t *key) {
+        // Nothing calls this because these unit tests don't deal with old-version
+        // leaf nodes.
+        unreachable();
+    }
+
     static const btree_key_t *entry_key(const entry_t *entry) {
         static_assert(DEAD_ENTRY_CODE > MAX_KEY_SIZE, "DEAD_ENTRY_CODE incompatible with MAX_KEY_SIZE.");
 

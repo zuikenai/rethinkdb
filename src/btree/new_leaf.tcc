@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "btree/keys.hpp"
+#include "btree/leaf_node.hpp"
 #include "btree/leaf_structure.hpp"
 #include "btree/main_btree.hpp"
 #include "btree/node.hpp"
@@ -736,9 +737,45 @@ dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
 }
 
 template <class btree_type>
-buf_ptr_t new_leaf_t<btree_type>::reconstruct(UNUSED default_block_size_t bs,
-                                              UNUSED const leaf::state_description_t &desc) {
-    crash("RSI: unimplemented");
+buf_ptr_t new_leaf_t<btree_type>::reconstruct(default_block_size_t bs,
+                                              const leaf::state_description_t &desc) {
+    size_t live_entry_size = 0;
+    size_t dead_entry_size = 0;
+    for (const leaf::state_description_t::entry_ptrs_t &e : desc.entries) {
+        if (e.value_or_null != nullptr) {
+            live_entry_size += btree_type::live_entry_size_from_keyvalue(bs, e.key, e.value_or_null) + sizeof(uint16_t);
+        } else {
+            dead_entry_size += btree_type::dead_entry_size_from_key(e.key) + sizeof(uint16_t);
+        }
+    }
+
+    buf_ptr_t ptr = buf_ptr_t::alloc_uninitialized(block_size_t::make_from_cache(offsetof(main_leaf_node_t, pair_offsets) + live_entry_size + dead_entry_size));
+
+    sized_ptr_t<main_leaf_node_t> node = ptr.sized_cache_data<main_leaf_node_t>();
+
+    node.buf->magic = main_leaf_node_t::expected_magic;
+    node.buf->num_pairs = desc.entries.size();
+    node.buf->live_entry_size = live_entry_size;
+    node.buf->dead_entry_size = dead_entry_size;
+    node.buf->partial_replicability_age = desc.partial_replicability_age;
+
+    size_t offset = pair_offsets_back_offset(node.buf->num_pairs);
+    for (size_t i = 0; i < desc.entries.size(); ++i) {
+        node.buf->pair_offsets[i] = offset;
+        const leaf::state_description_t::entry_ptrs_t &ent = desc.entries[i];
+        scoped_malloc_t<entry_t> e;
+        if (ent.value_or_null == nullptr) {
+            e = btree_type::combine_dead_entry(ent.tstamp, ent.key);
+        } else {
+            e = btree_type::combine_live_entry(bs, ent.tstamp, ent.key, ent.value_or_null);
+        }
+        const size_t e_size = btree_type::entry_size(bs, e.get());
+        memcpy(get_entry(node, offset), e.get(), e_size);
+        offset += e_size;
+        rassert(offset <= node.block_size);
+    }
+
+    return ptr;
 }
 
 

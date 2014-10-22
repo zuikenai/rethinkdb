@@ -52,6 +52,15 @@ public:
 
     static size_t dead_entry_size_from_key(const btree_key_t *key);
 
+    // RSI: Rename or something -- they construct these things from old btrees.
+    static scoped_malloc_t<entry_t> combine_live_entry(default_block_size_t bs,
+                                                       repli_timestamp_t tstamp,
+                                                       const btree_key_t *key,
+                                                       const void *value);
+
+    static scoped_malloc_t<entry_t> combine_dead_entry(repli_timestamp_t tstamp,
+                                                       const btree_key_t *key);
+
     static bool is_live(const entry_t *entry) {
         const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
         return *(p + sizeof(repli_timestamp_t)) != DELETION_ENTRY_CODE;

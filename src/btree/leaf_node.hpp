@@ -25,6 +25,7 @@ struct state_description_t {
     // All the node's entries, with timestamp and pointers into the leaf node for key
     // and (if applicable) value.  Deletion entries don't have values and have a NULL
     // pointer instead.
+    // These are sorted by key!
     std::vector<entry_ptrs_t> entries;
 };
 
