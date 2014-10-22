@@ -73,6 +73,7 @@ bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node);
 void split(value_sizer_t *sizer, leaf_node_t *node, leaf_node_t *sibling,
            store_key_t *median_out);
 
+// RSI: This is dead code.
 void merge(value_sizer_t *sizer, leaf_node_t *left, leaf_node_t *right);
 
 // The pointers in `moved_values_out` point to positions in `node` and

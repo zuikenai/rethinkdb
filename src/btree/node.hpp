@@ -100,7 +100,8 @@ bool is_underfull(value_sizer_t *sizer, const node_t *node);
 void split(value_sizer_t *sizer, buf_write_t *node,
            buf_ptr_t *rnode_out, store_key_t *median_out);
 
-void merge(value_sizer_t *sizer, node_t *node, node_t *rnode, const internal_node_t *parent);
+void merge(value_sizer_t *sizer, buf_write_t *node, buf_write_t *rnode,
+           const internal_node_t *parent);
 
 void validate(value_sizer_t *sizer, sized_ptr_t<const node_t> node);
 

@@ -636,6 +636,8 @@ void check_and_handle_underfull(value_sizer_t *sizer,
 
                 // Detach all values / children in `sib_buf`
                 buf_read_t sib_buf_read(&sib_buf);
+                // RSI: This assumes default block size -- new leafs
+                // will break.  (Remove get_data_read, too.)
                 const node_t *node =
                     static_cast<const node_t *>(sib_buf_read.get_data_read());
                 detach_all_children(node, buf_parent_t(&sib_buf), detacher);
@@ -643,8 +645,8 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                 const internal_node_t *parent_node
                     = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
                 node::merge(sizer,
-                            static_cast<node_t *>(sib_buf_write.get_data_write()),
-                            static_cast<node_t *>(buf_write.get_data_write()),
+                            &sib_buf_write,
+                            &buf_write,
                             parent_node);
             }
             sib_buf.mark_deleted();

@@ -55,11 +55,14 @@ void split(value_sizer_t *sizer,
            buf_ptr_t *rnode_out,
            store_key_t *median_out);
 
+void merge(value_sizer_t *sizer,
+           buf_write_t *left,
+           buf_write_t *right);
+
+bool is_mergable(value_sizer_t *sizer, const leaf_node_t *node, const leaf_node_t *sibling);
 
 using ::old_leaf::init;
-using ::old_leaf::merge;
 using ::old_leaf::level;
-using ::old_leaf::is_mergable;
 using ::old_leaf::lookup;
 using ::old_leaf::insert;
 using ::old_leaf::remove;

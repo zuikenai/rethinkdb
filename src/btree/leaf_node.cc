@@ -101,7 +101,20 @@ void split(value_sizer_t *sizer,
     main_leaf_t::split(sizer->default_block_size(), node, rnode_out, median_out);
 }
 
+void merge(value_sizer_t *sizer,
+           buf_write_t *left,
+           buf_write_t *right) {
+    convert_to_new_leaf_if_necessary(sizer, left);
+    convert_to_new_leaf_if_necessary(sizer, right);
+    main_leaf_t::merge(sizer->default_block_size(), left, right);
+}
 
+// RSI: I guess the specific is_mergable implementations are dead.
+bool is_mergable(value_sizer_t *sizer,
+                 const leaf_node_t *node,
+                 const leaf_node_t *sibling) {
+    return is_underfull(sizer, node) && is_underfull(sizer, sibling);
+}
 
 
 
