@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "backfill_progress.hpp"
-#include "btree/node.hpp"  // RSI: Remove?
 #include "buffer_cache/alt.hpp"
 #include "concurrency/auto_drainer.hpp"
 #include "rdb_protocol/datum.hpp"
