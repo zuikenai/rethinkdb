@@ -162,8 +162,8 @@ bool lookup(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node,
     }
 }
 
-void insert(value_sizer_t *sizer, buf_write_t *node,
-            const btree_key_t *key, const void *value, repli_timestamp_t tstamp) {
+void insert(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key,
+            const void *value, repli_timestamp_t tstamp) {
     convert_to_new_leaf_if_necessary(sizer, node);
     default_block_size_t bs = sizer->default_block_size();
     scoped_malloc_t<main_btree_t::entry_t> entry
@@ -171,6 +171,17 @@ void insert(value_sizer_t *sizer, buf_write_t *node,
     main_leaf_t::insert_entry(bs, node, entry.get());
 }
 
+void remove(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key,
+            repli_timestamp_t tstamp) {
+    convert_to_new_leaf_if_necessary(sizer, node);
+    default_block_size_t bs = sizer->default_block_size();
+
+    // We want to remove our live entry... and insert a dead one.
+    // RSI:  erase_presence could thus wastefully compactify the node.
+    main_leaf_t::erase_presence(bs, node, key);
+    scoped_malloc_t<void> dead_entry = main_btree_t::combine_dead_entry(tstamp, key);
+    main_leaf_t::insert_entry(bs, node, dead_entry.get());
+}
 
 
 

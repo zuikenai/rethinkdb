@@ -75,9 +75,10 @@ MUST_USE bool lookup(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node,
 void insert(value_sizer_t *sizer, buf_write_t *node,
             const btree_key_t *key, const void *value, repli_timestamp_t tstamp);
 
+void remove(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key,
+            repli_timestamp_t tstamp);
 
 using ::old_leaf::init;
-using ::old_leaf::remove;
 using ::old_leaf::erase_presence;
 using ::old_leaf::dump_entries_since_time;
 using ::old_leaf::entry_reception_callback_t;

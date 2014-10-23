@@ -698,9 +698,8 @@ void store_t::clear_sindex(
                 kv_location.value.reset();
                 if (kv_location.there_originally_was_value) {
                     buf_write_t write(&kv_location.buf);
-                    auto leaf_node = static_cast<leaf_node_t *>(write.get_data_write());
                     leaf::remove(sizer,
-                                 leaf_node,
+                                 &write,
                                  keys[i].btree_key(),
                                  repli_timestamp_t::distant_past);
                 }
