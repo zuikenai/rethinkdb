@@ -188,6 +188,46 @@ void erase_presence(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *
     main_leaf_t::erase_presence(sizer->default_block_size(), node, key);
 }
 
+void dump_entries_since_time(value_sizer_t *sizer,
+                             sized_ptr_t<const leaf_node_t> node,
+                             repli_timestamp_t minimum_tstamp,
+                             repli_timestamp_t maximum_possible_timestamp,
+                             entry_reception_callback_t *cb) {
+    if (is_old(node.buf)) {
+        rassert(node.block_size == sizer->default_block_size().value());
+        old_leaf::dump_entries_since_time(sizer, node.buf, minimum_tstamp,
+                                          maximum_possible_timestamp, cb);
+    } else {
+        std::vector<const void *> entries;
+        const new_leaf::dump_result_t res
+            = main_leaf_t::dump_entries_since_time(
+                    sized_reinterpret_cast<const main_leaf_node_t>(node),
+                    minimum_tstamp,
+                    &entries);
+
+        if (res == new_leaf::dump_result_t::all_live_entries) {
+            cb->lost_deletions();
+        }
+
+        std::vector<const btree_key_t *> keys;
+        std::vector<const void *> values;
+        std::vector<repli_timestamp_t> tstamps;
+
+        for (const void *entry : entries) {
+            const auto e = static_cast<const main_btree_t::entry_t *>(entry);
+            if (main_btree_t::is_live(e)) {
+                keys.push_back(main_btree_t::entry_key(e));
+                values.push_back(main_btree_t::live_entry_value(e));
+                tstamps.push_back(main_btree_t::entry_timestamp(e));
+            } else if (res == new_leaf::dump_result_t::exact_live_and_dead_entries) {
+                cb->deletion(main_btree_t::entry_key(e), main_btree_t::entry_timestamp(e));
+            }
+        }
+
+        cb->keys_values(keys, values, tstamps);
+    }
+}
+
 
 
 }  // namespace leaf
