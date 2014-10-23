@@ -1507,7 +1507,7 @@ void erase_presence(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *
 }
 
 
-void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp,  entry_reception_callback_t *cb) {
+bool dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp, std::vector<leaf::entry_ptrs_t> *entries_out) {
     int stop_offset = 0;
 
     // First, determine stop_offset: offset of the first [tstamp][entry] which has tstamp < minimum_tstamp
@@ -1539,42 +1539,41 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
 
     // Walk through all the entries starting with the the frontmost and finishing right before the one which has tstamp < minimum_tstamp
     // (if it exists). If it doesn't exist, we also walk through the non-timestamped entries.
-    {
-        entry_iter_t iter = entry_iter_t::make(node);
-        repli_timestamp_t last_seen_tstamp = maximum_possible_timestamp;
+    entry_iter_t iter = entry_iter_t::make(node);
+    repli_timestamp_t last_seen_tstamp = maximum_possible_timestamp;
 
-        // Collect key_value pairs so we can send a bunch of them at a time.
-        std::vector<leaf::entry_ptrs_t> entries;
-        entries.reserve(node->num_pairs);
-        while (iter.offset < stop_offset) {
-            repli_timestamp_t tstamp;
-            if (iter.offset < node->tstamp_cutpoint) {
-                tstamp = get_timestamp(node, iter.offset);
-            } else {
-                tstamp = last_seen_tstamp;
-            }
-            last_seen_tstamp = tstamp;
-
-            const entry_t *ent = get_entry(node, iter.offset);
-
-            if (entry_is_live(ent)) {
-                leaf::entry_ptrs_t ptrs;
-                ptrs.tstamp = tstamp;
-                ptrs.key = entry_key(ent);
-                ptrs.value_or_null = entry_value(ent);
-                entries.push_back(ptrs);
-            } else if (entry_is_deletion(ent) && include_deletions) {
-                leaf::entry_ptrs_t ptrs;
-                ptrs.tstamp = tstamp;
-                ptrs.key = entry_key(ent);
-                ptrs.value_or_null = nullptr;
-                entries.push_back(ptrs);
-            }
-
-            iter.step(sizer, node);
+    // Collect key_value pairs so we can send a bunch of them at a time.
+    std::vector<leaf::entry_ptrs_t> entries;
+    entries.reserve(node->num_pairs);
+    while (iter.offset < stop_offset) {
+        repli_timestamp_t tstamp;
+        if (iter.offset < node->tstamp_cutpoint) {
+            tstamp = get_timestamp(node, iter.offset);
+        } else {
+            tstamp = last_seen_tstamp;
         }
-        cb->entries(include_deletions, entries);
+        last_seen_tstamp = tstamp;
+
+        const entry_t *ent = get_entry(node, iter.offset);
+
+        if (entry_is_live(ent)) {
+            leaf::entry_ptrs_t ptrs;
+            ptrs.tstamp = tstamp;
+            ptrs.key = entry_key(ent);
+            ptrs.value_or_null = entry_value(ent);
+            entries.push_back(ptrs);
+        } else if (entry_is_deletion(ent) && include_deletions) {
+            leaf::entry_ptrs_t ptrs;
+            ptrs.tstamp = tstamp;
+            ptrs.key = entry_key(ent);
+            ptrs.value_or_null = nullptr;
+            entries.push_back(ptrs);
+        }
+
+        iter.step(sizer, node);
     }
+    *entries_out = std::move(entries);
+    return include_deletions;
 }
 
 leaf::state_description_t full_state_description(value_sizer_t *sizer,

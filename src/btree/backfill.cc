@@ -29,51 +29,36 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
             right_inclusive_or_null ? store_key_t(right_inclusive_or_null) : store_key_t());
         clipped_range = clipped_range.intersection(key_range_);
 
-        struct our_cb_t : public leaf::entry_reception_callback_t {
-            explicit our_cb_t(buf_parent_t _parent) : parent(_parent) { }
-            void entries(bool exact, const std::vector<leaf::entry_ptrs_t> &kvts) {
-                if (!exact) {
-                    cb->on_delete_range(range, interruptor);
-                }
+        std::vector<leaf::entry_ptrs_t> kvts;
+        const bool exact = leaf::dump_entries_since_time(sizer_, data, since_when_, leaf_node_buf->get_recency(), &kvts);
 
-                std::vector<const btree_key_t *> filtered_keys;
-                std::vector<const void *> filtered_values;
-                std::vector<repli_timestamp_t> filtered_tstamps;
-                filtered_keys.reserve(kvts.size());
-                filtered_values.reserve(kvts.size());
-                filtered_tstamps.reserve(kvts.size());
-                for (const leaf::entry_ptrs_t &kvt : kvts) {
-                    if (range.contains_key(kvt.key->contents, kvt.key->size)) {
-                        if (kvt.value_or_null != nullptr) {
-                            filtered_keys.push_back(kvt.key);
-                            filtered_values.push_back(kvt.value_or_null);
-                            filtered_tstamps.push_back(kvt.tstamp);
-                        } else {
-                            rassert(exact);
-                            cb->on_deletion(kvt.key, kvt.tstamp, interruptor);
-                        }
-                    }
-                }
+        if (!exact) {
+            callback_->on_delete_range(clipped_range, interruptor);
+        }
 
-                // RSI: Why do we only call on_pairs if the vectors are non-empty?
-                if (!filtered_keys.empty()) {
-                    cb->on_pairs(parent, filtered_tstamps, filtered_keys,
-                                 filtered_values, interruptor);
+        std::vector<const btree_key_t *> filtered_keys;
+        std::vector<const void *> filtered_values;
+        std::vector<repli_timestamp_t> filtered_tstamps;
+        filtered_keys.reserve(kvts.size());
+        filtered_values.reserve(kvts.size());
+        filtered_tstamps.reserve(kvts.size());
+        for (const leaf::entry_ptrs_t &kvt : kvts) {
+            if (clipped_range.contains_key(kvt.key->contents, kvt.key->size)) {
+                if (kvt.value_or_null != nullptr) {
+                    filtered_keys.push_back(kvt.key);
+                    filtered_values.push_back(kvt.value_or_null);
+                    filtered_tstamps.push_back(kvt.tstamp);
+                } else {
+                    rassert(exact);
+                    callback_->on_deletion(kvt.key, kvt.tstamp, interruptor);
                 }
             }
+        }
 
-            agnostic_backfill_callback_t *cb;
-            buf_parent_t parent;
-            key_range_t range;
-            signal_t *interruptor;
-        };
-
-        our_cb_t x((buf_parent_t(leaf_node_buf)));
-        x.cb = callback_;
-        x.range = clipped_range;
-        x.interruptor = interruptor;
-
-        leaf::dump_entries_since_time(sizer_, data, since_when_, leaf_node_buf->get_recency(), &x);
+        if (!filtered_keys.empty()) {
+            callback_->on_pairs(buf_parent_t(leaf_node_buf), filtered_tstamps, filtered_keys,
+                                filtered_values, interruptor);
+        }
     }
 
     void postprocess_internal_node(UNUSED buf_lock_t *internal_node_buf) {

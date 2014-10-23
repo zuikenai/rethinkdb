@@ -91,32 +91,11 @@ void remove(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key, rep
 
 void erase_presence(value_sizer_t *sizer, leaf_node_t *node, const btree_key_t *key);
 
-enum class dump_result_t {
-    exact_live_and_dead_entries,
-    all_live_entries,
-};
-
-// RSI: Taking a callback, the way this is written, is just stupid.
-class entry_reception_callback_t {
-public:
-    /* Note: If any of these callbacks throw exceptions, then
-    `dump_entries_since_time()` must pass the exception up and not leak memory
-    or anything. */
-
-    // Sends entries from the leaf.  This is called exactly once by
-    // dump_entries_since_time.  deletion entries are included, if `exact` is true.
-    // Otherwise, _all_ the live entries of the leaf node are included (and we lack
-    // precise information about exact live and dead entries, because the
-    // minimium_timestamp was too early, which means the backfilling code needs to
-    // re-send the entire leaf node).
-    virtual void entries(bool exact,
-                         const std::vector<leaf::entry_ptrs_t> &entries) = 0;
-
-protected:
-    virtual ~entry_reception_callback_t() { }
-};
-
-void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp, entry_reception_callback_t *cb);
+// Returns true if *entries_out is filled with an "exact" set of entries in the leaf
+// node that are >= minimum_tstamp.  Otherwise, the leaf node does not have enough
+// information about deleted entries, and instead, _all_ the live entries of the leaf
+// node are included (and no dead ones are).
+bool dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repli_timestamp_t minimum_tstamp, repli_timestamp_t maximum_possible_timestamp, std::vector<leaf::entry_ptrs_t> *entries_out);
 
 leaf::state_description_t full_state_description(
         value_sizer_t *sizer, const leaf_node_t *node,

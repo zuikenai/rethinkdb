@@ -188,15 +188,16 @@ void erase_presence(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *
     main_leaf_t::erase_presence(sizer->default_block_size(), node, key);
 }
 
-void dump_entries_since_time(value_sizer_t *sizer,
+bool dump_entries_since_time(value_sizer_t *sizer,
                              sized_ptr_t<const leaf_node_t> node,
                              repli_timestamp_t minimum_tstamp,
                              repli_timestamp_t maximum_possible_timestamp,
-                             entry_reception_callback_t *cb) {
+                             std::vector<entry_ptrs_t> *entries_out) {
     if (is_old(node.buf)) {
         rassert(node.block_size == sizer->default_block_size().value());
-        old_leaf::dump_entries_since_time(sizer, node.buf, minimum_tstamp,
-                                          maximum_possible_timestamp, cb);
+        return old_leaf::dump_entries_since_time(sizer, node.buf, minimum_tstamp,
+                                                 maximum_possible_timestamp,
+                                                 entries_out);
     } else {
         std::vector<const void *> entries;
         const bool exact = main_leaf_t::dump_entries_since_time(
@@ -204,17 +205,18 @@ void dump_entries_since_time(value_sizer_t *sizer,
                 minimum_tstamp,
                 &entries);
 
-        std::vector<leaf::entry_ptrs_t> kvts;
+        std::vector<entry_ptrs_t> kvts;
         kvts.reserve(node.buf->num_pairs);
 
         for (const void *entry : entries) {
             const auto e = static_cast<const main_btree_t::entry_t *>(entry);
-            leaf::entry_ptrs_t ptrs = main_btree_t::entry_ptrs(e);
+            entry_ptrs_t ptrs = main_btree_t::entry_ptrs(e);
             rassert(exact || ptrs.value_or_null != nullptr);
             kvts.push_back(ptrs);
         }
 
-        cb->entries(exact, kvts);
+        *entries_out = std::move(kvts);
+        return exact;
     }
 }
 

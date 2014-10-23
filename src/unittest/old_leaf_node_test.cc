@@ -232,36 +232,6 @@ public:
         // old_leaf::print(stdout, &sizer_, node());
     }
 
-    class verify_receptor_t : public old_leaf::entry_reception_callback_t {
-    public:
-        verify_receptor_t() : got_lost_deletions_(false) { }
-
-        void entries(bool exact, const std::vector<leaf::entry_ptrs_t> &kvts) {
-            got_lost_deletions_ = !exact;
-            ASSERT_TRUE(got_lost_deletions_);
-            for (const leaf::entry_ptrs_t &kvt : kvts) {
-                if (kvt.value_or_null != nullptr) {
-                    auto value = static_cast<const short_value_t *>(kvt.value_or_null);
-
-                    store_key_t k_buf(kvt.key);
-                    short_value_buffer_t v_buf(value);
-                    std::string v_str = v_buf.as_str();
-
-                    ASSERT_TRUE(kv_map_.find(k_buf) == kv_map_.end());
-                    kv_map_[k_buf] = v_str;
-                }
-            }
-        }
-
-        const std::map<store_key_t, std::string>& map() const { return kv_map_; }
-
-    private:
-        // RSI: This is a useless variable now.
-        bool got_lost_deletions_;
-
-        std::map<store_key_t, std::string> kv_map_;
-    };
-
     void printmap(const std::map<store_key_t, std::string>& m) {
         for (std::map<store_key_t, std::string>::const_iterator p = m.begin(), q = m.end(); p != q; ++p) {
             printf("%s: %s;", key_to_debug_str(p->first).c_str(), p->second.c_str());
@@ -273,18 +243,33 @@ public:
         // Of course, this will fail with rassert, not a gtest assertion.
         old_leaf::validate(&sizer_, node());
 
-        verify_receptor_t receptor;
         repli_timestamp_t max_possible_tstamp = { tstamp_counter_ };
-        old_leaf::dump_entries_since_time(&sizer_, node(), repli_timestamp_t::distant_past, max_possible_tstamp, &receptor);
+        std::vector<leaf::entry_ptrs_t> kvts;
+        const bool exact = old_leaf::dump_entries_since_time(&sizer_, node(), repli_timestamp_t::distant_past, max_possible_tstamp, &kvts);
+        ASSERT_FALSE(exact);
 
-        if (receptor.map() != kv_) {
+        std::map<store_key_t, std::string> kv_map;
+        for (const leaf::entry_ptrs_t &kvt : kvts) {
+            if (kvt.value_or_null != nullptr) {
+                auto value = static_cast<const short_value_t *>(kvt.value_or_null);
+
+                store_key_t k_buf(kvt.key);
+                short_value_buffer_t v_buf(value);
+                std::string v_str = v_buf.as_str();
+
+                ASSERT_TRUE(kv_map.find(k_buf) == kv_map.end());
+                kv_map[k_buf] = v_str;
+            }
+        }
+
+        if (kv_map != kv_) {
             printf("receptor.map(): ");
-            printmap(receptor.map());
+            printmap(kv_map);
             printf("\nkv_: ");
             printmap(kv_);
             printf("\n");
         }
-        ASSERT_TRUE(receptor.map() == kv_);
+        ASSERT_TRUE(kv_map == kv_);
     }
 
 private:

@@ -82,13 +82,11 @@ void remove(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key,
 
 void erase_presence(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key);
 
-// RSI: The dump_entries_since_time interface is awful.  Fix the callsite.
-using ::old_leaf::entry_reception_callback_t;
-void dump_entries_since_time(value_sizer_t *sizer,
+bool dump_entries_since_time(value_sizer_t *sizer,
                              sized_ptr_t<const leaf_node_t> node,
                              repli_timestamp_t minimum_tstamp,
                              repli_timestamp_t maximum_possible_timestamp,
-                             entry_reception_callback_t *cb);
+                             std::vector<entry_ptrs_t> *entries_out);
 
 buf_ptr_t init();
 
