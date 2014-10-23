@@ -214,18 +214,18 @@ void dump_entries_since_time(value_sizer_t *sizer,
 
         for (const void *entry : entries) {
             const auto e = static_cast<const main_btree_t::entry_t *>(entry);
+            leaf::entry_ptrs_t ptrs;
+            ptrs.tstamp = main_btree_t::entry_timestamp(e);
+            ptrs.key = main_btree_t::entry_key(e);
             if (main_btree_t::is_live(e)) {
-                leaf::entry_ptrs_t ptrs;
-                ptrs.tstamp = main_btree_t::entry_timestamp(e);
-                ptrs.key = main_btree_t::entry_key(e);
                 ptrs.value_or_null = main_btree_t::live_entry_value(e);
-                kvts.push_back(ptrs);
-            } else if (res == new_leaf::dump_result_t::exact_live_and_dead_entries) {
-                cb->deletion(main_btree_t::entry_key(e), main_btree_t::entry_timestamp(e));
+            } else {
+                ptrs.value_or_null = nullptr;
             }
+            kvts.push_back(ptrs);
         }
 
-        cb->keys_values(kvts);
+        cb->entries(kvts);
     }
 }
 

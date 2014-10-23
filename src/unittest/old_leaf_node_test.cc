@@ -241,22 +241,19 @@ public:
             got_lost_deletions_ = true;
         }
 
-        void deletion(UNUSED const btree_key_t *k, UNUSED repli_timestamp_t tstamp) {
-            ASSERT_TRUE(false);
-        }
-
-        void keys_values(const std::vector<leaf::entry_ptrs_t> &kvts) {
+        void entries(const std::vector<leaf::entry_ptrs_t> &kvts) {
             ASSERT_TRUE(got_lost_deletions_);
             for (const leaf::entry_ptrs_t &kvt : kvts) {
-                ASSERT_NE(nullptr, kvt.value_or_null);
-                auto value = static_cast<const short_value_t *>(kvt.value_or_null);
+                if (kvt.value_or_null != nullptr) {
+                    auto value = static_cast<const short_value_t *>(kvt.value_or_null);
 
-                store_key_t k_buf(kvt.key);
-                short_value_buffer_t v_buf(value);
-                std::string v_str = v_buf.as_str();
+                    store_key_t k_buf(kvt.key);
+                    short_value_buffer_t v_buf(value);
+                    std::string v_str = v_buf.as_str();
 
-                ASSERT_TRUE(kv_map_.find(k_buf) == kv_map_.end());
-                kv_map_[k_buf] = v_str;
+                    ASSERT_TRUE(kv_map_.find(k_buf) == kv_map_.end());
+                    kv_map_[k_buf] = v_str;
+                }
             }
         }
 

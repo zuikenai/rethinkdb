@@ -101,11 +101,9 @@ public:
     // Says that the timestamp was too early, and we can't send accurate deletion history.
     virtual void lost_deletions() = 0;
 
-    // Sends a deletion in the deletion history.
-    virtual void deletion(const btree_key_t *k, repli_timestamp_t tstamp) = 0;
-
-    // Sends the key/value pairs in the leaf.
-    virtual void keys_values(const std::vector<leaf::entry_ptrs_t> &key_values_tstamps) = 0;
+    // Sends the entries in the leaf (just the live entries, if lost_deletions has
+    // been called).
+    virtual void entries(const std::vector<leaf::entry_ptrs_t> &entries) = 0;
 
 protected:
     virtual ~entry_reception_callback_t() { }

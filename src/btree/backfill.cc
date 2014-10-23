@@ -35,13 +35,7 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
                 cb->on_delete_range(range, interruptor);
             }
 
-            void deletion(const btree_key_t *k, repli_timestamp_t tstamp) {
-                if (range.contains_key(k->contents, k->size)) {
-                    cb->on_deletion(k, tstamp, interruptor);
-                }
-            }
-
-            void keys_values(const std::vector<leaf::entry_ptrs_t> &kvts) {
+            void entries(const std::vector<leaf::entry_ptrs_t> &kvts) {
                 std::vector<const btree_key_t *> filtered_keys;
                 std::vector<const void *> filtered_values;
                 std::vector<repli_timestamp_t> filtered_tstamps;
@@ -50,10 +44,13 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
                 filtered_tstamps.reserve(kvts.size());
                 for (const leaf::entry_ptrs_t &kvt : kvts) {
                     if (range.contains_key(kvt.key->contents, kvt.key->size)) {
-                        filtered_keys.push_back(kvt.key);
-                        rassert(kvt.value_or_null != nullptr);
-                        filtered_values.push_back(kvt.value_or_null);
-                        filtered_tstamps.push_back(kvt.tstamp);
+                        if (kvt.value_or_null != nullptr) {
+                            filtered_keys.push_back(kvt.key);
+                            filtered_values.push_back(kvt.value_or_null);
+                            filtered_tstamps.push_back(kvt.tstamp);
+                        } else {
+                            cb->on_deletion(kvt.key, kvt.tstamp, interruptor);
+                        }
                     }
                 }
 

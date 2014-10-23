@@ -1545,8 +1545,8 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
         repli_timestamp_t last_seen_tstamp = maximum_possible_timestamp;
 
         // Collect key_value pairs so we can send a bunch of them at a time.
-        std::vector<leaf::entry_ptrs_t> keys_values_tstamps;
-        keys_values_tstamps.reserve(node->num_pairs);
+        std::vector<leaf::entry_ptrs_t> entries;
+        entries.reserve(node->num_pairs);
         while (iter.offset < stop_offset) {
             repli_timestamp_t tstamp;
             if (iter.offset < node->tstamp_cutpoint) {
@@ -1563,14 +1563,18 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
                 ptrs.tstamp = tstamp;
                 ptrs.key = entry_key(ent);
                 ptrs.value_or_null = entry_value(ent);
-                keys_values_tstamps.push_back(ptrs);
+                entries.push_back(ptrs);
             } else if (entry_is_deletion(ent) && include_deletions) {
-                cb->deletion(entry_key(ent), tstamp);
+                leaf::entry_ptrs_t ptrs;
+                ptrs.tstamp = tstamp;
+                ptrs.key = entry_key(ent);
+                ptrs.value_or_null = nullptr;
+                entries.push_back(ptrs);
             }
 
             iter.step(sizer, node);
         }
-        cb->keys_values(keys_values_tstamps);
+        cb->entries(entries);
     }
 }
 
