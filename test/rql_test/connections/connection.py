@@ -5,10 +5,10 @@
 
 from __future__ import print_function
 
-import datetime, inspect, os, re, socket, sys, threading, unittest
+import datetime, os, re, socket, sys, threading, unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
-import test_util
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "common"))
+import driver, utils
 
 try:
     xrange
@@ -19,26 +19,30 @@ try:
 except:
     import socketserver as SocketServer
 
-# - import the rethinkdb driver
+# -- import the rethinkdb driver
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "common"))
-import utils
 r = utils.import_python_driver()
 
-# - import it using the 'from rethinkdb import *' form
-sys.path.insert(0, os.path.dirname(inspect.getfile(r)))
+# -- import it using the 'from rethinkdb import *' form
+
+sys.path.insert(0, os.path.dirname(r.__file__))
 from rethinkdb import *
 
-import time # overrides the import of rethinkdb.time
+import time # overrides the import of rethinkdb.time for #2343
 
-if len(sys.argv) > 1:
-    server_build_dir = sys.argv[1]
-else:
-    server_build_dir = utils.latest_build_dir()
+# -- get settings
 
-use_default_port = 0
-if len(sys.argv) > 2:
-    use_default_port = bool(int(sys.argv[2]))
+DEFAULT_DRIVER_PORT = 28015
+
+rethinkdb_exe = sys.argv[1] if len(sys.argv) > 1 else utils.find_rethinkdb_executable()
+use_default_port = bool(int(sys.argv[2])) if len(sys.argv) > 2 else 0
+
+# -- shared server
+
+globalServer = None # will be started 
+globalServerClosedCleanly = True
+
+# == Test Base Classes
 
 class TestCaseCompatible(unittest.TestCase):
     '''Compatibility shim for Python 2.6'''
@@ -74,37 +78,43 @@ class TestCaseCompatible(unittest.TestCase):
             self.assertTrue(isinstance(e, exception), '%s expected to raise %s but instead raised %s: %s' % (repr(callable_func), repr(exception), e.__class__.__name__, str(e)))
             self.assertTrue(re.search(regexp, str(e)), '%s did not raise the expected message "%s", but rather: %s' % (repr(callable_func), str(regexp), str(e)))
 
-class TestNoConnection(TestCaseCompatible):
+class TestWithConnection(TestCaseCompatible):
     
-    @staticmethod
-    def findOpenPort():
-        deadline = time.time() + 10
-        while time.time() < deadline:
-            useSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            useSocket.settimeout(.5)
-            try:
-                import random # importing here to avoid issue #2343
-                port = random.randint(49152, 65535)
-                useSocket.connect(('localhost', port))
-                useSocket.close()
-            except socket.timeout:
-                pass
-            except socket.error:
-                return port
-        raise Exception('Timed out looking for an open port')
+    server = None
+    port = None
+    
+    def setUp(self):
+        if self.server is None:
+            if globalServer is None:
+                self.server = driver.Process(executable_path=rethinkdb_exe, wait_until_ready=True)
+            else:
+                self.server = globalServer
         
+        self.port = self.server.driver_port()
+        
+        # - insure the 'test' database is created
+        
+        conn = r.connect(port=self.port)
+        if 'test' not in r.db_list().run(conn):
+            r.db_create('test').run(conn)
+
+    def tearDown(self):
+        if self.server is not None:
+            self.server.check()
+
+# == Test Classes
+
+class TestNoConnection(TestCaseCompatible):
     
     # No servers started yet so this should fail
     def test_connect(self):
         if not use_default_port:
             self.skipTest("Not testing default port")
             return # in case we fell back on replacement_skip
-        self.assertRaisesRegexp(
-            RqlDriverError, "Could not connect to localhost:28015.",
-            r.connect)
+        self.assertRaisesRegexp(RqlDriverError, "Could not connect to localhost:%d." % DEFAULT_DRIVER_PORT, r.connect)
 
     def test_connect_port(self):
-        port = self.findOpenPort()
+        port = utils.get_avalible_port()
         self.assertRaisesRegexp(RqlDriverError, "Could not connect to localhost:%d." % port, r.connect, port=port)
 
     def test_connect_host(self):
@@ -112,54 +122,50 @@ class TestNoConnection(TestCaseCompatible):
             self.skipTest("Not testing default port")
             return # in case we fell back on replacement_skip
         self.assertRaisesRegexp(
-            RqlDriverError, "Could not connect to 0.0.0.0:28015.",
-            r.connect, host="0.0.0.0")
+            RqlDriverError, "Could not connect to 0.0.0.0:%d." % DEFAULT_DRIVER_PORT, r.connect, host="0.0.0.0")
     
     def test_connnect_timeout(self):
         '''Test that we get a ReQL error if we connect to a non-responsive port'''
         useSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        port = self.findOpenPort()
-        useSocket.bind(('localhost', port))
+        useSocket.bind(('localhost', 0))
         useSocket.listen(0)
+        
+        port = useSocket.getsockname()[1]
+        
         try:
             self.assertRaisesRegexp(RqlDriverError, "Timed out during handshake with localhost:%d." % port, r.connect, port=port)
         finally:
             useSocket.close()
     
     def test_connect_host(self):
-        port = self.findOpenPort()
+        port = utils.get_avalible_port()
         self.assertRaisesRegexp(RqlDriverError, "Could not connect to 0.0.0.0:%d." % port, r.connect, host="0.0.0.0", port=port)
 
     def test_empty_run(self):
         # Test the error message when we pass nothing to run and didn't call `repl`
-        self.assertRaisesRegexp(
-            r.RqlDriverError, "RqlQuery.run must be given a connection to run on.",
-            r.expr(1).run)
+        self.assertRaisesRegexp(r.RqlDriverError, "RqlQuery.run must be given a connection to run on.", r.expr(1).run)
 
     def test_auth_key(self):
         # Test that everything still doesn't work even with an auth key
         if not use_default_port:
             self.skipTest("Not testing default port")
             return # in case we fell back on replacement_skip
-        self.assertRaisesRegexp(
-            RqlDriverError, 'Could not connect to 0.0.0.0:28015."',
-            r.connect, host="0.0.0.0", port=28015, auth_key="hunter2")
+        self.assertRaisesRegexp(RqlDriverError, 'Could not connect to 0.0.0.0:%d."' % DEFAULT_DRIVER_PORT, r.connect, host="0.0.0.0", port=DEFAULT_DRIVER_PORT, auth_key="hunter2")
 
 class TestConnectionDefaultPort(TestCaseCompatible):
     
-    servers = None
+    server = None
     
     def setUp(self):
         if not use_default_port:
             self.skipTest("Not testing default port")
             return # in case we fell back on replacement_skip
-        self.servers = test_util.RethinkDBTestServers(4, server_build_dir=server_build_dir, use_default_port=use_default_port)
-        self.servers.__enter__()
-
+        self.server = driver.Process(executable_path=rethinkdb_exe, wait_until_ready=True, extra_options=['--driver-port', DEFAULT_DRIVER_PORT])
+    
     def tearDown(self):
-        if self.servers is not None:
-            self.servers.__exit__(None, None, None)
-
+        if self.server is not None:
+            self.server.check_and_stop() # will not re-use for other tests
+    
     def test_connect(self):
         if not use_default_port:
             return
@@ -175,13 +181,13 @@ class TestConnectionDefaultPort(TestCaseCompatible):
     def test_connect_host_port(self):
         if not use_default_port:
             return
-        conn = r.connect(host='localhost', port=28015)
+        conn = r.connect(host='localhost', port=DEFAULT_DRIVER_PORT)
         conn.reconnect()
 
     def test_connect_port(self):
         if not use_default_port:
             return
-        conn = r.connect(port=28015)
+        conn = r.connect(port=DEFAULT_DRIVER_PORT)
         conn.reconnect()
 
     def test_connect_wrong_auth(self):
@@ -192,21 +198,19 @@ class TestConnectionDefaultPort(TestCaseCompatible):
             r.connect, auth_key="hunter2")
 
 class TestAuthConnection(TestCaseCompatible):
-
+    
+    server = None
+    port = None
+    
     def setUp(self):
-        self.servers = test_util.RethinkDBTestServers(4, server_build_dir=server_build_dir)
-        self.servers.__enter__()
-        self.port=self.servers.driver_port()
-
-        cluster_port = self.servers.cluster_port()
-        exe = self.servers.executable()
-
-        if test_util.set_auth(cluster_port, exe, "hunter2") != 0:
+        self.server = driver.Process(executable_path=rethinkdb_exe, wait_until_ready=True)
+        self.port = self.server.driver_port
+        if self.server.set_auth("hunter2") != 0:
             raise RuntimeError("Could not set up authorization key")
 
     def tearDown(self):
-        if self.servers is not None:
-            self.servers.__exit__()
+        if self.server is not None:
+            self.server.check_and_stop()
 
     def test_connect_no_auth(self):
         self.assertRaisesRegexp(
@@ -241,20 +245,6 @@ class TestAuthConnection(TestCaseCompatible):
     def test_connect_correct_auth(self):
         conn = r.connect(port=self.port, auth_key="hunter2")
         conn.reconnect()
-
-class TestWithConnection(TestCaseCompatible):
-
-    def setUp(self):
-        self.servers = test_util.RethinkDBTestServers(4, server_build_dir=server_build_dir)
-        self.servers.__enter__()
-        self.port = self.servers.driver_port()
-        conn = r.connect(port=self.port)
-        if 'test' not in r.db_list().run(conn):
-            r.db_create('test').run(conn)
-
-    def tearDown(self):
-        if self.servers is not None:
-            self.servers.__exit__(None, None, None)
 
 class TestConnection(TestWithConnection):
     def test_connect_close_reconnect(self):
@@ -394,11 +384,9 @@ class TestShutdown(TestWithConnection):
     def test_shutdown(self):
         c = r.connect(port=self.port)
         r.expr(1).run(c)
-        self.servers.stop()
+        self.server.close()
         time.sleep(0.2)
-        self.assertRaisesRegexp(
-            r.RqlDriverError, "Connection is closed.",
-            r.expr(1).run, c)
+        self.assertRaisesRegexp(r.RqlDriverError, "Connection is closed.", r.expr(1).run, c)
 
 
 # This doesn't really have anything to do with connections but it'll go
@@ -525,7 +513,8 @@ if __name__ == '__main__':
     suite = unittest.TestSuite()
     loader = unittest.TestLoader()
     suite.addTest(loader.loadTestsFromTestCase(TestNoConnection))
-    suite.addTest(loader.loadTestsFromTestCase(TestConnectionDefaultPort))
+    if use_default_port:
+        suite.addTest(loader.loadTestsFromTestCase(TestConnectionDefaultPort))
     suite.addTest(loader.loadTestsFromTestCase(TestAuthConnection))
     suite.addTest(loader.loadTestsFromTestCase(TestConnection))
     suite.addTest(loader.loadTestsFromTestCase(TestShutdown))
@@ -533,7 +522,14 @@ if __name__ == '__main__':
     suite.addTest(TestBatching())
     suite.addTest(TestGetIntersectingBatching())
     suite.addTest(TestGroupWithTimeKey())
-
+    
     res = unittest.TextTestRunner(verbosity=2).run(suite)
-    if not res.wasSuccessful():
+    
+    try:
+        server.check_and_stop()
+    except Exception as e:
+        serverClosedCleanly = False
+        sys.stderr.write('The server did not close cleanly after testing: %s' % str(e))
+    
+    if not res.wasSuccessful() or not serverClosedCleanly:
         sys.exit(1)

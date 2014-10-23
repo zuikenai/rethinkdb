@@ -14,6 +14,10 @@ process.on('uncaughtException', function(err) {
     process.exit(1)
 });
 
+// -- 
+
+var port = parseInt(process.env.RDB_DRIVER_PORT || process.argv[2], 10)
+
 // -- load rethinkdb from the proper location
 
 var r = require(path.resolve(__dirname, '..', 'importRethinkDB.js')).r;
@@ -48,8 +52,6 @@ var assert = function(predicate) {
         throw new Error("Assert failed");
     }
 };
-
-var port = parseInt(process.argv[2], 10)
 
 r.connect({port: port}).then(function(c) {
     var tbl = r.table('test');
