@@ -2,6 +2,7 @@
 #include <map>
 
 #include "btree/old_leaf.hpp"
+#include "btree/leaf_node.hpp"
 #include "btree/leaf_structure.hpp"
 #include "btree/node.hpp"
 #include "containers/scoped.hpp"
@@ -244,12 +245,13 @@ public:
             ASSERT_TRUE(false);
         }
 
-        void keys_values(const std::vector<const btree_key_t *> &ks, const std::vector<const void *> &values, const std::vector<repli_timestamp_t> &) {
+        void keys_values(const std::vector<leaf::entry_ptrs_t> &kvts) {
             ASSERT_TRUE(got_lost_deletions_);
-            for (size_t i = 0; i < ks.size(); ++i) {
-                const short_value_t *value = static_cast<const short_value_t *>(values[i]);
+            for (const leaf::entry_ptrs_t &kvt : kvts) {
+                ASSERT_NE(nullptr, kvt.value_or_null);
+                auto value = static_cast<const short_value_t *>(kvt.value_or_null);
 
-                store_key_t k_buf(ks[i]);
+                store_key_t k_buf(kvt.key);
                 short_value_buffer_t v_buf(value);
                 std::string v_str = v_buf.as_str();
 

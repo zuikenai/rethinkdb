@@ -1545,12 +1545,8 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
         repli_timestamp_t last_seen_tstamp = maximum_possible_timestamp;
 
         // Collect key_value pairs so we can send a bunch of them at a time.
-        std::vector<const btree_key_t *> keys;
-        std::vector<const void *> values;
-        std::vector<repli_timestamp_t> tstamps;
-        keys.reserve(node->num_pairs);
-        values.reserve(node->num_pairs);
-        tstamps.reserve(node->num_pairs);
+        std::vector<leaf::entry_ptrs_t> keys_values_tstamps;
+        keys_values_tstamps.reserve(node->num_pairs);
         while (iter.offset < stop_offset) {
             repli_timestamp_t tstamp;
             if (iter.offset < node->tstamp_cutpoint) {
@@ -1563,17 +1559,20 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
             const entry_t *ent = get_entry(node, iter.offset);
 
             if (entry_is_live(ent)) {
-                keys.push_back(entry_key(ent));
-                values.push_back(entry_value(ent));
-                tstamps.push_back(tstamp);
+                leaf::entry_ptrs_t ptrs;
+                ptrs.tstamp = tstamp;
+                ptrs.key = entry_key(ent);
+                ptrs.value_or_null = entry_value(ent);
+                keys_values_tstamps.push_back(ptrs);
             } else if (entry_is_deletion(ent) && include_deletions) {
                 cb->deletion(entry_key(ent), tstamp);
             }
 
             iter.step(sizer, node);
         }
-        if (!keys.empty()) {
-            cb->keys_values(keys, values, tstamps);
+        // RSI: Why do we check if it's empty?
+        if (!keys_values_tstamps.empty()) {
+            cb->keys_values(keys_values_tstamps);
         }
     }
 }

@@ -18,6 +18,7 @@ struct store_key_t;
 struct leaf_node_t;
 
 namespace leaf {
+struct entry_ptrs_t;
 struct state_description_t;
 }  // namespace leaf
 
@@ -104,7 +105,7 @@ public:
     virtual void deletion(const btree_key_t *k, repli_timestamp_t tstamp) = 0;
 
     // Sends the key/value pairs in the leaf.
-    virtual void keys_values(const std::vector<const btree_key_t *> &ks, const std::vector<const void *> &values, const std::vector<repli_timestamp_t> &tstamps) = 0;
+    virtual void keys_values(const std::vector<leaf::entry_ptrs_t> &key_values_tstamps) = 0;
 
 protected:
     virtual ~entry_reception_callback_t() { }

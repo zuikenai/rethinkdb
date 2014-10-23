@@ -41,23 +41,19 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
                 }
             }
 
-            void keys_values(const std::vector<const btree_key_t *> &keys,
-                             const std::vector<const void *> &values,
-                             const std::vector<repli_timestamp_t> &tstamps) {
-                rassert(keys.size() == values.size());
-                rassert(keys.size() == tstamps.size());
-
+            void keys_values(const std::vector<leaf::entry_ptrs_t> &kvts) {
                 std::vector<const btree_key_t *> filtered_keys;
                 std::vector<const void *> filtered_values;
                 std::vector<repli_timestamp_t> filtered_tstamps;
-                filtered_keys.reserve(keys.size());
-                filtered_values.reserve(keys.size());
-                filtered_tstamps.reserve(keys.size());
-                for (size_t i = 0; i < keys.size(); ++i) {
-                    if (range.contains_key(keys[i]->contents, keys[i]->size)) {
-                        filtered_keys.push_back(keys[i]);
-                        filtered_values.push_back(values[i]);
-                        filtered_tstamps.push_back(tstamps[i]);
+                filtered_keys.reserve(kvts.size());
+                filtered_values.reserve(kvts.size());
+                filtered_tstamps.reserve(kvts.size());
+                for (const leaf::entry_ptrs_t &kvt : kvts) {
+                    if (range.contains_key(kvt.key->contents, kvt.key->size)) {
+                        filtered_keys.push_back(kvt.key);
+                        rassert(kvt.value_or_null != nullptr);
+                        filtered_values.push_back(kvt.value_or_null);
+                        filtered_tstamps.push_back(kvt.tstamp);
                     }
                 }
 
