@@ -17,6 +17,7 @@ module 'DataExplorerView', ->
             suggestions: true
             electric_punctuation: false # False by default
             profiler: false
+            coffeescript: false
         history: []
         focus_on_codemirror: true
         last_query_has_profile: true
@@ -590,7 +591,7 @@ module 'DataExplorerView', ->
         init_after_dom_rendered: =>
             @codemirror = CodeMirror.fromTextArea document.getElementById('input_query'),
                 mode:
-                    name: 'javascript'
+                    name: @state.options.coffeescript ? 'coffeescript' : 'javascript'
                 onKeyEvent: @handle_keypress
                 lineNumbers: true
                 lineWrapping: true
