@@ -394,7 +394,7 @@ void create_stat_block(superblock_t *sb) {
     sb->set_stat_block_id(stats_block.block_id());
 }
 
-buf_lock_t get_root(value_sizer_t *sizer, superblock_t *sb) {
+buf_lock_t get_root(superblock_t *sb) {
     const block_id_t node_id = sb->get_root_block_id();
 
     if (node_id != NULL_BLOCK_ID) {
@@ -403,7 +403,7 @@ buf_lock_t get_root(value_sizer_t *sizer, superblock_t *sb) {
         buf_lock_t lock(sb->expose_buf(), alt_create_t::create);
         {
             buf_write_t write(&lock);
-            leaf::init(sizer, static_cast<leaf_node_t *>(write.get_data_write()));
+            write.set_data_write(leaf::init());
         }
         insert_root(lock.block_id(), sb);
         return lock;
@@ -821,7 +821,7 @@ void find_keyvalue_location_for_write(
         // worsen the performance of the program -- sometimes we only end up using
         // this block for read.  So the profiling information is not very good.
         profile::starter_t starter("Acquiring block for write.\n", trace);
-        buf = get_root(sizer, superblock);
+        buf = get_root(superblock);
     }
 
     // Walk down the tree to the leaf.

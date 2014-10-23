@@ -69,21 +69,17 @@ bool is_full(value_sizer_t *sizer, const leaf_node_t *node, const btree_key_t *k
 
 bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node);
 
-// RSI: This is dead code.
 void split(value_sizer_t *sizer, leaf_node_t *node, leaf_node_t *sibling,
            store_key_t *median_out);
 
-// RSI: This is dead code.
 void merge(value_sizer_t *sizer, leaf_node_t *left, leaf_node_t *right);
 
 // The pointers in `moved_values_out` point to positions in `node` and
 // will be valid as long as `node` remains unchanged.
-// RSI: This is dead code.
 bool level(value_sizer_t *sizer, int nodecmp_node_with_sib, leaf_node_t *node,
            leaf_node_t *sibling, store_key_t *replacement_key_out,
            std::vector<const void *> *moved_values_out);
 
-// RSI: Probably dead code.
 bool is_mergable(value_sizer_t *sizer, const leaf_node_t *node, const leaf_node_t *sibling);
 
 bool lookup(value_sizer_t *sizer, const leaf_node_t *node, const btree_key_t *key, void *value_out);

@@ -88,7 +88,7 @@ void dump_entries_since_time(value_sizer_t *sizer,
                              repli_timestamp_t maximum_possible_timestamp,
                              entry_reception_callback_t *cb);
 
-using ::old_leaf::init;
+buf_ptr_t init();
 
 using ::old_leaf::reverse_iterator;
 

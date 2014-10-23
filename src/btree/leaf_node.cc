@@ -228,7 +228,9 @@ void dump_entries_since_time(value_sizer_t *sizer,
     }
 }
 
-
+buf_ptr_t init() {
+    return main_leaf_t::init();
+}
 
 }  // namespace leaf
 
