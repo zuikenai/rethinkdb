@@ -1,15 +1,37 @@
 #!/usr/bin/env python
 
-import os, subprocess, sys, tempfile, threading, time
+import os, socket, subprocess, sys, tempfile, threading, time
 
 import test_exceptions
 
 # -- constants
 
+def project_root_dir():
+    '''Return the root directory for this project'''
+    
+    # warn: hard-coded both for location of this file and the name of the build dir
+    masterBuildDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir)
+    if not os.path.isdir(masterBuildDir):
+        raise Exception('The project build directory does not exist where expected: %s' % str(masterBuildDir))
+    
+    return os.path.realpath(masterBuildDir)
+
 driverPaths = {
-    'javascript': {'extension':'js', 'relDriverPath':'build/packages/js', 'relSourcePath':'drivers/javascript'},
-    'python': {'extension':'py', 'relDriverPath':'build/drivers/python/rethinkdb', 'relSourcePath':'drivers/python'},
-    'ruby': {'extension':'rb', 'relDriverPath':'build/drivers/ruby/lib', 'relSourcePath':'drivers/ruby'}
+    'javascript': {
+        'extension':'js',
+        'driverPath':os.path.join(project_root_dir(), 'build', 'packages', 'js'),
+        'sourcePath':os.path.join(project_root_dir(), 'drivers', 'javascript')
+    },
+    'python': {
+        'extension':'py',
+        'driverPath':os.path.join(project_root_dir(), 'build', 'drivers', 'python', 'rethinkdb'),
+        'sourcePath':os.path.join(project_root_dir(), 'drivers', 'python')
+    },
+    'ruby': {
+        'extension':'rb',
+        'driverPath':'build/drivers/ruby/lib',
+        'sourcePath':'drivers/ruby'
+    }
 }
 
 # --
@@ -27,18 +49,13 @@ def guess_is_text_file(name):
             return False
     return True
 
-def project_root_dir():
-    '''Return the root directory for this project'''
-    
-    # warn: hard-coded both for location of this file and the name of the build dir
-    masterBuildDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir)
-    if not os.path.isdir(masterBuildDir):
-        raise Exception('The project build directory does not exist where expected: %s' % str(masterBuildDir))
-    
-    return os.path.realpath(masterBuildDir)
-
 def find_rethinkdb_executable(mode=None):
-    return os.path.join(latest_build_dir(check_executable=True, mode=mode), 'rethinkdb')
+    result_path = os.environ.get('RDB_EXE_PATH') or os.path.join(latest_build_dir(check_executable=True, mode=mode), 'rethinkdb')
+    
+    if not os.access(result_path, os.X_OK):
+    	raise test_exceptions.NotBuiltException(detail='The rethinkdb server executable is not avalible: %s' % str(result_path))
+    
+    return result_path
 
 def latest_build_dir(check_executable=True, mode=None):
     '''Look for the most recently built version of this project'''
@@ -269,3 +286,84 @@ def supportsTerminalColors():
         return False
     return True
 
+def get_avalible_port(interface='localhost'):
+    testSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    testSocket.bind((interface, 0))
+    freePort = testSocket.getsockname()[1]
+    testSocket.close()
+    return freePort
+
+def shard_table(self, cluster_port, rdb_executable, table_name):
+        
+    blackHole = tempfile.NamedTemporaryFile()
+    commandPrefix = [str(rdb_executable), 'admin', '--join', 'localhost:%d' % str(cluster_port), 'split', 'shard', str(table_name)]
+    
+    for splitPoint in ('Nc040800000000000\2333', 'Nc048800000000000\2349', 'Nc04f000000000000\2362'):
+        returnCode = subprocess.call(commandPrefix + [splitPoint], stdout=blackHole, stderr=blackHole)
+        if returnCode != 0:
+            return returnCode
+    time.sleep(3)
+    return 0
+
+def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
+    '''make sure that the given process group id is not running'''
+    
+    # -- validate input
+    
+    try:
+        processGroupId = int(processGroupId)
+        if processGroupId < 0:
+            raise Exception()
+    except Exception:
+        raise ValueError('kill_process_group requires a valid process group id, got: %s' % str(processGroupId))
+    
+    try:
+        timeout = float(timeout)
+        if timeout < 0:
+            raise Exception()
+    except Exception:
+        raise ValueError('kill_process_group requires a valid timeout, got: %s' % str(timeout))
+    
+    try:
+        shudown_grace = float(shudown_grace)
+        if shudown_grace < 0:
+            raise Exception()
+    except Exception:
+        raise ValueError('kill_process_group requires a valid timeout, got: %s' % str(shudown_grace))
+    
+    # --
+    
+    # ToDo: check for child processes outside the process group
+    
+    deadline = time.time() + timeout
+    graceDeadline = time.time() + shudown_grace
+    
+    # -- allow processes to gracefully exit
+    
+    if shudown_grace > 0:
+        os.killpg(processGroupId, signal.SIGTERM)
+        
+        while time.time() < graceDeadline:
+            try:
+                os.killpg(self.testProcess.pid, 0) # 0 checks to see if the process is there
+            except OSError as e:
+                if e.errno == 3: # errno 3 = "no such process"
+                    return
+                else:
+                    raise
+    
+    # -- slam the remaining processes
+    
+    while time.time() < deadline:
+        try:
+            os.killpg(processGroupId, signal.SIGKILL)
+        except OSError as e:
+            if e.errno == 3:
+                return # errno 3 = "no such process"
+            else:
+                raise
+        else:
+            time.sleep(.1)
+    
+    raise Exception('Unable to kill all of the processes for process group %d after %d seconds' % (processGroupId, timeout))
+    # ToDo: better categorize the error
