@@ -65,7 +65,8 @@ public:
 
             deleter_->delete_value(buf_parent_t(leaf_node_buf), value.get());
             // RSI: Presumably we want to pass node, not node.buf, here.
-            leaf::erase_presence(sizer_, node.buf, keys_to_delete[i].btree_key());
+            leaf::erase_presence(sizer_, &write, keys_to_delete[i].btree_key());
+            node = write.get_sized_data_write<leaf_node_t>();
             --population_change;
         }
 

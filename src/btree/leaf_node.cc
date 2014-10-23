@@ -183,6 +183,11 @@ void remove(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key,
     main_leaf_t::insert_entry(bs, node, dead_entry.get());
 }
 
+void erase_presence(value_sizer_t *sizer, buf_write_t *node, const btree_key_t *key) {
+    convert_to_new_leaf_if_necessary(sizer, node);
+    main_leaf_t::erase_presence(sizer->default_block_size(), node, key);
+}
+
 
 
 }  // namespace leaf
