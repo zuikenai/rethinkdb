@@ -744,7 +744,7 @@ buf_ptr_t new_leaf_t<btree_type>::reconstruct(default_block_size_t bs,
                                               const leaf::state_description_t &desc) {
     size_t live_entry_size = 0;
     size_t dead_entry_size = 0;
-    for (const leaf::state_description_t::entry_ptrs_t &e : desc.entries) {
+    for (const leaf::entry_ptrs_t &e : desc.entries) {
         if (e.value_or_null != nullptr) {
             live_entry_size += btree_type::live_entry_size_from_keyvalue(bs, e.key, e.value_or_null) + sizeof(uint16_t);
         } else {
@@ -765,7 +765,7 @@ buf_ptr_t new_leaf_t<btree_type>::reconstruct(default_block_size_t bs,
     size_t offset = pair_offsets_back_offset(node.buf->num_pairs);
     for (size_t i = 0; i < desc.entries.size(); ++i) {
         node.buf->pair_offsets[i] = offset;
-        const leaf::state_description_t::entry_ptrs_t &ent = desc.entries[i];
+        const leaf::entry_ptrs_t &ent = desc.entries[i];
         scoped_malloc_t<entry_t> e;
         if (ent.value_or_null == nullptr) {
             e = btree_type::combine_dead_entry(ent.tstamp, ent.key);

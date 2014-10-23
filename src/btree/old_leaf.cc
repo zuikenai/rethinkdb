@@ -1581,15 +1581,14 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
 leaf::state_description_t full_state_description(value_sizer_t *sizer,
                                                  const leaf_node_t *node,
                                                  repli_timestamp_t maximum_possible_timestamp) {
-    using entry_ptrs_t = leaf::state_description_t::entry_ptrs_t;
-    std::vector<entry_ptrs_t> entries;
+    std::vector<leaf::entry_ptrs_t> entries;
     entries.reserve(node->num_pairs);
 
     repli_timestamp_t last_tstamp = maximum_possible_timestamp;
     for (entry_iter_t iter = entry_iter_t::make(node);
          !iter.done(sizer);
          iter.step(sizer, node)) {
-        entry_ptrs_t entry_ptrs;
+        leaf::entry_ptrs_t entry_ptrs;
         if (iter.offset < node->tstamp_cutpoint) {
             repli_timestamp_t tstamp = get_timestamp(node, iter.offset);
             entry_ptrs.tstamp = tstamp;
@@ -1605,7 +1604,7 @@ leaf::state_description_t full_state_description(value_sizer_t *sizer,
     }
 
     std::sort(entries.begin(), entries.end(),
-              [](const entry_ptrs_t &x, const entry_ptrs_t &y) {
+              [](const leaf::entry_ptrs_t &x, const leaf::entry_ptrs_t &y) {
                   return btree_key_cmp(x.key, y.key) < 0;
               });
 

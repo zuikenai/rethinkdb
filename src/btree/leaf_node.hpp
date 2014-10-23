@@ -10,19 +10,21 @@ class buf_write_t;
 
 namespace leaf {
 
+// Describes a leaf node entry.
+struct entry_ptrs_t {
+    repli_timestamp_t tstamp;
+    const btree_key_t *key;
+    // Deletion entries don't have values and have a NULL pointer instead.
+    const void *value_or_null;
+};
+
+
 // A complete description of an old_leaf node's state.  Used for constructing a
 // new_leaf.  (The old leaf must not be modified!)
 struct state_description_t {
     // The timestamp for which we aren't missing any deletion entries >= that
     // timestamp.  (Maybe distant_past when we have 0 entries.)
     repli_timestamp_t partial_replicability_age;
-
-    struct entry_ptrs_t {
-        repli_timestamp_t tstamp;
-        const btree_key_t *key;
-        // Deletion entries don't have values and have a NULL pointer instead.
-        const void *value_or_null;
-    };
 
     // All the node's entries, with timestamp and pointers into the leaf node for key
     // and (if applicable) value.  Deletion entries don't have values and have a NULL
