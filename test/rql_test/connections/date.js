@@ -14,7 +14,7 @@ var r = require(path.resolve(__dirname, '..', 'importRethinkDB.js')).r;
 
 // --
 
-var build_dir = process.env.BUILD_DIR || '../../../build/debug' // - ToDo: replace this
+var rethinkdbExe = process.env.RDB_EXE_PATH || throw new Error('RDB_EXE_PATH ENV variable was not set!') // - ToDo: replace this
 var testDefault = process.env.TEST_DEFAULT_PORT == "1"
 
 var port = null;
@@ -54,7 +54,7 @@ describe('Javascript date pseudotype conversion', function(){
         server_out_log = fs.openSync('run/server-log.txt', 'a');
         server_err_log = fs.openSync('run/server-error-log.txt', 'a');
         cpp_server = spawn(
-            build_dir + '/rethinkdb',
+            rethinkdbExe,
             ['--driver-port', port, '--http-port', '0', '--cluster-port', cluster_port, '--cache-size', '512'],
             {stdio: ['ignore', server_out_log, server_err_log]});
         setTimeout(done, 1000);

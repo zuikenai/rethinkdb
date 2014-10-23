@@ -4,9 +4,6 @@ from __future__ import print_function
 
 import os, random, subprocess, sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
-from test_util import RethinkDBTestServers
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'common')))
 import utils
 
@@ -25,9 +22,9 @@ else:
 
 res = 0
 
-with RethinkDBTestServers(4, server_build_dir=server_build_dir) as servers:
-    port = servers.driver_port()
-    c = r.connect(port=port)
+with Cluster.create_cluster(4, server_build_dir=server_build_dir) as cluster:
+    server = cluster.processes[0]
+    c = r.connect(host=server.host, port=server.driver_port)
     r.db_create('test').run(c)
     r.db('test').table_create('test').run(c)
     tbl = r.table('test')
