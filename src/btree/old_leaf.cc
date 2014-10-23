@@ -1570,10 +1570,7 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
 
             iter.step(sizer, node);
         }
-        // RSI: Why do we check if it's empty?
-        if (!keys_values_tstamps.empty()) {
-            cb->keys_values(keys_values_tstamps);
-        }
+        cb->keys_values(keys_values_tstamps);
     }
 }
 

@@ -57,6 +57,7 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
                     }
                 }
 
+                // RSI: Why do we only call on_pairs if the vectors are non-empty?
                 if (!filtered_keys.empty()) {
                     cb->on_pairs(parent, filtered_tstamps, filtered_keys,
                                  filtered_values, interruptor);
