@@ -138,6 +138,30 @@ bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
     return leveled;
 }
 
+bool lookup(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node,
+            const btree_key_t *key, void *value_out) {
+    if (is_old(node.buf)) {
+        rassert(node.block_size == sizer->default_block_size().value());
+        return old_leaf::lookup(sizer, node.buf, key, value_out);
+    } else {
+        const void *entry;
+        bool found = main_leaf_t::lookup_entry(as_new(node), key, &entry);
+        if (found) {
+            const auto e = static_cast<const main_btree_t::entry_t *>(entry);
+            if (main_btree_t::is_live(e)) {
+                const void *value = main_btree_t::live_entry_value(e);
+                memcpy(value_out, value,
+                       main_btree_t::value_size(sizer->default_block_size(), value));
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+}
+
 
 
 }  // namespace leaf

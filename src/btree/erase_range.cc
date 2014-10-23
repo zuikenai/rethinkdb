@@ -30,11 +30,12 @@ public:
                         signal_t *,
                         int *population_change_out) THROWS_ONLY(interrupted_exc_t) {
         buf_write_t write(leaf_node_buf);
-        leaf_node_t *node = static_cast<leaf_node_t *>(write.get_data_write());
+        sized_ptr_t<leaf_node_t> node = write.get_sized_data_write<leaf_node_t>();
 
         std::vector<store_key_t> keys_to_delete;
 
-        for (auto it = leaf::begin(node); it != leaf::end(node); it.step()) {
+        // RSI: Presumably we want to pass a sized_ptr_t to leaf::begin.
+        for (auto it = leaf::begin(node.buf); it != leaf::end(node.buf); it.step()) {
             const btree_key_t *k = (*it).first;
             if (!k) {
                 break;
@@ -63,7 +64,8 @@ public:
             }
 
             deleter_->delete_value(buf_parent_t(leaf_node_buf), value.get());
-            leaf::erase_presence(sizer_, node, keys_to_delete[i].btree_key());
+            // RSI: Presumably we want to pass node, not node.buf, here.
+            leaf::erase_presence(sizer_, node.buf, keys_to_delete[i].btree_key());
             --population_change;
         }
 

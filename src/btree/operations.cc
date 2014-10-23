@@ -886,7 +886,7 @@ void find_keyvalue_location_for_write(
 
         // We've gone down the tree and gotten to a leaf. Now look up the key.
         buf_read_t read(&buf);
-        auto node = static_cast<const leaf_node_t *>(read.get_data_read());
+        sized_ptr_t<const leaf_node_t> node = read.get_sized_data_read<leaf_node_t>();
         bool key_found = leaf::lookup(sizer, node, key, tmp.get());
 
         if (key_found) {
@@ -965,8 +965,7 @@ void find_keyvalue_location_for_read(
     bool value_found;
     {
         buf_read_t read(&buf);
-        const leaf_node_t *leaf
-            = static_cast<const leaf_node_t *>(read.get_data_read());
+        sized_ptr_t<const leaf_node_t> leaf = read.get_sized_data_read<leaf_node_t>();
         value_found = leaf::lookup(sizer, leaf, key, value.get());
     }
     if (value_found) {

@@ -64,14 +64,16 @@ void merge(value_sizer_t *sizer,
 
 bool is_mergable(value_sizer_t *sizer, const leaf_node_t *node, const leaf_node_t *sibling);
 
-bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
-           buf_write_t *node, buf_write_t *sib,
-           store_key_t *replacement_key_out,
-           std::vector<scoped_malloc_t<void> > *moved_live_values_out);
+MUST_USE bool level(value_sizer_t *sizer, int nodecmp_node_with_sib,
+                    buf_write_t *node, buf_write_t *sib,
+                    store_key_t *replacement_key_out,
+                    std::vector<scoped_malloc_t<void> > *moved_live_values_out);
+
+MUST_USE bool lookup(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node,
+                     const btree_key_t *key, void *value_out);
 
 
 using ::old_leaf::init;
-using ::old_leaf::lookup;
 using ::old_leaf::insert;
 using ::old_leaf::remove;
 using ::old_leaf::erase_presence;
