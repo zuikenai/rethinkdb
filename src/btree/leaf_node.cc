@@ -162,6 +162,16 @@ bool lookup(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node,
     }
 }
 
+void insert(value_sizer_t *sizer, buf_write_t *node,
+            const btree_key_t *key, const void *value, repli_timestamp_t tstamp) {
+    convert_to_new_leaf_if_necessary(sizer, node);
+    default_block_size_t bs = sizer->default_block_size();
+    scoped_malloc_t<main_btree_t::entry_t> entry
+        = main_btree_t::combine_live_entry(bs, tstamp, key, value);
+    main_leaf_t::insert_entry(bs, node, entry.get());
+}
+
+
 
 
 }  // namespace leaf

@@ -1011,9 +1011,8 @@ void apply_keyvalue_change(
 
         {
             buf_write_t write(&kv_loc->buf);
-            auto leaf_node = static_cast<leaf_node_t *>(write.get_data_write());
             leaf::insert(sizer,
-                         leaf_node,
+                         &write,
                          key,
                          kv_loc->value.get(),
                          tstamp);
