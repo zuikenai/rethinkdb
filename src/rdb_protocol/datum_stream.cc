@@ -8,6 +8,7 @@
 #include "rdb_protocol/func.hpp"
 #include "rdb_protocol/term.hpp"
 #include "rdb_protocol/val.hpp"
+#include "utils.hpp"
 
 #include "debug.hpp"
 
@@ -630,14 +631,14 @@ std::string intersecting_readgen_t::sindex_name() const {
     return sindex;
 }
 
-counted_t<val_t> datum_stream_t::run_terminal(
+scoped_ptr_t<val_t> datum_stream_t::run_terminal(
     env_t *env, const terminal_variant_t &tv) {
     scoped_ptr_t<eager_acc_t> acc(make_eager_terminal(tv));
     accumulate(env, acc.get(), tv);
     return acc->finish_eager(backtrace(), is_grouped(), env->limits());
 }
 
-counted_t<val_t> datum_stream_t::to_array(env_t *env) {
+scoped_ptr_t<val_t> datum_stream_t::to_array(env_t *env) {
     scoped_ptr_t<eager_acc_t> acc = make_to_array(env->reql_version());
     accumulate_all(env, acc.get());
     return acc->finish_eager(backtrace(), is_grouped(), env->limits());
@@ -1075,6 +1076,96 @@ union_datum_stream_t::next_batch_impl(env_t *env, const batchspec_t &batchspec) 
         }
     }
     return std::vector<datum_t>();
+}
+
+// RANGE_DATUM_STREAM_T
+range_datum_stream_t::range_datum_stream_t(bool _is_infinite,
+                                           int64_t _start,
+                                           int64_t _stop,
+                                           const protob_t<const Backtrace> &bt_source)
+    : eager_datum_stream_t(bt_source),
+      is_infinite(_is_infinite),
+      start(_start),
+      stop(_stop) { }
+
+std::vector<datum_t>
+range_datum_stream_t::next_raw_batch(env_t *, const batchspec_t &batchspec) {
+    rcheck(!is_infinite
+           || batchspec.get_batch_type() == batch_type_t::NORMAL
+           || batchspec.get_batch_type() == batch_type_t::NORMAL_FIRST,
+           base_exc_t::GENERIC,
+           "Cannot call a terminal (`reduce`, `count`, etc.) on an infinite stream.");
+
+    std::vector<datum_t> v;
+    // 500 is picked out of a hat for latency, primarily in the Data Explorer. If you
+    // think strongly it should be something else you're probably right.
+    batcher_t batcher = batchspec.with_at_most(500).to_batcher();
+
+    while (!is_exhausted()) {
+        double next = safe_to_double(start++);
+        // `safe_to_double` returns NaN on error, which signals that `start` is larger
+        // than 2^53 indicating we've reached the end of our infinite stream. This must
+        // be checked before creating a `datum_t` as that does a similar check on
+        // construction.
+        rcheck(risfinite(next), base_exc_t::GENERIC,
+               "`range` out of safe double bounds.");
+
+        v.emplace_back(next);
+        batcher.note_el(v.back());
+        if (batcher.should_send_batch()) {
+            break;
+        }
+    }
+    return v;
+}
+
+bool range_datum_stream_t::is_exhausted() const {
+    return !is_infinite && start >= stop && batch_cache_exhausted();
+}
+
+// MAP_DATUM_STREAM_T
+map_datum_stream_t::map_datum_stream_t(std::vector<counted_t<datum_stream_t> > &&_streams,
+                                       counted_t<const func_t> &&_func,
+                                       const protob_t<const Backtrace> &bt_src)
+    : eager_datum_stream_t(bt_src), streams(std::move(_streams)), func(std::move(_func)),
+      is_array_map(true), is_cfeed_map(false) {
+    for (const auto &stream : streams) {
+        is_array_map &= stream->is_array();
+        is_cfeed_map |= stream->is_cfeed();
+    }
+}
+
+std::vector<datum_t>
+map_datum_stream_t::next_raw_batch(env_t *env, const batchspec_t &batchspec) {
+    std::vector<datum_t> batch;
+    batcher_t batcher = batchspec.to_batcher();
+
+    std::vector<datum_t> args;
+    args.reserve(streams.size());
+    while (!is_exhausted()) {
+        args.clear();   // This prevents allocating a new vector every iteration.
+        for (const auto &stream : streams) {
+            args.push_back(stream->next(env, batchspec));
+        }
+
+        datum_t datum = func->call(env, args)->as_datum();
+        batcher.note_el(datum);
+        batch.push_back(std::move(datum));
+        if (batcher.should_send_batch()) {
+            break;
+        }
+    }
+
+    return batch;
+}
+
+bool map_datum_stream_t::is_exhausted() const {
+    for (const auto &stream : streams) {
+        if (stream->is_exhausted()) {
+            return batch_cache_exhausted();
+        }
+    }
+    return false;
 }
 
 } // namespace ql

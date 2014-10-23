@@ -191,29 +191,6 @@ class TestConnectionDefaultPort(TestCaseCompatible):
             RqlDriverError, "Server dropped connection with message: \"ERROR: Incorrect authorization key.\"",
             r.connect, auth_key="hunter2")
 
-class BlackHoleRequestHandler(SocketServer.BaseRequestHandler):
-    def handle(self):
-        time.sleep(1)
-
-class ThreadedBlackHoleServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    pass
-
-class TestTimeout(TestCaseCompatible):
-    def setUp(self):
-        import random # importing here to avoid issue #2343
-        self.timeout = 0.5
-        self.port = random.randint(1025, 65535)
-
-        self.server = ThreadedBlackHoleServer(('localhost', self.port), BlackHoleRequestHandler)
-        self.server_thread = threading.Thread(target=self.server.serve_forever)
-        self.server_thread.start()
-
-    def tearDown(self):
-        self.server.shutdown()
-
-    def test_timeout(self):
-        self.assertRaises(socket.timeout, r.connect, port=self.port, timeout=self.timeout)
-
 class TestAuthConnection(TestCaseCompatible):
 
     def setUp(self):
@@ -460,12 +437,12 @@ class TestGetIntersectingBatching(TestWithConnection):
         random.seed(rseed)
         print("Random seed: " + str(rseed))
         points = []
-        for i in range(0, point_count):
-            points.append({'geo':r.point(random.uniform(-90.0, 90.0), random.uniform(-180.0, 180.0))})
+        for i in xrange(0, point_count):
+            points.append({'geo':r.point(random.uniform(-180.0, 180.0), random.uniform(-90.0, 90.0))})
         polygons = []
-        for i in range(0, poly_count):
+        for i in xrange(0, poly_count):
             # A fairly big circle, so it will cover a large range in the secondary index
-            polygons.append({'geo':r.circle([random.uniform(-90.0, 90.0), random.uniform(-180.0, 180.0)], 1000000)})
+            polygons.append({'geo':r.circle([random.uniform(-180.0, 180.0), random.uniform(-90.0, 90.0)], 1000000)})
         t1.insert(points).run(c)
         t1.insert(polygons).run(c)
 
@@ -473,8 +450,8 @@ class TestGetIntersectingBatching(TestWithConnection):
         # While the test is randomized, chances are extremely high to get a lazy result at least once.
         seen_lazy = False
 
-        for i in range(0, get_tries):
-            query_circle = r.circle([random.uniform(-90.0, 90.0), random.uniform(-180.0, 180.0)], 8000000);
+        for i in xrange(0, get_tries):
+            query_circle = r.circle([random.uniform(-180.0, 180.0), random.uniform(-90.0, 90.0)], 8000000);
             reference = t1.filter(r.row['geo'].intersects(query_circle)).coerce_to("ARRAY").run(c)
             cursor = t1.get_intersecting(query_circle, index='geo').run(c, max_batch_rows=batch_size)
             if not cursor.end_flag:
@@ -503,7 +480,7 @@ class TestBatching(TestWithConnection):
         batch_size = 3
         count = 500
 
-        ids = set(range(0, count))
+        ids = set(xrange(0, count))
 
         t1.insert([{'id':i} for i in ids]).run(c)
         cursor = t1.run(c, max_batch_rows=batch_size)
@@ -549,7 +526,6 @@ if __name__ == '__main__':
     loader = unittest.TestLoader()
     suite.addTest(loader.loadTestsFromTestCase(TestNoConnection))
     suite.addTest(loader.loadTestsFromTestCase(TestConnectionDefaultPort))
-    suite.addTest(loader.loadTestsFromTestCase(TestTimeout))
     suite.addTest(loader.loadTestsFromTestCase(TestAuthConnection))
     suite.addTest(loader.loadTestsFromTestCase(TestConnection))
     suite.addTest(loader.loadTestsFromTestCase(TestShutdown))
