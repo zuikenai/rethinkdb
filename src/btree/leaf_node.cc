@@ -199,15 +199,10 @@ void dump_entries_since_time(value_sizer_t *sizer,
                                           maximum_possible_timestamp, cb);
     } else {
         std::vector<const void *> entries;
-        const new_leaf::dump_result_t res
-            = main_leaf_t::dump_entries_since_time(
-                    sized_reinterpret_cast<const main_leaf_node_t>(node),
-                    minimum_tstamp,
-                    &entries);
-
-        if (res == new_leaf::dump_result_t::all_live_entries) {
-            cb->lost_deletions();
-        }
+        const bool exact = main_leaf_t::dump_entries_since_time(
+                sized_reinterpret_cast<const main_leaf_node_t>(node),
+                minimum_tstamp,
+                &entries);
 
         std::vector<leaf::entry_ptrs_t> kvts;
         kvts.reserve(node.buf->num_pairs);
@@ -220,12 +215,13 @@ void dump_entries_since_time(value_sizer_t *sizer,
             if (main_btree_t::is_live(e)) {
                 ptrs.value_or_null = main_btree_t::live_entry_value(e);
             } else {
+                rassert(!exact);
                 ptrs.value_or_null = nullptr;
             }
             kvts.push_back(ptrs);
         }
 
-        cb->entries(kvts);
+        cb->entries(exact, kvts);
     }
 }
 

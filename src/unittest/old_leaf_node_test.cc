@@ -236,12 +236,8 @@ public:
     public:
         verify_receptor_t() : got_lost_deletions_(false) { }
 
-        void lost_deletions() {
-            ASSERT_FALSE(got_lost_deletions_);
-            got_lost_deletions_ = true;
-        }
-
-        void entries(const std::vector<leaf::entry_ptrs_t> &kvts) {
+        void entries(bool exact, const std::vector<leaf::entry_ptrs_t> &kvts) {
+            got_lost_deletions_ = !exact;
             ASSERT_TRUE(got_lost_deletions_);
             for (const leaf::entry_ptrs_t &kvt : kvts) {
                 if (kvt.value_or_null != nullptr) {
@@ -260,6 +256,7 @@ public:
         const std::map<store_key_t, std::string>& map() const { return kv_map_; }
 
     private:
+        // RSI: This is a useless variable now.
         bool got_lost_deletions_;
 
         std::map<store_key_t, std::string> kv_map_;

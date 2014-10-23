@@ -1534,7 +1534,6 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
     // If we haven't found a [tstamp][entry] pair such that tstamp < minimum_tstamp, then we are missing some deletion history
     if (stop_offset == 0) {
         stop_offset = sizer->default_block_size().value();
-        cb->lost_deletions();
         include_deletions = false;
     }
 
@@ -1574,7 +1573,7 @@ void dump_entries_since_time(value_sizer_t *sizer, const leaf_node_t *node, repl
 
             iter.step(sizer, node);
         }
-        cb->entries(entries);
+        cb->entries(include_deletions, entries);
     }
 }
 

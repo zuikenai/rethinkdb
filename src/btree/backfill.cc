@@ -31,11 +31,11 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
 
         struct our_cb_t : public leaf::entry_reception_callback_t {
             explicit our_cb_t(buf_parent_t _parent) : parent(_parent) { }
-            void lost_deletions() {
-                cb->on_delete_range(range, interruptor);
-            }
+            void entries(bool exact, const std::vector<leaf::entry_ptrs_t> &kvts) {
+                if (!exact) {
+                    cb->on_delete_range(range, interruptor);
+                }
 
-            void entries(const std::vector<leaf::entry_ptrs_t> &kvts) {
                 std::vector<const btree_key_t *> filtered_keys;
                 std::vector<const void *> filtered_values;
                 std::vector<repli_timestamp_t> filtered_tstamps;
@@ -49,6 +49,7 @@ struct backfill_traversal_helper_t : public btree_traversal_helper_t, public hom
                             filtered_values.push_back(kvt.value_or_null);
                             filtered_tstamps.push_back(kvt.tstamp);
                         } else {
+                            rassert(exact);
                             cb->on_deletion(kvt.key, kvt.tstamp, interruptor);
                         }
                     }

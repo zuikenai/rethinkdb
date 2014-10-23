@@ -720,7 +720,7 @@ bool new_leaf_t<btree_type>::is_mergable(default_block_size_t bs,
 // were dropped.  Instead we return (to entries_out) just all the live entries in the
 // entire leaf node.
 template <class btree_type>
-dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
+bool new_leaf_t<btree_type>::dump_entries_since_time(
         sized_ptr_t<const main_leaf_node_t> node,
         repli_timestamp_t minimum_tstamp,
         std::vector<const void *> *entries_out) {
@@ -736,7 +736,7 @@ dump_result_t new_leaf_t<btree_type>::dump_entries_since_time(
         }
     }
     *entries_out = std::move(entries);
-    return exact ? dump_result_t::exact_live_and_dead_entries : dump_result_t::all_live_entries;
+    return exact;
 }
 
 template <class btree_type>

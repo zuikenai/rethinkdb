@@ -23,11 +23,6 @@ struct state_description_t;
 
 namespace new_leaf {
 
-enum class dump_result_t {
-    exact_live_and_dead_entries,
-    all_live_entries,
-};
-
 template <class btree_type>
 class new_leaf_t {
 public:
@@ -73,8 +68,9 @@ public:
                             const main_leaf_node_t *node,
                             const main_leaf_node_t *sibling);
 
-    static
-    dump_result_t
+    // Returns true if the dump is "exact".  Otherwise, entries_out will consist of
+    // all the live entries in the leaf node.
+    static bool
     dump_entries_since_time(sized_ptr_t<const main_leaf_node_t> node,
                             repli_timestamp_t minimum_tstamp,
                             std::vector<const void *> *entries_out);
