@@ -1,5 +1,6 @@
 #include "btree/main_btree.hpp"
 
+#include "btree/leaf_node.hpp"
 #include "containers/scoped.hpp"
 #include "rdb_protocol/value_sizer.hpp"
 #include "serializer/types.hpp"
@@ -53,6 +54,27 @@ size_t main_btree_t::entry_size(default_block_size_t bs, const entry_t *entry) {
     rassert(key->size <= MAX_KEY_SIZE);
     stepped += key->full_size();
     return stepped + value_size(bs, p + stepped);
+}
+
+const leaf::entry_ptrs_t main_btree_t::entry_ptrs(const entry_t *entry) {
+    static_assert(DELETION_ENTRY_CODE > MAX_KEY_SIZE, "DELETION_ENTRY_CODE incompatible with MAX_KEY_SIZE.");
+    const uint8_t *const p = reinterpret_cast<const uint8_t *>(entry);
+    leaf::entry_ptrs_t ret;
+    ret.tstamp = *reinterpret_cast<const repli_timestamp_t *>(p);
+    size_t stepped = sizeof(repli_timestamp_t);
+    bool is_dead;
+    if (*(p + stepped) == DELETION_ENTRY_CODE) {
+        ++stepped;
+        is_dead = true;
+    } else {
+        is_dead = false;
+    }
+    const btree_key_t *key = reinterpret_cast<const btree_key_t *>(p + stepped);
+    ret.key = key;
+    rassert(key->size <= MAX_KEY_SIZE);
+    stepped += key->full_size();
+    ret.value_or_null = is_dead ? nullptr : p + stepped;
+    return ret;
 }
 
 const void *main_btree_t::live_entry_value(const entry_t *entry) {

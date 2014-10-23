@@ -29,6 +29,10 @@ namespace new_leaf {
 struct entry_t;
 }
 
+namespace leaf {
+struct entry_ptrs_t;
+}
+
 struct main_btree_t {
 public:
     typedef new_leaf::entry_t entry_t;
@@ -77,6 +81,8 @@ public:
         rassert(ret->size <= MAX_KEY_SIZE);
         return ret;
     }
+
+    static const leaf::entry_ptrs_t entry_ptrs(const entry_t *entry);
 
     static const void *live_entry_value(const entry_t *entry);
 
