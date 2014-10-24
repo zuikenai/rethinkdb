@@ -1653,27 +1653,6 @@ bool iterator::operator!=(const iterator &other) const {
     return !operator==(other);
 }
 
-reverse_iterator::reverse_iterator() { }
-
-reverse_iterator::reverse_iterator(const leaf_node_t *node, int index)
-    : inner_(node, index) { }
-
-std::pair<const btree_key_t *, const void *> reverse_iterator::operator*() const {
-    return *inner_;
-}
-
-void reverse_iterator::step() {
-    inner_.step_backward();
-}
-
-bool reverse_iterator::operator==(const reverse_iterator &other) const {
-    return inner_ == other.inner_;
-}
-bool reverse_iterator::operator!=(const reverse_iterator &other) const {
-    return !operator==(other);
-}
-
-
 old_leaf::iterator begin(const leaf_node_t *leaf_node) {
     old_leaf::iterator ret(leaf_node, -1);
     ret.step();
@@ -1682,16 +1661,6 @@ old_leaf::iterator begin(const leaf_node_t *leaf_node) {
 
 old_leaf::iterator end(const leaf_node_t *leaf_node) {
     return old_leaf::iterator(leaf_node, leaf_node->num_pairs);
-}
-
-old_leaf::reverse_iterator rbegin(const leaf_node_t *leaf_node) {
-    old_leaf::reverse_iterator ret(leaf_node, leaf_node->num_pairs);
-    ret.step();
-    return ret;
-}
-
-old_leaf::reverse_iterator rend(const leaf_node_t *leaf_node) {
-    return old_leaf::reverse_iterator(leaf_node, -1);
 }
 
 old_leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
@@ -1721,23 +1690,6 @@ old_leaf::iterator upper_bound(const btree_key_t *key, const leaf_node_t *leaf_n
         }
     }
     old_leaf::iterator ret(leaf_node, index - 1);
-    ret.step();
-    return ret;
-}
-
-old_leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
-    int index;
-    old_leaf::find_key(leaf_node, key, &index);
-    if (index < leaf_node->num_pairs) {
-        const old_leaf::entry_t *entry = old_leaf::get_entry(leaf_node, leaf_node->pair_offsets[index]);
-        const btree_key_t *ekey = old_leaf::entry_key(entry);
-        if (entry_is_live(entry) &&
-            sized_strcmp(ekey->contents, ekey->size, key->contents, key->size) == 0) {
-            return old_leaf::reverse_iterator(leaf_node, index);
-        }
-    }
-
-    old_leaf::reverse_iterator ret(leaf_node, index);
     ret.step();
     return ret;
 }

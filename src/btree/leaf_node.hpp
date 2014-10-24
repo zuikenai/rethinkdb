@@ -40,6 +40,7 @@ using ::old_leaf::rbegin;
 using ::old_leaf::rend;
 
 using ::old_leaf::inclusive_lower_bound;
+using ::old_leaf::upper_bound;
 using ::old_leaf::inclusive_upper_bound;
 
 
@@ -90,7 +91,7 @@ bool dump_entries_since_time(value_sizer_t *sizer,
 
 buf_ptr_t init();
 
-using ::old_leaf::reverse_iterator;
+using ::old_leaf::iterator;
 
 
 }  // namespace leaf

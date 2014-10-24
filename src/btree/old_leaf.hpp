@@ -24,16 +24,12 @@ struct state_description_t;
 
 namespace old_leaf {
 class iterator;
-class reverse_iterator;
 
 old_leaf::iterator begin(const leaf_node_t *leaf_node);
 old_leaf::iterator end(const leaf_node_t *leaf_node);
 
-old_leaf::reverse_iterator rbegin(const leaf_node_t *leaf_node);
-old_leaf::reverse_iterator rend(const leaf_node_t *leaf_node);
-
 old_leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
-old_leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
+old_leaf::iterator upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
 
 
 // We must maintain timestamps and deletion entries as best we can,
@@ -113,18 +109,6 @@ public:
 private:
     const leaf_node_t *node_;
     int index_;
-};
-
-class reverse_iterator {
-public:
-    reverse_iterator();
-    reverse_iterator(const leaf_node_t *node, int index);
-    std::pair<const btree_key_t *, const void *> operator*() const;
-    void step();
-    bool operator==(const reverse_iterator &other) const;
-    bool operator!=(const reverse_iterator &other) const;
-private:
-    iterator inner_;
 };
 
 }  // namespace old_leaf

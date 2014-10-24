@@ -191,13 +191,15 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
                 }
             }
         } else {
-            leaf::reverse_iterator it;
+            leaf::iterator it;
             if (range.right.unbounded) {
-                it = leaf::rbegin(lnode);
+                it = leaf::end(lnode);
             } else {
-                it = leaf::inclusive_upper_bound(range.right.key.btree_key(), lnode);
+                it = leaf::upper_bound(range.right.key.btree_key(), lnode);
             }
-            for (/* assignment above */; it != leaf::rend(lnode); it.step()) {
+            const leaf::iterator begin = leaf::begin(lnode);
+            while (it != begin) {
+                it.step_backward();
                 key = (*it).first;
 
                 if (btree_key_cmp(key, range.left.btree_key()) <= 0) {
