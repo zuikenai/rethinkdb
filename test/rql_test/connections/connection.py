@@ -60,7 +60,10 @@ def closeSharedServer():
     global sharedServer, sharedServerOutput, sharedServerHost, sharedServerDriverPort
     
     if sharedServer is not None:
-        sharedServer.close()
+        try:
+            sharedServer.close()
+        except Exception as e:
+            sys.stderr.write('Got error while shutting down server: %s' % str(e))
     sharedServer = None
     sharedServerOutput = None
     sharedServerHost = None
@@ -121,7 +124,7 @@ class TestWithConnection(TestCaseCompatible):
                 closeSharedServer()
         
         if sharedServerDriverPort is None:
-            sharedServerOutput = tempfile.NamedTemporaryFile()
+            sharedServerOutput = tempfile.NamedTemporaryFile('w+')
             sharedServer = driver.Process(executable_path=rethinkdb_exe, console_output=sharedServerOutput, wait_until_ready=True)
             sharedServerHost = sharedServer.host
             sharedServerDriverPort = sharedServer.driver_port
@@ -248,7 +251,7 @@ class TestAuthConnection(TestCaseCompatible):
             except Exception:
                 self.__class__.server = None
         if self.server is None:
-            self.__class__.serverConsoleOuput = tempfile.NamedTemporaryFile()
+            self.__class__.serverConsoleOuput = tempfile.NamedTemporaryFile('w+')
             self.__class__.server = driver.Process(executable_path=rethinkdb_exe, console_output=self.__class__.serverConsoleOuput, wait_until_ready=True)
             self.__class__.port = self.server.driver_port
             

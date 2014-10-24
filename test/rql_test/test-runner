@@ -758,7 +758,7 @@ def cleanup(*args):
     
     for processGroupId in runningProcessGroupsIds:
         try:
-            utils.kill_process_group(self.process_group_id)
+            utils.kill_process_group(processGroupId)
         except Exception as e:
             raise Warning('Unable to shut down server: %s' % str(e))
     
@@ -925,7 +925,7 @@ def main():
     # -- make sure the drivers are built
     
     for language in options.languages:
-        outputFile = tempfile.NamedTemporaryFile()
+        outputFile = tempfile.NamedTemporaryFile(mode='w+')
         notificationDeadline = time.time() + 3
         makeProcess = subprocess.Popen(['make', '-C', language.driver_source_path], stdout=outputFile, stderr=subprocess.STDOUT)
         while makeProcess.poll() is None and time.time() < notificationDeadline:
@@ -982,14 +982,19 @@ def main():
         if server is None:
             if options.cluster_port is not None:
                 sys.exit('Internal failure: we somehow lost track of the already running server!')
-            serverOuput = tempfile.NamedTemporaryFile()
-            server = driver.Process(executable_path=rethinkdb_exe_path, console_output=serverOuput, wait_until_ready=True)
+            serverOuput = tempfile.NamedTemporaryFile(mode='w+')
+            try:
+                server = driver.Process(executable_path=rethinkdb_exe_path, console_output=serverOuput, wait_until_ready=True)
+            except Exception as e:
+                serverOuput.seek(0)
+                sys.stderr.write('Unable to start a managed server. The servers output was:\n%s\n' % serverOuput.read())
+                sys.exit(str(e))
             
         # - run the test
         
         outputChannel = None
         if options.verbose is False:
-            outputChannel = tempfile.NamedTemporaryFile()
+            outputChannel = tempfile.NamedTemporaryFile(mode='w+')
         
         testProcessGroupId = None
         print("\n== Running %s (%s)" % (test.name, test.language.display_name))
@@ -1028,8 +1033,11 @@ def main():
                     try:
                         server.check_and_stop()
                     except Exception as e:
-                        serverOutput.seek(0)
-                        sys.stderr.write('RethinkDB server failed: %s\nServer log:\n%s' % (str(e), serverOutput.read()))
+                        serverLog = ''
+                        if serverOutput:
+                            serverOutput.seek(0)
+                            serverLog = '\nServer log:\n%s' % serverOuput.read()
+                        sys.stderr.write('RethinkDB server failed: %s' % (str(e), serverLog))
                     server = None
                     serverOutput = None
                 
