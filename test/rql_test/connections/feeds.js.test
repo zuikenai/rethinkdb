@@ -16,7 +16,7 @@ os.environ['RDB_EXE_PATH'] = executable_path
 
 # get a group of 4 connected servers
 
-with Cluster.create_cluster(4, executable_path=executable_path) as cluster:
+with driver.Cluster.create_cluster(4, executable_path=executable_path) as cluster:
 	
 	server = cluster.processes[0]
 	conn = r.connect(server.host, com_server.driver_port)
@@ -27,4 +27,5 @@ with Cluster.create_cluster(4, executable_path=executable_path) as cluster:
 		r.db('test').table_create('test').run(conn)
 	
 	print("Running JS feeds")
-	sys.exit(subprocess.call([os.environ.get('INTERPRETER_PATH', 'node'), os.path.join(os.path.dirname(__file__), 'feeds.js'), str(server.driver_port)]))
+	os.environ['RDB_DRIVER_PORT'] = server.driver_port
+	sys.exit(subprocess.call([os.environ.get('INTERPRETER_PATH', 'node'), os.path.join(os.path.dirname(__file__), 'feeds.js')]))

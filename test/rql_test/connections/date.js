@@ -14,7 +14,10 @@ var r = require(path.resolve(__dirname, '..', 'importRethinkDB.js')).r;
 
 // --
 
-var rethinkdbExe = process.env.RDB_EXE_PATH || throw new Error('RDB_EXE_PATH ENV variable was not set!') // - ToDo: replace this
+var rethinkdbExe = process.env.RDB_EXE_PATH
+if (!process.env.RDB_EXE_PATH) {
+    throw new Error('RDB_EXE_PATH ENV variable was not set!')
+}
 var testDefault = process.env.TEST_DEFAULT_PORT == "1"
 
 var port = null;

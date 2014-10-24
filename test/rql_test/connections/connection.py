@@ -555,8 +555,8 @@ class TestGroupWithTimeKey(TestWithConnection):
     def runTest(self):
         c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         
-        if 't1' in r.db('test').table_list().run(c):
-            r.db('test').table_drop('t1').run(c)
+        if 'times' in r.db('test').table_list().run(c):
+            r.db('test').table_drop('times').run(c)
         r.db('test').table_create('times').run(c)
 
         time1 = 1375115782.24
