@@ -20,9 +20,9 @@ import atexit, os, random, re, shutil, signal, socket, subprocess, sys, tempfile
 import utils
 
 try:
-	xrange
-except ImportError:
-	xrange = range
+    xrange
+except NameError:
+    xrange = range
 
 def block_path(source_port, dest_port):
     # `-A` means list all processes. `-www` prevents `ps` from truncating the output at
@@ -145,20 +145,20 @@ class Cluster(object):
     
     @classmethod
     def create_cluster(cls, initial_servers, metacluster=None, executable_path=None, command_prefix=None, extra_options=None, wait_until_ready=True):
-    	
-    	# -- input validation
-    	
-    	if initial_servers is not None:
-        	try:
-        		initial_servers = int(initial_servers)
-        	except ValueError:
-        		raise ValueError('the machines input must be a number, got: %s' % str(initial_servers))
-        	if initial_servers < 1:
-        		raise ValueError('the machines input must be a positive integet, got: %d' % initial_servers)
-    	
-    	if metacluster is not None:
-			assert isinstance(metacluster, Metacluster)
-			assert not metacluster.closed
+        
+        # -- input validation
+        
+        if initial_servers is not None:
+            try:
+                initial_servers = int(initial_servers)
+            except ValueError:
+                raise ValueError('the machines input must be a number, got: %s' % str(initial_servers))
+            if initial_servers < 1:
+                raise ValueError('the machines input must be a positive integet, got: %d' % initial_servers)
+        
+        if metacluster is not None:
+            assert isinstance(metacluster, Metacluster)
+            assert not metacluster.closed
         
         # -- create the cluster
         
@@ -167,7 +167,7 @@ class Cluster(object):
         # -- setup servers
         
         for i in xrange(initial_servers):
-        	cluster.processes.add(Process(cluster=self))
+            cluster.processes.add(Process(cluster=self))
         
         # -- wait for servers
         
@@ -178,24 +178,24 @@ class Cluster(object):
         
         return cluster
     
-	def __enter__(self):
-		self.wait_until_started_up()
-		return self
-	
-	def __exit__(self, type, value, traceback):
-		self.check_and_stop()
-	
+    def __enter__(self):
+        self.wait_until_started_up()
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.check_and_stop()
+    
     def check(self):
         """Throws an exception if any of the processes in the cluster has
         stopped or crashed. """
         for proc in self.processes:
             proc.check()
     
-	def wait_until_ready(self, timemeout=30):
-		for server in self.processes:
-			server.wait_until_started_up(timemeout=timemeout)
-		# ToDo: try all of them in parallel to handle the timeout correctly
-	
+    def wait_until_ready(self, timemeout=30):
+        for server in self.processes:
+            server.wait_until_started_up(timemeout=timemeout)
+        # ToDo: try all of them in parallel to handle the timeout correctly
+    
     def check_and_stop(self):
         """First checks that each process in the cluster is still running, then
         stops them by sending SIGINT. Throws an exception if any exit with a
@@ -209,7 +209,7 @@ class Cluster(object):
                 iter(self.processes).next().close()
             self.metacluster.clusters.remove(self)
             self.metacluster = None
-	
+    
     def _block_process(self, process):
         assert process not in self.processes
         for other_process in self.processes:
@@ -387,15 +387,15 @@ class _Process(object):
         else:
             self.cluster = cluster
             self.cluster.processes.add(self)
-	
-	def __enter__(self):
-		self.wait_until_started_up()
-		return self
-	
-	def __exit__(self, type, value, traceback):
-		# ToDo: handle non-normal exits
-		self.close()
-	
+    
+    def __enter__(self):
+        self.wait_until_started_up()
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        # ToDo: handle non-normal exits
+        self.close()
+    
     def wait_until_started_up(self, timeout=30):
         time_limit = time.time() + timeout
         while time.time() < time_limit:
@@ -517,7 +517,7 @@ class _Process(object):
     def set_auth(self, auth_key):
         assert os.access(self.executable_path, os.X_OK), 'set_auth requires a executable that works, got: %s' % str(self.executable_path)
         
-        blackHole = tempfile.TemporaryFile()
+        blackHole = tempfile.TemporaryFile(mode='w+')
         
         # ToDo: re-write all of this against ReQL admin
         
@@ -538,7 +538,7 @@ class _Process(object):
     
     def shard_table(self, table_name):
         
-        blackHole = tempfile.NamedTemporaryFile()
+        blackHole = tempfile.NamedTemporaryFile(mode='w+')
         commandPrefix = [self.executable_path, 'admin', '--join', '%s:%d' % (self.host, self.cluster_port), 'split', 'shard', str(table_name)]
         
         for splitPoint in ('Nc040800000000000\2333', 'Nc048800000000000\2349', 'Nc04f000000000000\2362'):

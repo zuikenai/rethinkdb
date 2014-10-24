@@ -9,7 +9,7 @@ import utils, driver
 r = utils.import_python_driver()
 
 if not os.path.isdir('run'):
-    os.makedirs('run')
+	os.makedirs('run')
 
 executable_path = sys.argv[1] if len(sys.argv) > 1 else utils.find_rethinkdb_executable()
 os.environ['RDB_EXE_PATH'] = executable_path
@@ -25,6 +25,6 @@ with Cluster.create_cluster(4, executable_path=executable_path) as cluster:
 		r.db_create('test').run(conn)
 	if not 'test' in r.db('test').table_list().run(conn):
 		r.db('test').table_create('test').run(conn)
-    
-    print("Running JS feeds")
+	
+	print("Running JS feeds")
 	sys.exit(subprocess.call([os.environ.get('INTERPRETER_PATH', 'node'), os.path.join(os.path.dirname(__file__), 'feeds.js'), str(server.driver_port)]))

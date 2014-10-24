@@ -5,7 +5,7 @@ from __future__ import print_function
 import os, random, subprocess, sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'common')))
-import utils
+import driver, utils
 
 r = utils.import_python_driver()
 
@@ -14,15 +14,12 @@ try:
 except NameError:
     xrange = range
 
-server_build_dir = sys.argv[1]
-if len(sys.argv) >= 3:
-    lang = sys.argv[2]
-else:
-    lang = None
+executable_path = sys.argv[1] if len(sys.argv) > 1 else utils.find_rethinkdb_executable()
+lang = sys.argv[2] if len(sys.argv) > 2 else None
 
 res = 0
 
-with Cluster.create_cluster(4, server_build_dir=server_build_dir) as cluster:
+with driver.Cluster.create_cluster(4, executable_path=executable_path) as cluster:
     server = cluster.processes[0]
     c = r.connect(host=server.host, port=server.driver_port)
     r.db_create('test').run(c)

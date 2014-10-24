@@ -21,7 +21,7 @@ class TestHttpTerm(unittest.TestCase):
             try:
                 self._server.driver_port = int(os.getenv('RDB_DRIVER_PORT') or sys.argv[1])
             except Exception:
-                self.__class__._server_log = tempfile.NamedTemporaryFile()
+                self.__class__._server_log = tempfile.NamedTemporaryFile('w+')
                 self.__class__._server = driver.Process(console_output=self._server_log.name)
                 self.__class__.conn = self._server.driver_port
             

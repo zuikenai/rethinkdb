@@ -101,7 +101,7 @@ def latest_build_dir(check_executable=True, mode=None):
 def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, buildOptions=None):
     '''Call `make -C` on a folder to build it. If waitNotification is given wait notificationTimeout seconds and then print the notificaiton'''
     
-    outputFile = tempfile.NamedTemporaryFile()
+    outputFile = tempfile.NamedTemporaryFile('w+')
     notificationDeadline = None
     if waitNotification not in ("", None):
         notificationDeadline = time.time() + notificationTimeout
@@ -150,8 +150,8 @@ def import_python_driver(targetDir=None):
     # - project directory
     if all(map(lambda x: os.path.isdir(os.path.join(targetDir, x)), ['src', 'drivers', 'admin'])):
         buildDriver = True
-        driverDir = os.path.join(targetDir, driverPaths['python']['relDriverPath'])
-        srcDir = os.path.join(targetDir, driverPaths['python']['relSourcePath'])
+        driverDir = os.path.join(targetDir, driverPaths['python']['driverPath'])
+        srcDir = os.path.join(targetDir, driverPaths['python']['sourcePath'])
     
     # - built driver - it does not matter if this is source, build, or installed, it looks complete
     elif builtDriver(targetDir):
@@ -295,7 +295,7 @@ def get_avalible_port(interface='localhost'):
 
 def shard_table(cluster_port, rdb_executable, table_name):
         
-    blackHole = tempfile.NamedTemporaryFile()
+    blackHole = tempfile.NamedTemporaryFile('w+')
     commandPrefix = [str(rdb_executable), 'admin', '--join', 'localhost:%d' % str(cluster_port), 'split', 'shard', str(table_name)]
     
     for splitPoint in ('Nc040800000000000\2333', 'Nc048800000000000\2349', 'Nc04f000000000000\2362'):
@@ -370,5 +370,5 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         else:
             time.sleep(.1)
     
-    raise Exception('Unable to kill all of the processes for process group %d after %d seconds' % (processGroupId, timeout))
+    raise Warning('Unable to kill all of the processes for process group %d after %d seconds' % (processGroupId, timeout))
     # ToDo: better categorize the error
