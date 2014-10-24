@@ -36,12 +36,9 @@ struct state_description_t {
 
 using ::old_leaf::begin;
 using ::old_leaf::end;
-using ::old_leaf::rbegin;
-using ::old_leaf::rend;
 
 using ::old_leaf::inclusive_lower_bound;
 using ::old_leaf::upper_bound;
-using ::old_leaf::inclusive_upper_bound;
 
 
 void validate(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node);
