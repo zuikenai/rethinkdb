@@ -167,7 +167,7 @@ class Cluster(object):
         # -- setup servers
         
         for i in xrange(initial_servers):
-            cluster.processes.add(Process(cluster=self))
+            cluster.processes.add(Process(cluster=cluster))
         
         # -- wait for servers
         
@@ -464,10 +464,9 @@ class _Process(object):
                 raise RuntimeError("Process failed to stop within %d seconds after SIGINT" % grace_period)
             if self.process.poll() != 0:
                 raise RuntimeError("Process stopped unexpectedly with return code %d after SIGINT" % self.process.poll())
-            
+        finally:
             if self in runningServers:
                 runningServers.remove(self)
-        finally:
             self.close()
     
     def kill(self):

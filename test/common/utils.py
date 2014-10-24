@@ -359,6 +359,7 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
     
     while time.time() < deadline:
         try:
+            os.killpg(processGroupId, 0) # 0 checks to see if the process is there
             os.killpg(processGroupId, signal.SIGKILL)
         except OSError as e:
             if e.errno == 3: # No such process
@@ -370,5 +371,7 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         else:
             time.sleep(.1)
     
-    raise Warning('Unable to kill all of the processes for process group %d after %d seconds' % (processGroupId, timeout))
+    output, _ = subprocess.Popen(['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    
+    raise Warning('Unable to kill all of the processes for process group %d after %d seconds:\n%s\n' % (processGroupId, timeout, output))
     # ToDo: better categorize the error
