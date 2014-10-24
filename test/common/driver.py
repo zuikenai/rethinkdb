@@ -501,7 +501,7 @@ class _Process(object):
             runningServers.remove(self)
         self.process = None
 
-        if self._close_console_output is not None:
+        if self._close_console_output:
             self.console_file.close()
 
         # `self.cluster` might be `None` if we crash in the middle of

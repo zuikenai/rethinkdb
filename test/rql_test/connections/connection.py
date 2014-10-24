@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-import datetime, os, re, socket, sys, threading, unittest
+import datetime, os, re, socket, sys, tempfile, threading, unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "common"))
 import driver, utils
@@ -39,8 +39,33 @@ use_default_port = bool(int(sys.argv[2])) if len(sys.argv) > 2 else 0
 
 # -- shared server
 
-globalServer = None # will be started 
-globalServerClosedCleanly = True
+sharedServer = None
+sharedServerOutput = None
+sharedServerHost = None
+sharedServerDriverPort = None
+if 'RDB_DRIVER_PORT' in os.environ:
+    sharedServerDriverPort = int(os.environ['RDB_DRIVER_PORT'])
+    if 'RDB_SERVER_HOST' in os.environ:
+        sharedServerHost = os.environ['RDB_SERVER_HOST']
+    else:
+        sharedServerHost = 'localhost'
+
+def checkSharedServer():
+    if sharedServerDriverPort is not None:
+        conn = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
+        if 'test' not in r.db_list().run(conn):
+            r.db_create('test').run(conn)
+
+def closeSharedServer():
+    global sharedServer, sharedServerOutput, sharedServerHost, sharedServerDriverPort
+    
+    if sharedServer is not None:
+        sharedServer.close()
+    sharedServer = None
+    sharedServerOutput = None
+    sharedServerHost = None
+    sharedServerDriverPort = None
+
 
 # == Test Base Classes
 
@@ -73,34 +98,47 @@ class TestCaseCompatible(unittest.TestCase):
     def replacement_assertRaisesRegexp(self, exception, regexp, callable_func, *args, **kwds):
         try:
             callable_func(*args, **kwds)
-            self.fail('%s failed to raise a %s' % (repr(callable_func), repr(exception)))
         except Exception as e:
             self.assertTrue(isinstance(e, exception), '%s expected to raise %s but instead raised %s: %s' % (repr(callable_func), repr(exception), e.__class__.__name__, str(e)))
             self.assertTrue(re.search(regexp, str(e)), '%s did not raise the expected message "%s", but rather: %s' % (repr(callable_func), str(regexp), str(e)))
+        else:
+            self.fail('%s failed to raise a %s' % (repr(callable_func), repr(exception)))            
 
 class TestWithConnection(TestCaseCompatible):
     
-    server = None
     port = None
+    server = None
+    serverOutput = None
     
     def setUp(self):
-        if self.server is None:
-            if globalServer is None:
-                self.server = driver.Process(executable_path=rethinkdb_exe, wait_until_ready=True)
-            else:
-                self.server = globalServer
+        global sharedServer, sharedServerOutput, sharedServerHost, sharedServerDriverPort
         
-        self.port = self.server.driver_port()
+        if sharedServer is not None:
+            try:
+                sharedServer.check()
+            except Exception:
+                # ToDo: figure out how to blame the last test
+                closeSharedServer()
         
-        # - insure the 'test' database is created
+        if sharedServerDriverPort is None:
+            sharedServerOutput = tempfile.NamedTemporaryFile()
+            sharedServer = driver.Process(executable_path=rethinkdb_exe, console_output=sharedServerOutput, wait_until_ready=True)
+            sharedServerHost = sharedServer.host
+            sharedServerDriverPort = sharedServer.driver_port
         
-        conn = r.connect(port=self.port)
-        if 'test' not in r.db_list().run(conn):
-            r.db_create('test').run(conn)
+        # - insure we are ready
+        
+        checkSharedServer()
 
     def tearDown(self):
-        if self.server is not None:
-            self.server.check()
+        global sharedServer, sharedServerOutput, sharedServerHost, sharedServerDriverPort
+
+        if sharedServerDriverPort is not None:
+            try:
+                checkSharedServer()
+            except Exception:
+                closeSharedServer()
+                raise # ToDo: figure out how to best give the server log
 
 # == Test Classes
 
@@ -133,7 +171,7 @@ class TestNoConnection(TestCaseCompatible):
         port = useSocket.getsockname()[1]
         
         try:
-            self.assertRaisesRegexp(RqlDriverError, "Timed out during handshake with localhost:%d." % port, r.connect, port=port)
+            self.assertRaisesRegexp(RqlDriverError, "Timed out during handshake with localhost:%d." % port, r.connect, port=port, timeout=2)
         finally:
             useSocket.close()
     
@@ -200,13 +238,22 @@ class TestConnectionDefaultPort(TestCaseCompatible):
 class TestAuthConnection(TestCaseCompatible):
     
     server = None
+    serverConsoleOuput = None
     port = None
     
     def setUp(self):
-        self.server = driver.Process(executable_path=rethinkdb_exe, wait_until_ready=True)
-        self.port = self.server.driver_port
-        if self.server.set_auth("hunter2") != 0:
-            raise RuntimeError("Could not set up authorization key")
+        if self.server is not None:
+            try:
+                self.server.check()
+            except Exception:
+                self.__class__.server = None
+        if self.server is None:
+            self.__class__.serverConsoleOuput = tempfile.NamedTemporaryFile()
+            self.__class__.server = driver.Process(executable_path=rethinkdb_exe, console_output=self.__class__.serverConsoleOuput, wait_until_ready=True)
+            self.__class__.port = self.server.driver_port
+            
+            if self.server.set_auth("hunter2") != 0:
+                raise RuntimeError("Could not set up authorization key")
 
     def tearDown(self):
         if self.server is not None:
@@ -248,7 +295,7 @@ class TestAuthConnection(TestCaseCompatible):
 
 class TestConnection(TestWithConnection):
     def test_connect_close_reconnect(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         r.expr(1).run(c)
         c.close()
         c.close()
@@ -256,7 +303,7 @@ class TestConnection(TestWithConnection):
         r.expr(1).run(c)
 
     def test_connect_close_expr(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         r.expr(1).run(c)
         c.close()
         self.assertRaisesRegexp(
@@ -264,7 +311,7 @@ class TestConnection(TestWithConnection):
             r.expr(1).run, c)
 
     def test_noreply_wait_waits(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.noreply_wait()
@@ -272,7 +319,7 @@ class TestConnection(TestWithConnection):
         self.assertGreaterEqual(duration, 0.5)
 
     def test_close_waits_by_default(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.close()
@@ -280,7 +327,7 @@ class TestConnection(TestWithConnection):
         self.assertGreaterEqual(duration, 0.5)
 
     def test_reconnect_waits_by_default(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.reconnect()
@@ -288,7 +335,7 @@ class TestConnection(TestWithConnection):
         self.assertGreaterEqual(duration, 0.5)
 
     def test_close_does_not_wait_if_requested(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.close(noreply_wait=False)
@@ -296,7 +343,7 @@ class TestConnection(TestWithConnection):
         self.assertLess(duration, 0.5)
 
     def test_reconnect_does_not_wait_if_requested(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         t = time.time()
         r.js('while(true);', timeout=0.5).run(c, noreply=True)
         c.reconnect(noreply_wait=False)
@@ -304,10 +351,18 @@ class TestConnection(TestWithConnection):
         self.assertLess(duration, 0.5)
 
     def test_db(self):
-        c = r.connect(port=self.port)
-
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
+        
+        if 't1' in r.db('test').table_list().run(c):
+            r.db('test').table_drop('t1').run(c)
         r.db('test').table_create('t1').run(c)
+        
+        if 'db2' in r.db_list().run(c):
+            r.db_drop('db2').run(c)
         r.db_create('db2').run(c)
+        
+        if 't2' in r.db('db2').table_list().run(c):
+            r.db('db2').table_drop('t2').run(c)
         r.db('db2').table_create('t2').run(c)
 
         # Default db should be 'test' so this will work
@@ -329,21 +384,22 @@ class TestConnection(TestWithConnection):
         c.close()
 
         # Test setting the db in connect
-        c = r.connect(db='db2', port=self.port)
+        c = r.connect(db='db2', host=sharedServerHost, port=sharedServerDriverPort)
         r.table('t2').run(c)
 
-        self.assertRaisesRegexp(
-            r.RqlRuntimeError, "Table `db2.t1` does not exist.",
-            r.table('t1').run, c)
+        self.assertRaisesRegexp(r.RqlRuntimeError, "Table `db2.t1` does not exist.", r.table('t1').run, c)
 
         c.close()
 
         # Test setting the db as a `run` option
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         r.table('t2').run(c, db='db2')
 
     def test_use_outdated(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
+        
+        if 't1' in r.db('test').table_list().run(c):
+            r.db('test').table_drop('t1').run(c)
         r.db('test').table_create('t1').run(c)
 
         # Use outdated is an option that can be passed to db.table or `run`
@@ -356,7 +412,7 @@ class TestConnection(TestWithConnection):
 
         # Calling .repl() should set this connection as global state
         # to be used when `run` is not otherwise passed a connection.
-        c = r.connect(port=self.port).repl()
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort).repl()
 
         r.expr(1).run()
 
@@ -366,26 +422,29 @@ class TestConnection(TestWithConnection):
 
         c.close()
 
-        self.assertRaisesRegexp(
-            r.RqlDriverError, "Connection is closed",
-            r.expr(1).run)
+        self.assertRaisesRegexp(r.RqlDriverError, "Connection is closed", r.expr(1).run)
 
     def test_port_conversion(self):
-        c = r.connect(port=str(self.port))
+        c = r.connect(host=sharedServerHost, port=str(sharedServerDriverPort))
         r.expr(1).run(c)
-
         c.close()
-        self.assertRaisesRegexp(
-            r.RqlDriverError,
-            "Could not convert port abc to an integer.",
-            lambda: r.connect(port='abc'))
+        
+        self.assertRaisesRegexp(r.RqlDriverError, "Could not convert port abc to an integer.", r.connect, port='abc', host=sharedServerHost)
 
 class TestShutdown(TestWithConnection):
+    
+    def setUp(self):
+        if sharedServer is None:
+            closeSharedServer() # we need to be able to kill the server, so can't use one from outside
+        super(TestShutdown, self).setUp()
+    
     def test_shutdown(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
         r.expr(1).run(c)
-        self.server.close()
+        
+        closeSharedServer()
         time.sleep(0.2)
+        
         self.assertRaisesRegexp(r.RqlDriverError, "Connection is closed.", r.expr(1).run, c)
 
 
@@ -405,8 +464,10 @@ class TestGetIntersectingBatching(TestWithConnection):
     def runTest(self):
         import random # importing here to avoid issue #2343
 
-        c = r.connect(port=self.port)
-
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
+        
+        if 't1' in r.db('test').table_list().run(c):
+            r.db('test').table_drop('t1').run(c)
         r.db('test').table_create('t1').run(c)
         t1 = r.db('test').table('t1')
 
@@ -423,7 +484,9 @@ class TestGetIntersectingBatching(TestWithConnection):
         # test filtering of duplicates on the server.
         rseed = random.getrandbits(64)
         random.seed(rseed)
-        print("Random seed: " + str(rseed))
+        print("Random seed: " + str(rseed), end=' ')
+        sys.stdout.flush()
+        
         points = []
         for i in xrange(0, point_count):
             points.append({'geo':r.point(random.uniform(-180.0, 180.0), random.uniform(-90.0, 90.0))})
@@ -459,9 +522,11 @@ class TestGetIntersectingBatching(TestWithConnection):
 
 class TestBatching(TestWithConnection):
     def runTest(self):
-        c = r.connect(port=self.port)
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
 
         # Test the cursor API when there is exactly mod batch size elements in the result stream
+        if 't1' in r.db('test').table_list().run(c):
+            r.db('test').table_drop('t1').run(c)
         r.db('test').table_create('t1').run(c)
         t1 = r.table('t1')
 
@@ -485,8 +550,10 @@ class TestBatching(TestWithConnection):
 
 class TestGroupWithTimeKey(TestWithConnection):
     def runTest(self):
-        c = r.connect(port=self.port)
-
+        c = r.connect(host=sharedServerHost, port=sharedServerDriverPort)
+        
+        if 't1' in r.db('test').table_list().run(c):
+            r.db('test').table_drop('t1').run(c)
         r.db('test').table_create('times').run(c)
 
         time1 = 1375115782.24
@@ -517,16 +584,18 @@ if __name__ == '__main__':
         suite.addTest(loader.loadTestsFromTestCase(TestConnectionDefaultPort))
     suite.addTest(loader.loadTestsFromTestCase(TestAuthConnection))
     suite.addTest(loader.loadTestsFromTestCase(TestConnection))
-    suite.addTest(loader.loadTestsFromTestCase(TestShutdown))
     suite.addTest(TestPrinting())
     suite.addTest(TestBatching())
     suite.addTest(TestGetIntersectingBatching())
     suite.addTest(TestGroupWithTimeKey())
+    suite.addTest(loader.loadTestsFromTestCase(TestShutdown))
     
     res = unittest.TextTestRunner(verbosity=2).run(suite)
     
+    serverClosedCleanly = True
     try:
-        server.check_and_stop()
+        if sharedServer is not None:
+            sharedServer.check_and_stop()
     except Exception as e:
         serverClosedCleanly = False
         sys.stderr.write('The server did not close cleanly after testing: %s' % str(e))
