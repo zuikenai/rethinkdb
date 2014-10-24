@@ -1707,6 +1707,24 @@ old_leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node
     }
 }
 
+old_leaf::iterator upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
+    int index;
+    old_leaf::find_key(leaf_node, key, &index);
+    if (index < leaf_node->num_pairs) {
+        const entry_t *entry = old_leaf::get_entry(leaf_node,
+                                                   leaf_node->pair_offsets[index]);
+        const btree_key_t *ekey = old_leaf::entry_key(entry);
+        if (entry_is_live(entry) && btree_key_cmp(ekey, key) == 0) {
+            old_leaf::iterator ret(leaf_node, index);
+            ret.step();
+            return ret;
+        }
+    }
+    old_leaf::iterator ret(leaf_node, index - 1);
+    ret.step();
+    return ret;
+}
+
 old_leaf::reverse_iterator inclusive_upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
     int index;
     old_leaf::find_key(leaf_node, key, &index);
