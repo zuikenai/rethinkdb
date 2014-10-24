@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, socket, subprocess, sys, tempfile, threading, time
+import os, signal, socket, subprocess, sys, tempfile, threading, time
 
 import test_exceptions
 
@@ -293,7 +293,7 @@ def get_avalible_port(interface='localhost'):
     testSocket.close()
     return freePort
 
-def shard_table(self, cluster_port, rdb_executable, table_name):
+def shard_table(cluster_port, rdb_executable, table_name):
         
     blackHole = tempfile.NamedTemporaryFile()
     commandPrefix = [str(rdb_executable), 'admin', '--join', 'localhost:%d' % str(cluster_port), 'split', 'shard', str(table_name)]
@@ -345,11 +345,14 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         
         while time.time() < graceDeadline:
             try:
-                os.killpg(self.testProcess.pid, 0) # 0 checks to see if the process is there
+                os.killpg(processGroupId, 0) # 0 checks to see if the process is there
             except OSError as e:
-                if e.errno == 3: # errno 3 = "no such process"
+                if e.errno == 3: # No such process
                     return
+                elif e.errno == 1: # Operation not permitted
+                    return # not our process
                 else:
+                    print('tried to signal: ', processGroupId)
                     raise
     
     # -- slam the remaining processes
@@ -358,8 +361,10 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         try:
             os.killpg(processGroupId, signal.SIGKILL)
         except OSError as e:
-            if e.errno == 3:
-                return # errno 3 = "no such process"
+            if e.errno == 3: # No such process
+                return
+            elif e.errno == 1: # Operation not permitted
+                return # not our process
             else:
                 raise
         else:

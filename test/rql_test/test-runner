@@ -959,7 +959,7 @@ def main():
         
         executablePath = test.path
         
-        # - make type-specific setups
+        # - type-specific setup
         
         if test.type == 'yaml':
             
@@ -977,13 +977,13 @@ def main():
                 traceback.print_exc()
                 continue
             
-            # - start the server
-            
-            if server is None:
-                if options.cluster_port is not None:
-                    sys.exit('Internal failure: we somehow lost track of the already running server!')
-                serverOuput = tempfile.NamedTemporaryFile()
-                server = driver.Process(executable_path=rethinkdb_exe_path, console_output=serverOuput, wait_until_ready=True)
+        # - start the server
+        
+        if server is None:
+            if options.cluster_port is not None:
+                sys.exit('Internal failure: we somehow lost track of the already running server!')
+            serverOuput = tempfile.NamedTemporaryFile()
+            server = driver.Process(executable_path=rethinkdb_exe_path, console_output=serverOuput, wait_until_ready=True)
             
         # - run the test
         
@@ -1007,7 +1007,8 @@ def main():
             envVariables = copy.copy(os.environ)
             envVariables.update({
                 'RDB_DRIVER_PORT':str(server.driver_port),
-                'RDB_CLUSTER_PORT':str(server.cluster_port)
+                'RDB_CLUSTER_PORT':str(server.cluster_port),
+                'RDB_SERVER_HOST':server.host
             })
             if test.language:
                 envVariables['INTERPRETER_PATH'] = test.language.interpreter_path

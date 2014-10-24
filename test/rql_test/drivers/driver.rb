@@ -5,7 +5,7 @@ $failure_count = 0
 $success_count = 0
 
 DRIVER_PORT = (ARGV[0] || ENV['RDB_DRIVER_PORT'] || raise('driver port not supplied')).to_i
-DB_AND_TABLE_NAME = ARGV[1] || ENV['RDB_DRIVER_PORT'] || 'no_table_specified'
+DB_AND_TABLE_NAME = ARGV[1] || ENV['TEST_DB_AND_TABLE_NAME'] || 'no_table_specified'
 
 # -- import the rethinkdb driver
 
