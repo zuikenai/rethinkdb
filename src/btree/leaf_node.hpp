@@ -52,14 +52,14 @@ bool is_full(value_sizer_t *sizer, const leaf_node_t *node,
 
 bool is_underfull(value_sizer_t *sizer, const leaf_node_t *node);
 
+// RSI: Remove assertions in level and split about stuff being underfull or
+// not -- leaf::is_mergable will run old_leaf underfull code.  Make those functions
+// be super-rigorous about avoiding empty nodes, gracefully failing.
 void split(value_sizer_t *sizer,
            buf_write_t *node,
            buf_ptr_t *rnode_out,
            store_key_t *median_out);
 
-// RSI: Remove assertions in merge and level and such about stuff being underfull or
-// not -- leaf::is_mergable will run old_leaf underfull code.  Make those functions
-// be super-rigorous about avoiding empty nodes, gracefully failing.
 void merge(value_sizer_t *sizer,
            buf_write_t *left,
            buf_write_t *right);

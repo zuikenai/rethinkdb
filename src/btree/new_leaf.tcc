@@ -707,13 +707,6 @@ void new_leaf_t<btree_type>::merge(default_block_size_t bs,
     new_leaf_t<btree_type>::validate(bs, left_node);
 }
 
-template <class btree_type>
-bool new_leaf_t<btree_type>::is_mergable(default_block_size_t bs,
-                                         const main_leaf_node_t *node,
-                                         const main_leaf_node_t *sibling) {
-    return is_underfull(bs, node) && is_underfull(bs, sibling);
-}
-
 
 // Returning `all_live_entries` means that we can't give precise information about
 // the (dead) entries added since time `minimum_tstamp`, because some dead entries

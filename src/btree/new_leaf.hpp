@@ -64,10 +64,6 @@ public:
     static void merge(default_block_size_t bs,
                       buf_write_t *left, buf_write_t *right);
 
-    static bool is_mergable(default_block_size_t bs,
-                            const main_leaf_node_t *node,
-                            const main_leaf_node_t *sibling);
-
     // Returns true if the dump is "exact".  Otherwise, entries_out will consist of
     // all the live entries in the leaf node.
     static bool
