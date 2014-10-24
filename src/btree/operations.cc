@@ -717,14 +717,14 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                 }
             }
 
-            // We moved new subtrees or values into buf, so its recency may need to
-            // be increased.  (We conservatively update it to the max of our subtrees
-            // and sib_buf's subtrees and our current txn's recency, to simplify the
-            // code.)
-            buf->manually_touch_recency(superceding_recency(sib_buf.get_recency(),
-                                                            buf->get_recency()));
-
             if (leveled) {
+                // We moved new subtrees or values into buf, so its recency may need to
+                // be increased.  (We conservatively update it to the max of our subtrees
+                // and sib_buf's subtrees and our current txn's recency, to simplify the
+                // code.)
+                buf->manually_touch_recency(superceding_recency(sib_buf.get_recency(),
+                                                                buf->get_recency()));
+
                 buf_write_t last_buf_write(last_buf);
                 internal_node::update_key(static_cast<internal_node_t *>(last_buf_write.get_data_write()),
                                           key_in_middle.btree_key(),
