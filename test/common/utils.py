@@ -371,7 +371,13 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         else:
             time.sleep(.1)
     
-    output, _ = subprocess.Popen(['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    # -- check with `ps` that it too thinks there is something there
+    
+    output, _ = subprocess.Popen(['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()
+    if len(output.splitlines()) < 2:
+        return
+    
+    # --
     
     raise Warning('Unable to kill all of the processes for process group %d after %d seconds:\n%s\n' % (processGroupId, timeout, output))
     # ToDo: better categorize the error
