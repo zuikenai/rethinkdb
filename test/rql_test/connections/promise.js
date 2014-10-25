@@ -14,9 +14,10 @@ process.on('uncaughtException', function(err) {
     process.exit(1)
 });
 
-// -- 
+// -- get input
 
-var port = parseInt(process.env.RDB_DRIVER_PORT || process.argv[2], 10)
+var port = parseInt(process.argv[2], 10)
+var num_rows = parseInt(process.argv[3], 10);
 
 // -- load rethinkdb from the proper location
 
@@ -54,9 +55,9 @@ var assert = function(predicate) {
 };
 
 r.connect({port: port}).then(function(c) {
-    var tbl = r.table('test');
-    var num_rows = parseInt(process.argv[3], 10);
-    console.log("Testing for "+num_rows);
+    
+    var tbl = r.db('test').table('test');
+    console.log("Testing for " + num_rows + ' rows');
 
 
     tbl.run(c).then(function(cur) {

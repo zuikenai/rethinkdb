@@ -618,8 +618,12 @@ class RethinkDBRunningServer(object):
         self.__cluster_port = cluster_port
     
     @property
+    def host(self):
+        return 'localhost'
+    
+    @property
     def driver_port(self):
-        return self._driver_port
+        return self.__driver_port
     
     @property
     def cluster_port(self):

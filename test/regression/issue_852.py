@@ -50,7 +50,7 @@ with driver.Metacluster() as metacluster:
         print("Stopping release-mode processes.")
         process1.check_and_stop()
         process2.check_and_stop()
-        print "Starting original-mode processes."
+        print("Starting original-mode processes.")
         process1 = driver.Process(cluster, files1, console_output="serve-output-1", command_prefix=command_prefix, extra_options=serve_options)
         process2 = driver.Process(cluster, files2, console_output="serve-output-2", command_prefix=command_prefix, extra_options=serve_options)
         process1.wait_until_started_up()

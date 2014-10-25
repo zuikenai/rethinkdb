@@ -15,7 +15,7 @@ os.environ['RDB_EXE_PATH'] = executable_path
 res = 0
 
 with driver.Cluster.create_cluster(initial_servers=4, executable_path=executable_path) as cluster:
-    port = cluster.processes[0].driver_port()
+    port = list(cluster.processes)[0].driver_port()
     
     c = r.connect(port=port)
     r.db_create('test').run(c)

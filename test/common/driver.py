@@ -172,14 +172,14 @@ class Cluster(object):
         # -- wait for servers
         
         if wait_until_ready:
-            self.wait_until_ready()
+            cluster.wait_until_ready()
         
         # -- return the cluster
         
         return cluster
     
     def __enter__(self):
-        self.wait_until_started_up()
+        self.wait_until_ready()
         return self
     
     def __exit__(self, type, value, traceback):
@@ -191,9 +191,9 @@ class Cluster(object):
         for proc in self.processes:
             proc.check()
     
-    def wait_until_ready(self, timemeout=30):
+    def wait_until_ready(self, timeout=30):
         for server in self.processes:
-            server.wait_until_started_up(timemeout=timemeout)
+            server.wait_until_started_up(timeout=timeout)
         # ToDo: try all of them in parallel to handle the timeout correctly
     
     def check_and_stop(self):

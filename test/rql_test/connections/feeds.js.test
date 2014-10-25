@@ -12,14 +12,14 @@ if not os.path.isdir('run'):
 	os.makedirs('run')
 
 executable_path = sys.argv[1] if len(sys.argv) > 1 else utils.find_rethinkdb_executable()
-os.environ['RDB_EXE_PATH'] = executable_path
+os.environ['RDB_EXE_PATH'] = str(executable_path)
 
 # get a group of 4 connected servers
 
 with driver.Cluster.create_cluster(4, executable_path=executable_path) as cluster:
 	
-	server = cluster.processes[0]
-	conn = r.connect(server.host, com_server.driver_port)
+	server = list(cluster.processes)[0]
+	conn = r.connect(server.host, server.driver_port)
 	
 	if not 'test' in r.db_list().run(conn):
 		r.db_create('test').run(conn)
@@ -27,5 +27,5 @@ with driver.Cluster.create_cluster(4, executable_path=executable_path) as cluste
 		r.db('test').table_create('test').run(conn)
 	
 	print("Running JS feeds")
-	os.environ['RDB_DRIVER_PORT'] = server.driver_port
+	os.environ['RDB_DRIVER_PORT'] = str(server.driver_port)
 	sys.exit(subprocess.call([os.environ.get('INTERPRETER_PATH', 'node'), os.path.join(os.path.dirname(__file__), 'feeds.js')]))
