@@ -109,7 +109,6 @@ void merge(value_sizer_t *sizer,
     main_leaf_t::merge(sizer->default_block_size(), left, right);
 }
 
-// RSI: I guess the specific is_mergable implementations are dead.
 bool is_mergable(value_sizer_t *sizer,
                  const leaf_node_t *node,
                  const leaf_node_t *sibling) {
