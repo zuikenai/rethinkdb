@@ -193,19 +193,52 @@ class TestNoConnection(TestCaseCompatible):
             return # in case we fell back on replacement_skip
         self.assertRaisesRegexp(RqlDriverError, 'Could not connect to 0.0.0.0:%d."' % DEFAULT_DRIVER_PORT, r.connect, host="0.0.0.0", port=DEFAULT_DRIVER_PORT, auth_key="hunter2")
 
-class TestConnectionDefaultPort(TestCaseCompatible):
+class TestPrivateServer(TestCaseCompatible):
     
     server = None
+    serverConsoleOuput = None
+    
+    useDefaultPort = False
+    port = None
+    
+    @classmethod
+    def setUp(cls):
+        if cls.server is not None:
+            try:
+                cls.server.check()
+            except Exception:
+                cls.server = None
+        if cls.server is None:
+            port = str(DEFAULT_DRIVER_PORT) if cls.useDefaultPort else '0'
+            cls.serverConsoleOuput = tempfile.NamedTemporaryFile('w+')
+            cls.server = driver.Process(executable_path=rethinkdb_exe, console_output=cls.serverConsoleOuput, wait_until_ready=True, extra_options=['--driver-port', port])
+            cls.port = cls.server.driver_port
+            
+            if cls.server.set_auth("hunter2") != 0:
+                raise RuntimeError("Could not set up authorization key")
+    
+    @classmethod
+    def tearDown(cls):
+        if cls.server is not None:
+            try:
+                cls.server.check()
+            except Exception as e:
+                try:
+                    cls.server.close()
+                except Exception:
+                    pass
+                cls.server = None
+                raise
+
+class TestConnectionDefaultPort(TestPrivateServer):
+    
+    useDefaultPort = True
     
     def setUp(self):
         if not use_default_port:
             self.skipTest("Not testing default port")
             return # in case we fell back on replacement_skip
-        self.server = driver.Process(executable_path=rethinkdb_exe, wait_until_ready=True, extra_options=['--driver-port', DEFAULT_DRIVER_PORT])
-    
-    def tearDown(self):
-        if self.server is not None:
-            self.server.check_and_stop() # will not re-use for other tests
+        super(TestConnectionDefaultPort, self).setUp()
     
     def test_connect(self):
         if not use_default_port:
@@ -238,29 +271,14 @@ class TestConnectionDefaultPort(TestCaseCompatible):
             RqlDriverError, "Server dropped connection with message: \"ERROR: Incorrect authorization key.\"",
             r.connect, auth_key="hunter2")
 
-class TestAuthConnection(TestCaseCompatible):
-    
-    server = None
-    serverConsoleOuput = None
-    port = None
+class TestAuthConnection(TestPrivateServer):
     
     def setUp(self):
-        if self.server is not None:
-            try:
-                self.server.check()
-            except Exception:
-                self.__class__.server = None
-        if self.server is None:
-            self.__class__.serverConsoleOuput = tempfile.NamedTemporaryFile('w+')
-            self.__class__.server = driver.Process(executable_path=rethinkdb_exe, console_output=self.__class__.serverConsoleOuput, wait_until_ready=True)
-            self.__class__.port = self.server.driver_port
-            
-            if self.server.set_auth("hunter2") != 0:
-                raise RuntimeError("Could not set up authorization key")
-
-    def tearDown(self):
-        if self.server is not None:
-            self.server.check_and_stop()
+        finishSetup = self.server is None
+        super(TestAuthConnection, self).setUp()
+        
+        if finishSetup and self.server.set_auth("hunter2") != 0:
+            raise RuntimeError("Could not set up authorization key")
 
     def test_connect_no_auth(self):
         self.assertRaisesRegexp(
@@ -449,7 +467,6 @@ class TestShutdown(TestWithConnection):
         time.sleep(0.2)
         
         self.assertRaisesRegexp(r.RqlDriverError, "Connection is closed.", r.expr(1).run, c)
-
 
 # This doesn't really have anything to do with connections but it'll go
 # in here for the time being.

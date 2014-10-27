@@ -62,7 +62,7 @@ def run_tests(build=None, data_dir='./'):
     executable_path = utils.find_rethinkdb_executable() if build is None else os.path.realpath(os.path.join(build, 'rethinkdb'))
     
     if not os.path.basename(os.path.dirname(executable_path)).startswith('release'):
-        raise Warning('Testing a non-release build: %s' % executable_path)
+        sys.stderr.write('Warning: Testing a non-release build: %s\n' % executable_path)
     else:
         print('Testing: %s' % executable_path)
     
@@ -73,11 +73,12 @@ def run_tests(build=None, data_dir='./'):
         
         serverFiles = driver.Files(machine_name=settings["name"], db_path=os.path.join(data_dir, settings["name"]))
         
-        with driver.Process(files=serverFiles, executable_path=executable_path, extra_options=['--cache_size', str(settings["cache_size"])]) as server:
+        with driver.Process(files=serverFiles, executable_path=executable_path, extra_options=['--cache-size', str(settings["cache_size"])]) as server:
             
             print(" Done.\nConnecting...", end=' ')
+            sys.stdout.flush()
 
-            connection = r.connect(host="localhost", port=server.driver_port())
+            connection = r.connect(host="localhost", port=server.driver_port)
             print(" Done.")
             sys.stdout.flush()
 
@@ -414,7 +415,7 @@ def main(data_dir):
     run_tests(data_dir=data_dir)
 
 if __name__ == "__main__":
-    data_dir = ''
+    data_dir = './'
     if len(sys.argv) > 1:
         data_dir = sys.argv[1]
     main(data_dir)
