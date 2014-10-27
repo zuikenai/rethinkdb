@@ -154,7 +154,7 @@ def import_python_driver(targetDir=None):
     # - source folder
     elif validSourceFolder(targetDir) and os.path.isfile(os.path.join(os.path.dirname(targetDir), 'Makefile')):
         buildDriver = True
-        driverDir = os.path.join(targetDir, os.path.pardir, os.path.relpath(driverPaths['python']['relDriverPath'], driverPaths['python']['relSourcePath']))
+        driverDir = os.path.join(targetDir, os.path.pardir, os.path.relpath(driverPaths['python']['driverPath'], driverPaths['python']['sourcePath']))
         srcDir = os.path.dirname(targetDir)
     
     else:
