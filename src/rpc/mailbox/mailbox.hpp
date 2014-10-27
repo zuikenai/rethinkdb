@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "backtrace.hpp"
 #include "concurrency/new_semaphore.hpp"
 #include "containers/archive/archive.hpp"
 #include "rpc/connectivity/cluster.hpp"
@@ -40,6 +41,10 @@ struct raw_mailbox_t : public home_thread_mixin_t {
 public:
     struct address_t;
     typedef uint64_t id_t;
+
+#ifndef NDEBUG
+    lazy_backtrace_formatter_t bt;
+#endif
 
 private:
     friend class mailbox_manager_t;
