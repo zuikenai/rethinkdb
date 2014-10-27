@@ -6,26 +6,18 @@ import test_exceptions
 
 # -- constants
 
-def project_root_dir():
-    '''Return the root directory for this project'''
-    
-    # warn: hard-coded both for location of this file and the name of the build dir
-    masterBuildDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir)
-    if not os.path.isdir(masterBuildDir):
-        raise Exception('The project build directory does not exist where expected: %s' % str(masterBuildDir))
-    
-    return os.path.realpath(masterBuildDir)
+project_root_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir))
 
 driverPaths = {
     'javascript': {
         'extension':'js',
-        'driverPath':os.path.join(project_root_dir(), 'build', 'packages', 'js'),
-        'sourcePath':os.path.join(project_root_dir(), 'drivers', 'javascript')
+        'driverPath':os.path.join(project_root_dir, 'build', 'packages', 'js'),
+        'sourcePath':os.path.join(project_root_dir, 'drivers', 'javascript')
     },
     'python': {
         'extension':'py',
-        'driverPath':os.path.join(project_root_dir(), 'build', 'drivers', 'python', 'rethinkdb'),
-        'sourcePath':os.path.join(project_root_dir(), 'drivers', 'python')
+        'driverPath':os.path.join(project_root_dir, 'build', 'drivers', 'python', 'rethinkdb'),
+        'sourcePath':os.path.join(project_root_dir, 'drivers', 'python')
     },
     'ruby': {
         'extension':'rb',
@@ -66,7 +58,7 @@ def latest_build_dir(check_executable=True, mode=None):
         canidatePath = os.path.realpath(os.getenv('RETHINKDB_BUILD_DIR'))
     
     else:
-        masterBuildDir = os.path.join(project_root_dir(), 'build')
+        masterBuildDir = os.path.join(project_root_dir, 'build')
         if not os.path.isdir(masterBuildDir):
             raise test_exceptions.NotBuiltException(detail='no version of this project has yet been built')
         
@@ -131,7 +123,7 @@ def import_python_driver(targetDir=None):
         elif 'PYTHON_DRIVER_SRC_DIR' in os.environ:
             targetDir = os.environ['PYTHON_DRIVER_SRC_DIR']
         else:
-            targetDir = project_root_dir()
+            targetDir = project_root_dir
     
     driverDir = None
     srcDir = None
