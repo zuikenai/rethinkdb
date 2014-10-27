@@ -153,9 +153,9 @@ class PyLang(SrcLang):
     minVersion = None
     maxVersion = None
     
-    driver_source_path = os.getenv('PYTHON_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'python')
+    driver_source_path = os.getenv('PYTHON_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir, 'drivers', 'python')
     driver_build_env_name = 'PYTHON_DRIVER_DIR'
-    driver_build_path = os.getenv('PYTHON_DRIVER_DIR') or os.path.join(utils.project_root_dir(), 'build', 'drivers', 'python')
+    driver_build_path = os.getenv('PYTHON_DRIVER_DIR') or os.path.join(utils.project_root_dir, 'build', 'drivers', 'python')
     
     polyglot_language_header = os.path.join(os.path.dirname(__file__), 'drivers', 'driver.py')
     
@@ -223,9 +223,9 @@ class JsLang(SrcLang):
     minVersion = None # no version requirements yet
     maxVersion = None
     
-    driver_source_path = os.getenv('JAVASCRIPT_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'javascript')
+    driver_source_path = os.getenv('JAVASCRIPT_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir, 'drivers', 'javascript')
     driver_build_env_name = 'JAVASCRIPT_DRIVER_DIR'
-    driver_build_path = os.getenv('JAVASCRIPT_DRIVER_DIR') or os.path.join(utils.project_root_dir(), 'build', 'packages', 'js')
+    driver_build_path = os.getenv('JAVASCRIPT_DRIVER_DIR') or os.path.join(utils.project_root_dir, 'build', 'packages', 'js')
     
     polyglot_language_header = os.path.join(os.path.dirname(__file__), 'drivers', 'driver.js')
     
@@ -268,9 +268,9 @@ class RbLang(SrcLang):
     minVersion = None
     maxVersion = None
     
-    driver_source_path = os.getenv('RUBY_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'ruby')
+    driver_source_path = os.getenv('RUBY_DRIVER_SRC_DIR') or os.path.join(utils.project_root_dir, 'drivers', 'ruby')
     driver_build_env_name = 'RUBY_DRIVER_DIR'
-    driver_build_path = os.getenv('RUBY_DRIVER_DIR') or os.path.join(utils.project_root_dir(), 'drivers', 'ruby', 'lib')
+    driver_build_path = os.getenv('RUBY_DRIVER_DIR') or os.path.join(utils.project_root_dir, 'drivers', 'ruby', 'lib')
     
     polyglot_language_header = os.path.join(os.path.dirname(__file__), 'drivers', 'driver.rb')
     
