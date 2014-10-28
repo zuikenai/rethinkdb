@@ -12,10 +12,8 @@ r = utils.import_python_driver()
 executable_path = sys.argv[1] if len(sys.argv) > 1 else utils.find_rethinkdb_executable()
 os.environ['RDB_EXE_PATH'] = executable_path
 
-res = 0
-
 with driver.Cluster.create_cluster(initial_servers=4, executable_path=executable_path) as cluster:
-    port = list(cluster.processes)[0].driver_port()
+    port = list(cluster.processes)[0].driver_port
     
     c = r.connect(port=port)
     r.db_create('test').run(c)
@@ -25,8 +23,4 @@ with driver.Cluster.create_cluster(initial_servers=4, executable_path=executable
     if not lang or lang == 'js':
         print("Running JS feeds")
         sys.stdout.flush()
-        res = res | subprocess.call(["node", os.path.join(os.path.dirname(__file__), "feeds.js"), str(port)])
-        print('')
-
-if res is not 0:
-    sys.exit(1)
+        sys.exit(subprocess.call(["node", os.path.join(os.path.dirname(__file__), "feeds.js"), str(port)]))
