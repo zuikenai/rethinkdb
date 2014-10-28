@@ -57,7 +57,7 @@ var assert = function(predicate) {
 r.connect({port: port}).then(function(c) {
     
     var tbl = r.db('test').table('test');
-    console.log("Testing for " + num_rows + ' rows');
+    console.log("Testing for " + num_rows + " rows");
 
 
     tbl.run(c).then(function(cur) {
