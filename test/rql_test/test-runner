@@ -986,12 +986,12 @@ def main():
         if server is None:
             if options.cluster_port is not None:
                 sys.exit('Internal failure: we somehow lost track of the already running server!')
-            serverOuput = tempfile.NamedTemporaryFile(mode='w+')
+            serverOutput = tempfile.NamedTemporaryFile(mode='w+')
             try:
-                server = driver.Process(executable_path=rethinkdb_exe_path, console_output=serverOuput, wait_until_ready=True)
+                server = driver.Process(executable_path=rethinkdb_exe_path, console_output=serverOutput, wait_until_ready=True)
             except Exception as e:
-                serverOuput.seek(0)
-                sys.stderr.write('Unable to start a managed server. The servers output was:\n%s\n' % serverOuput.read())
+                serverOutput.seek(0)
+                sys.stderr.write('Unable to start a managed server. The servers output was:\n%s\n' % serverOutput.read())
                 sys.exit(str(e))
             
         # - run the test
@@ -1040,7 +1040,7 @@ def main():
                         serverLog = ''
                         if serverOutput:
                             serverOutput.seek(0)
-                            serverLog = '\nServer log:\n%s' % serverOuput.read()
+                            serverLog = '\nServer log:\n%s' % serverOutput.read()
                         sys.stderr.write('RethinkDB server failed: %s' % (str(e), serverLog))
                     server = None
                     serverOutput = None

@@ -196,7 +196,7 @@ class TestNoConnection(TestCaseCompatible):
 class TestPrivateServer(TestCaseCompatible):
     
     server = None
-    serverConsoleOuput = None
+    serverConsoleOutput = None
     
     useDefaultPort = False
     port = None
@@ -210,8 +210,8 @@ class TestPrivateServer(TestCaseCompatible):
                 cls.server = None
         if cls.server is None:
             port = str(DEFAULT_DRIVER_PORT) if cls.useDefaultPort else '0'
-            cls.serverConsoleOuput = tempfile.NamedTemporaryFile('w+')
-            cls.server = driver.Process(executable_path=rethinkdb_exe, console_output=cls.serverConsoleOuput, wait_until_ready=True, extra_options=['--driver-port', port])
+            cls.serverConsoleOutput = tempfile.NamedTemporaryFile('w+')
+            cls.server = driver.Process(executable_path=rethinkdb_exe, console_output=cls.serverConsoleOutput, wait_until_ready=True, extra_options=['--driver-port', port])
             cls.port = cls.server.driver_port
             
             if cls.server.set_auth("hunter2") != 0:

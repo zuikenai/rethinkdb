@@ -24,10 +24,10 @@ res = 0
 server = None
 serverHost = os.environ.get('RDB_SERVER_HOST')
 serverPort = int(os.environ.get('RDB_DRIVER_PORT')) if 'RDB_DRIVER_PORT' in os.environ else None
-serverOuput = None
+serverOutput = None
 if None in (serverHost, serverPort):
-    serverOuput = tempfile.TemporaryFile(mode='w+')
-    server = driver.Process(executable_path=executable_path, console_output=serverOuput)
+    serverOutput = tempfile.TemporaryFile(mode='w+')
+    server = driver.Process(executable_path=executable_path, console_output=serverOutput)
     serverHost = server.host
     serverPort = server.driver_port
 
