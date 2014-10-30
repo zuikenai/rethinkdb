@@ -20,6 +20,7 @@
 #include "rdb_protocol/val.hpp"
 
 class extproc_pool_t;
+class tracking_allocator_factory_t;
 
 namespace re2 {
 class RE2;
@@ -111,6 +112,8 @@ public:
 
     reql_version_t reql_version() const { return reql_version_; }
 
+    std::shared_ptr<tracking_allocator_factory_t> factory() const { return factory_; }
+
 private:
     // The global optargs values passed to .run(...) in the Python, Ruby, and JS
     // drivers.
@@ -126,6 +129,10 @@ private:
 
     // query specific cache parameters; for example match regexes.
     query_cache_t cache_;
+
+    // allocator factory for tracking memory usage.  Can be nullptr;
+    // in that case, do not track use.
+    std::shared_ptr<tracking_allocator_factory_t> factory_;
 
 public:
     // The interruptor signal while a query evaluates.

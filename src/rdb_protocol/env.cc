@@ -1,9 +1,12 @@
 // Copyright 2010-2014 RethinkDB, all rights reserved.
 #include "rdb_protocol/env.hpp"
 
+#include <memory>
+
 #include "errors.hpp"
 #include <boost/bind.hpp>
 
+#include "allocation/tracking_allocator.hpp"
 #include "concurrency/cross_thread_watchable.hpp"
 #include "extproc/js_runner.hpp"
 #include "rdb_protocol/counted_term.hpp"
@@ -96,6 +99,28 @@ const std::map<std::string, wire_func_t> &global_optargs_t::get_all_optargs() co
     return optargs;
 }
 
+std::shared_ptr<tracking_allocator_factory_t>
+allocator_from_optargs(rdb_context_t *ctx, signal_t *interruptor,
+                       global_optargs_t *arguments) {
+    if (arguments->has_optarg("memory_limit")) {
+        // Fake an environment with no arguments.  We have to fake it
+        // because of a chicken/egg problem; this function gets called
+        // before there are any extant environments at all.  Only
+        // because we use an empty argument list do we prevent an
+        // infinite loop.
+        env_t env(ctx, interruptor, std::map<std::string, wire_func_t>(),
+                  nullptr);
+        int64_t limit = arguments->get_optarg(&env, "memory_limit")->as_int();
+        rcheck_datum(limit > 1, base_exc_t::GENERIC,
+                     strprintf("Illegal memory size limit `%" PRIi64 "`.", limit));
+        // N.B.: this discounts the cost of the allocator factory,
+        // which we can probably live with.
+        return std::make_shared<tracking_allocator_factory_t>(limit);
+    } else {
+        return std::shared_ptr<tracking_allocator_factory_t>(nullptr);
+    }
+}
+
 void env_t::set_eval_callback(eval_callback_t *callback) {
     eval_callback_ = callback;
 }
@@ -150,6 +175,7 @@ env_t::env_t(rdb_context_t *ctx,
       limits_(from_optargs(ctx, _interruptor, &global_optargs_)),
       reql_version_(reql_version_t::LATEST),
       cache_(LRU_CACHE_SIZE),
+      factory_(allocator_from_optargs(ctx, _interruptor, &global_optargs_)),
       interruptor(_interruptor),
       trace(_trace),
       evals_since_yield_(0),
@@ -165,6 +191,7 @@ env_t::env_t(signal_t *_interruptor, reql_version_t reql_version)
     : global_optargs_(),
       reql_version_(reql_version),
       cache_(LRU_CACHE_SIZE),
+      factory_(),
       interruptor(_interruptor),
       trace(NULL),
       evals_since_yield_(0),
