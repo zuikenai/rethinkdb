@@ -110,6 +110,7 @@ batched_replace_response_t rdb_batched_replace(
     const btree_batched_replacer_t *replacer,
     rdb_modification_report_cb_t *sindex_cb,
     ql::configured_limits_t limits,
+    const std::shared_ptr<tracking_allocator_factory_t> &factory,
     profile::trace_t *trace);
 
 void rdb_set(const store_key_t &key, ql::datum_t data,

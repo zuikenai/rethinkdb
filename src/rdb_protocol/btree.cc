@@ -210,11 +210,12 @@ kv_location_set(keyvalue_location_t *kv_location,
 }
 
 MUST_USE ql::datum_t
-make_replacement_pair(ql::datum_t old_val, ql::datum_t new_val) {
+make_replacement_pair(ql::datum_t old_val, ql::datum_t new_val,
+                      const std::shared_ptr<tracking_allocator_factory_t> &factory) {
     // in this context, we know the array will have one element.
     // stats_merge later can impose user preferences.
-    ql::datum_array_builder_t values(ql::configured_limits_t::unlimited);
-    ql::datum_object_builder_t value_pair;
+    ql::datum_array_builder_t values(ql::configured_limits_t::unlimited, factory);
+    ql::datum_object_builder_t value_pair(factory);
     bool conflict = value_pair.add("old_val", old_val)
         || value_pair.add("new_val", new_val);
     guarantee(!conflict);
@@ -227,13 +228,14 @@ batched_replace_response_t rdb_replace_and_return_superblock(
     const btree_point_replacer_t *replacer,
     const deletion_context_t *deletion_context,
     promise_t<superblock_t *> *superblock_promise,
+    const std::shared_ptr<tracking_allocator_factory_t> &factory,
     rdb_modification_info_t *mod_info_out,
     profile::trace_t *trace)
 {
     const return_changes_t return_changes = replacer->should_return_changes();
     const datum_string_t &primary_key = info.btree->primary_key;
     const store_key_t &key = *info.key;
-    ql::datum_object_builder_t resp;
+    ql::datum_object_builder_t resp(factory);
     try {
         keyvalue_location_t kv_location;
         rdb_value_sizer_t sizer(info.superblock->cache()->max_block_size());
@@ -261,13 +263,14 @@ batched_replace_response_t rdb_replace_and_return_superblock(
         guarantee(old_val.has());
         if (return_changes == return_changes_t::YES) {
             // first, fill with the old value.  Then, if `replacer` succeeds, fill with new value.
-            bool conflict = resp.add("changes", make_replacement_pair(old_val, old_val));
+            bool conflict = resp.add("changes",
+                                     make_replacement_pair(old_val, old_val, factory));
             guarantee(!conflict);
         }
 
         ql::datum_t new_val = replacer->replace(old_val);
         if (return_changes == return_changes_t::YES) {
-            resp.overwrite("changes", make_replacement_pair(old_val, new_val));
+            resp.overwrite("changes", make_replacement_pair(old_val, new_val, factory));
         }
         if (new_val.get_type() == ql::datum_t::R_NULL) {
             ended_empty = true;
@@ -398,6 +401,7 @@ void do_a_replace_from_batched_replace(
     const btree_loc_info_t &info,
     const one_replace_t one_replace,
     const ql::configured_limits_t &limits,
+    const std::shared_ptr<tracking_allocator_factory_t> &factory,
     promise_t<superblock_t *> *superblock_promise,
     rdb_modification_report_cb_t *sindex_cb,
     bool update_pkey_cfeeds,
@@ -411,8 +415,8 @@ void do_a_replace_from_batched_replace(
     rdb_live_deletion_context_t deletion_context;
     rdb_modification_report_t mod_report(*info.key);
     ql::datum_t res = rdb_replace_and_return_superblock(
-        info, &one_replace, &deletion_context, superblock_promise, &mod_report.info,
-        trace);
+        info, &one_replace, &deletion_context, superblock_promise, factory,
+        &mod_report.info, trace);
     *stats_out = (*stats_out).merge(res, ql::stats_merge, limits, conditions);
 
     // We wait to make sure we acquire `acq` in the same order we were
@@ -427,6 +431,8 @@ batched_replace_response_t rdb_batched_replace(
     const btree_info_t &info,
     scoped_ptr_t<superblock_t> *superblock,
     const std::vector<store_key_t> &keys,
+    const ql::configured_limits_t &limits,
+    const std::shared_ptr<tracking_allocator_factory_t> &factory,
     const btree_batched_replacer_t *replacer,
     rdb_modification_report_cb_t *sindex_cb,
     ql::configured_limits_t limits,
@@ -468,6 +474,7 @@ batched_replace_response_t rdb_batched_replace(
                         btree_loc_info_t(&info, current_superblock.release(), &keys[i]),
                         one_replace_t(replacer, i),
                         limits,
+                        factory,
                         &superblock_promise,
                         sindex_cb,
                         update_pkey_cfeeds,
@@ -488,7 +495,7 @@ batched_replace_response_t rdb_batched_replace(
         }
     }
 
-    ql::datum_object_builder_t out(stats);
+    ql::datum_object_builder_t out(stats, factory);
     out.add_warnings(conditions, limits);
     return std::move(out).to_datum();
 }

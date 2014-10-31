@@ -572,7 +572,8 @@ ql::datum_t js_make_datum(const v8::Handle<v8::Value> &value,
             v8::Handle<v8::Array> properties = objh->GetPropertyNames();
             guarantee(!properties.IsEmpty());
 
-            ql::datum_object_builder_t builder;
+            // don't use a factory here, as it'll get checked on the server side.
+            ql::datum_object_builder_t builder(nullptr);
 
             uint32_t len = properties->Length();
             for (uint32_t i = 0; i < len; ++i) {

@@ -308,26 +308,24 @@ std::vector<std::pair<datum_string_t, datum_t> > datum_t::to_sorted_vec(
     return sorted_vec;
 }
 
-datum_t to_datum_for_client_serialization(grouped_data_t &&gd,
-                                          reql_version_t reql_version,
-                                          const configured_limits_t &limits) {
+datum_t to_datum_for_client_serialization(grouped_data_t &&gd, const env_t &env) {
     std::map<datum_string_t, datum_t> map;
     map[datum_t::reql_type_string] =
         datum_t("GROUPED_DATA");
 
     {
-        datum_array_builder_t arr(limits);
+        datum_array_builder_t arr(env.limits(), env.factory());
         arr.reserve(gd.size());
         iterate_ordered_by_version(
-                reql_version,
-                gd,
-                [&arr, &limits](const datum_t &key,
-                                datum_t &value) {
-                    arr.add(datum_t(
+            env.reql_version(),
+            gd,
+            [&arr, &env](const datum_t &key,
+                         datum_t &value) {
+                arr.add(datum_t(
                             std::vector<datum_t>{
                                 key, std::move(value) },
-                            limits));
-                });
+                            env.limits()));
+            });
         map[data_field] = std::move(arr).to_datum();
     }
 
@@ -373,7 +371,8 @@ datum_t datum_t::binary(datum_string_t &&_data) {
     return datum_t(construct_binary_t(), std::move(_data));
 }
 
-datum_t to_datum(cJSON *json, const configured_limits_t &limits) {
+datum_t to_datum(cJSON *json, const configured_limits_t &limits,
+                 const std::shared_ptr<tracking_allocator_factory_t> &factory) {
     switch (json->type) {
     case cJSON_False: {
         return datum_t::boolean(false);
@@ -391,6 +390,7 @@ datum_t to_datum(cJSON *json, const configured_limits_t &limits) {
         return datum_t(json->valuestring);
     } break;
     case cJSON_Array: {
+        // TODO: use factory.
         std::vector<datum_t> array;
         json_array_iterator_t it(json);
         while (cJSON *item = it.next()) {
@@ -399,7 +399,7 @@ datum_t to_datum(cJSON *json, const configured_limits_t &limits) {
         return datum_t(std::move(array), limits);
     } break;
     case cJSON_Object: {
-        datum_object_builder_t builder;
+        datum_object_builder_t builder(factory);
         json_object_iterator_t it(json);
         while (cJSON *item = it.next()) {
             bool dup = builder.add(item->string, to_datum(item, limits));

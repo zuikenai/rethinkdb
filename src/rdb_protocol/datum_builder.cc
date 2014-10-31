@@ -7,7 +7,9 @@ const datum_string_t errors_field("errors");
 const datum_string_t first_error_field("first_error");
 const datum_string_t warnings_field("warnings");
 
-datum_object_builder_t::datum_object_builder_t(const datum_t &copy_from) {
+datum_object_builder_t::datum_object_builder_t(const datum_t &copy_from,
+                                               const std::shared_ptr<tracking_allocator_factory_t> &_factory)
+    : map(), factory(_factory) {
     const size_t copy_from_sz = copy_from.obj_size();
     for (size_t i = 0; i < copy_from_sz; ++i) {
         map.insert(copy_from.get_pair(i));
@@ -50,11 +52,11 @@ void datum_object_builder_t::add_warning(const char *msg, const configured_limit
         rcheck_datum(warnings_entry_sz + 1 <= limits.array_size_limit(),
             base_exc_t::GENERIC,
             strprintf("Warnings would exceed array size limit %zu; increase it to see warnings", limits.array_size_limit()));
-        datum_array_builder_t out(*warnings_entry, limits);
+        datum_array_builder_t out(*warnings_entry, limits, factory);
         out.add(datum_t(msg));
         *warnings_entry = std::move(out).to_datum();
     } else {
-        datum_array_builder_t out(limits);
+        datum_array_builder_t out(limits, factory);
         out.add(datum_t(msg));
         *warnings_entry = std::move(out).to_datum();
     }
@@ -67,7 +69,7 @@ void datum_object_builder_t::add_warnings(const std::set<std::string> &msgs, con
         rcheck_datum(warnings_entry->arr_size() + msgs.size() <= limits.array_size_limit(),
             base_exc_t::GENERIC,
             strprintf("Warnings would exceed array size limit %zu; increase it to see warnings", limits.array_size_limit()));
-        datum_array_builder_t out(*warnings_entry, limits);
+        datum_array_builder_t out(*warnings_entry, factory, limits);
         for (auto const & msg : msgs) {
             bool seen = false;
             // assume here that the warnings array will "always" be small.
@@ -130,8 +132,9 @@ datum_t datum_object_builder_t::to_datum(
 }
 
 datum_array_builder_t::datum_array_builder_t(const datum_t &copy_from,
-                                             const configured_limits_t &_limits)
-    : limits(_limits) {
+                                             const configured_limits_t &_limits,
+                                             const std::shared_ptr<tracking_allocator_factory_t> &_factory)
+    : limits(_limits), factory(_factory) {
     const size_t copy_from_sz = copy_from.arr_size();
     vector.reserve(copy_from_sz);
     for (size_t i = 0; i < copy_from_sz; ++i) {

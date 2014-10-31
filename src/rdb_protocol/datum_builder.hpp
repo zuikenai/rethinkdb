@@ -18,8 +18,9 @@ namespace ql {
 // you'll have to do check_str_validity checks yourself.
 class datum_object_builder_t {
 public:
-    datum_object_builder_t() { }
-    explicit datum_object_builder_t(const datum_t &copy_from);
+    explicit datum_object_builder_t(const std::shared_ptr<tracking_allocator_factory_t> &_factory)
+        : map(), factory(_factory) { }
+    datum_object_builder_t(const datum_t &copy_from, const std::shared_ptr<tracking_allocator_factory_t> &_factory);
 
     // Returns true if the insertion did _not_ happen because the key was already in
     // the object.
@@ -47,6 +48,7 @@ public:
 
 private:
     std::map<datum_string_t, datum_t> map;
+    std::shared_ptr<tracking_allocator_factory_t> factory;
     DISABLE_COPYING(datum_object_builder_t);
 };
 
@@ -54,8 +56,11 @@ private:
 // array-size checks on the fly.
 class datum_array_builder_t {
 public:
-    explicit datum_array_builder_t(const configured_limits_t &_limits) : limits(_limits) {}
-    explicit datum_array_builder_t(const datum_t &copy_from, const configured_limits_t &);
+    datum_array_builder_t(const configured_limits_t &_limits,
+                          const std::shared_ptr<tracking_allocator_factory_t> &_factory)
+        : limits(_limits), factory(_factory) {}
+    datum_array_builder_t(const datum_t &copy_from, const configured_limits_t &,
+                          const std::shared_ptr<tracking_allocator_factory_t> &);
 
     size_t size() const { return vector.size(); }
 
@@ -82,6 +87,7 @@ public:
 private:
     std::vector<datum_t> vector;
     configured_limits_t limits;
+    std::shared_ptr<tracking_allocator_factory_t> factory;
 
     DISABLE_COPYING(datum_array_builder_t);
 };

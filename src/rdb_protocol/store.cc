@@ -666,10 +666,12 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
                 &replacer,
                 &sindex_cb,
                 ql_env.limits(),
+                ql_env.factory(),
                 trace);
     }
 
     void operator()(const batched_insert_t &bi) {
+        ql::env_t ql_env(ctx, interruptor, bi.optargs, trace);
         rdb_modification_report_cb_t sindex_cb(
             store, &sindex_block,
             auto_drainer_t::lock_t(&store->drainer));
@@ -686,7 +688,8 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
                 keys,
                 &replacer,
                 &sindex_cb,
-                bi.limits,
+                ql_env.limits(),
+                ql_env.factory(),
                 trace);
     }
 
