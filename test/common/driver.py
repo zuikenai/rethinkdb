@@ -72,7 +72,7 @@ class Metacluster(object):
     
     __unique_id_counter = None
     
-    def __init__(self, output_folder=None):
+    def __init__(self, outputFolder=None):
         self.clusters = set()
         self.__unique_id_counter = 0
         self.closed = False
