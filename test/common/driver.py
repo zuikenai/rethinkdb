@@ -189,7 +189,7 @@ class Cluster(object):
     
     def __exit__(self, type, value, traceback):
         self.check_and_stop()
-
+    
     def check(self):
         """Throws an exception if any of the processes in the cluster has stopped or crashed. """
         for proc in self.processes:
