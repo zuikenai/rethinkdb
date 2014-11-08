@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, signal, socket, subprocess, sys, tempfile, threading, time
+import collections, fcntl, os, signal, socket, subprocess, sys, tempfile, threading, time
 
 import test_exceptions
 
@@ -373,3 +373,66 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
     
     raise Warning('Unable to kill all of the processes for process group %d after %d seconds:\n%s\n' % (processGroupId, timeout, output))
     # ToDo: better categorize the error
+
+def nonblocking_readline(source):
+    
+    # - ensure we have a file
+    
+    if isinstance(source, (str, unicode)):
+        if not os.path.isfile(source):
+            raise ValueError('can not find the source file: %s' % str(source))
+        try:
+            source = open(source, 'rU')
+        except Exception as e:
+            raise ValueError('bad source file: %s got error: %s' % (str(source), str(e)))
+    
+    elif isinstance(source, file):
+        try:
+            int(source.fileno())
+        except:
+            raise ValueError('bad source file, it does not have a fileno: %s' % repr(source))
+    else:
+        raise ValueError('bad source: %s' % repr(source))
+    
+    # - set non-blocking IO
+    
+    fcntl.fcntl(source, fcntl.F_SETFL, fcntl.fcntl(source, fcntl.F_GETFL) | os.O_NONBLOCK)
+    
+    # -
+    
+    waitingLines = collections.deque()
+    unprocessed = ''
+    lastRead = 0
+    
+    while True:
+        
+        # - return an already-processed line
+        
+        try:
+            yield waitingLines.popleft()
+            continue
+        except IndexError: pass
+        
+        # - try to read in a new chunk and split it
+        
+        source.seek(lastRead)
+        chunk = source.read(1024)
+        
+        if len(chunk) == 0:
+            yield None
+            continue
+        lastRead = source.tell()
+        
+        unprocessed += chunk
+        
+        # - process the block into lines
+        
+        endsWithNewline = unprocessed[-1] == '\n'
+        waitingLines += unprocessed.splitlines()
+        
+        if endsWithNewline:
+            unprocessed = ''
+        else:
+            unprocessed = waitingLines.pop()
+        
+        # wrap around to pass the data
