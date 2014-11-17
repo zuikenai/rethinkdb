@@ -2,7 +2,10 @@
 #ifndef BTREE_TYPES_HPP_
 #define BTREE_TYPES_HPP_
 
+#include "errors.hpp"
+
 class buf_parent_t;
+
 enum class done_traversing_t { NO, YES };
 
 class value_deleter_t {

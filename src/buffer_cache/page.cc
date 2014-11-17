@@ -13,13 +13,9 @@ public:
         : abandon_page_(false) { }
     virtual ~page_loader_t() { }
 
-    virtual void added_waiter(page_cache_t *, cache_account_t *) {
-        // Do nothing, in the default case.
-    }
+    virtual void added_waiter(page_cache_t *, cache_account_t *) = 0;
 
-    virtual bool is_really_loading() const {
-        return true;
-    }
+    virtual bool is_really_loading() const = 0;
 
     MUST_USE bool abandon_page() const { return abandon_page_; }
 
@@ -31,6 +27,23 @@ public:
 private:
     bool abandon_page_;
     DISABLE_COPYING(page_loader_t);
+};
+
+class instant_page_loader_t final : public page_loader_t {
+public:
+    instant_page_loader_t() { }
+    ~instant_page_loader_t() { }
+
+    void added_waiter(page_cache_t *, cache_account_t *) final {
+        // Do nothing.
+    }
+
+    bool is_really_loading() const final {
+        return true;
+    }
+
+private:
+    DISABLE_COPYING(instant_page_loader_t);
 };
 
 // We pick a weird that forces the logic and performance to not spaz out if the
@@ -124,7 +137,7 @@ void page_t::load_from_copyee(page_t *page, page_t *copyee,
                               cache_account_t *account) {
     // This is called using spawn_now_dangerously.  We need to atomically set
     // loader_ and do some other things.
-    page_loader_t loader;
+    instant_page_loader_t loader;
     rassert(page->loader_ == NULL);
     page->loader_ = &loader;
 
@@ -186,7 +199,7 @@ public:
     counted_t<standard_block_token_t> token;
 };
 
-class deferred_page_loader_t : public page_loader_t {
+class deferred_page_loader_t final : public page_loader_t {
 public:
     explicit deferred_page_loader_t(page_t *page)
         : page_(page), block_token_ptr_(new deferred_block_token_t) { }
@@ -199,14 +212,14 @@ public:
         return std::move(block_token_ptr_);
     }
 
-    void added_waiter(page_cache_t *page_cache, cache_account_t *account) {
+    void added_waiter(page_cache_t *page_cache, cache_account_t *account) final {
         coro_t::spawn_now_dangerously(std::bind(&page_t::catch_up_with_deferred_load,
                                                 this,
                                                 page_cache,
                                                 account));
     }
 
-    bool is_really_loading() const {
+    bool is_really_loading() const final {
         return false;
     }
 
@@ -235,7 +248,7 @@ void page_t::catch_up_with_deferred_load(
     // to the serializer thread, or returning back from the serializer thread, right
     // now.
     rassert(page->loader_ == deferred_loader);
-    page_loader_t our_loader;
+    instant_page_loader_t our_loader;
     page->loader_ = &our_loader;
 
     // Before blocking, take ownership of the block_token_ptr.
@@ -328,7 +341,7 @@ void page_t::load_with_block_id(page_t *page, block_id_t block_id,
                                 cache_account_t *account) {
     // This is called using spawn_now_dangerously.  We need to set
     // loader_ before blocking the coroutine.
-    page_loader_t loader;
+    instant_page_loader_t loader;
     rassert(page->loader_ == NULL);
     page->loader_ = &loader;
 
@@ -422,7 +435,7 @@ void page_t::load_using_block_token(page_t *page, page_cache_t *page_cache,
                                     cache_account_t *account) {
     // This is called using spawn_now_dangerously.  We need to set
     // loader_ before blocking the coroutine.
-    page_loader_t loader;
+    instant_page_loader_t loader;
     rassert(page->loader_ == NULL);
     page->loader_ = &loader;
 
