@@ -17,7 +17,7 @@ using main_leaf_t = new_leaf_t<main_btree_t>;
 
 template <class Callable>
 void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
-    if (is_old(node.buf)) {
+    if (is_old(node)) {
         for (old_leaf::iterator
                  it = old_leaf::begin(node.buf),
                  e = old_leaf::end(node.buf);
