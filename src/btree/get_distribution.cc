@@ -3,6 +3,7 @@
 
 #include "btree/internal_node.hpp"
 #include "btree/node.hpp"
+#include "btree/leaf_iteration.hpp"
 #include "btree/leaf_node.hpp"
 #include "btree/parallel_traversal.hpp"
 #include "buffer_cache/alt.hpp"
@@ -31,13 +32,12 @@ public:
                         signal_t * /*interruptor*/,
                         int * /*population_change_out*/) THROWS_ONLY(interrupted_exc_t) {
         buf_read_t read(leaf_node_buf);
-        const leaf_node_t *node
-            = static_cast<const leaf_node_t *>(read.get_data_read());
+        sized_ptr_t<const leaf_node_t> node = read.get_sized_data_read<leaf_node_t>();
 
-        for (auto it = leaf::begin(node); it != leaf::end(node); it.step()) {
-            const btree_key_t *key = (*it).first;
+        leaf::iterate_live_entries(node, [&](const btree_key_t *key, const void *) {
             keys->push_back(store_key_t(key->size, key->contents));
-        }
+            return true;
+        });
     }
 
     void postprocess_internal_node(buf_lock_t *internal_node_buf) {
