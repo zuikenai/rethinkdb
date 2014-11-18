@@ -9,30 +9,9 @@ namespace leaf {
 
 using main_leaf_t = new_leaf_t<main_btree_t>;
 
-inline bool is_old(const leaf_node_t *node) {
-    return node->magic == leaf_node_t::expected_magic;
-}
-
-inline bool is_old(sized_ptr_t<const leaf_node_t> node) {
-    return is_old(node.buf);
-}
-
-inline bool is_new(const leaf_node_t *node) {
-    return node->magic == main_leaf_node_t::expected_magic;
-}
-
-inline bool is_new(sized_ptr_t<const leaf_node_t> node) {
-    return is_new(node.buf);
-}
-
 inline const main_leaf_node_t *as_new(const leaf_node_t *node) {
     rassert(is_new(node));
     return reinterpret_cast<const main_leaf_node_t *>(node);
-}
-
-inline sized_ptr_t<const main_leaf_node_t> as_new(sized_ptr_t<const leaf_node_t> node) {
-    rassert(is_new(node));
-    return sized_reinterpret_cast<const main_leaf_node_t>(node);
 }
 
 inline sized_ptr_t<main_leaf_node_t> as_new(sized_ptr_t<leaf_node_t> node) {

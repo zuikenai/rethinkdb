@@ -804,6 +804,12 @@ void new_leaf_t<btree_type>::live_iter_t::step_backward() {
 }
 
 template <class btree_type>
+bool new_leaf_t<btree_type>::live_iter_t::at_end() const {
+    rassert(index_ <= node_.buf->num_pairs);
+    return index_ == node_.buf->num_pairs;
+}
+
+template <class btree_type>
 const void *new_leaf_t<btree_type>::live_iter_t::entry() const {
     rassert(index_ >= 0);
     return entry_for_index(node_, index_);

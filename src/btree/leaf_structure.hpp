@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "buffer_cache/types.hpp"
+#include "containers/sized_ptr.hpp"
 #include "repli_timestamp.hpp"
 
 // The leaf node begins with the following struct layout.  (This is the old leaf node
@@ -73,6 +74,28 @@ struct main_leaf_node_t {
 
 } __attribute__ ((__packed__));
 
+namespace leaf {
+inline bool is_old(const leaf_node_t *node) {
+    return node->magic == leaf_node_t::expected_magic;
+}
+
+inline bool is_old(sized_ptr_t<const leaf_node_t> node) {
+    return is_old(node.buf);
+}
+
+inline bool is_new(const leaf_node_t *node) {
+    return node->magic == main_leaf_node_t::expected_magic;
+}
+
+inline bool is_new(sized_ptr_t<const leaf_node_t> node) {
+    return is_new(node.buf);
+}
+
+inline sized_ptr_t<const main_leaf_node_t> as_new(sized_ptr_t<const leaf_node_t> node) {
+    rassert(is_new(node));
+    return sized_reinterpret_cast<const main_leaf_node_t>(node);
+}
+}  // namespace leaf
 
 
 #endif  // BTREE_LEAF_STRUCTURE_HPP_

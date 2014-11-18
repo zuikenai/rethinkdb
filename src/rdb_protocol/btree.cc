@@ -15,6 +15,7 @@
 #include "btree/erase_range.hpp"
 #include "btree/get_distribution.hpp"
 #include "btree/leaf_node.hpp"
+#include "btree/leaf_iteration.hpp"
 #include "btree/operations.hpp"
 #include "btree/parallel_traversal.hpp"
 #include "btree/slice.hpp"
@@ -1745,14 +1746,15 @@ public:
         store_t::sindex_access_vector_t sindexes;
 
         buf_read_t leaf_read(leaf_node_buf);
-        const leaf_node_t *leaf_node
-            = static_cast<const leaf_node_t *>(leaf_read.get_data_read());
+        sized_ptr_t<const leaf_node_t> leaf_node
+            = leaf_read.get_sized_data_read<leaf_node_t>();
 
         // Number of key/value pairs we process before yielding
         const int MAX_CHUNK_SIZE = 10;
         int current_chunk_size = 0;
         const rdb_post_construction_deletion_context_t deletion_context;
-        for (auto it = leaf::begin(leaf_node); it != leaf::end(leaf_node); it.step()) {
+        leaf::iterate_live_entries(leaf_node, [&](const btree_key_t *const key,
+                                                  const void *const value) {
             if (current_chunk_size == 0) {
                 // Start a write transaction and acquire the secondary index
                 // at the beginning of each chunk. We reset the transaction
@@ -1808,8 +1810,6 @@ public:
             store_->btree->stats.pm_total_keys_read += 1;
 
             /* Grab relevant values from the leaf node. */
-            const btree_key_t *key = (*it).first;
-            const void *value = (*it).second;
             guarantee(key);
 
             const store_key_t pk(key);
@@ -1842,7 +1842,7 @@ public:
                 wtxn.reset();
                 coro_t::yield();
             }
-        }
+        });
     }
 
     void postprocess_internal_node(buf_lock_t *) { }

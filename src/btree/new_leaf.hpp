@@ -82,6 +82,8 @@ public:
 
         const void *entry() const;
 
+        bool at_end() const;
+
     private:
         // Moves index forward, if at all, until it's at a live entry or num_pairs.
         void advance_index();
