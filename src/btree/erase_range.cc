@@ -2,6 +2,7 @@
 #include "btree/erase_range.hpp"
 
 #include "buffer_cache/alt.hpp"
+#include "btree/leaf_iteration.hpp"
 #include "btree/leaf_node.hpp"
 #include "btree/node.hpp"
 #include "btree/operations.hpp"
@@ -34,13 +35,7 @@ public:
 
         std::vector<store_key_t> keys_to_delete;
 
-        // RSI: Presumably we want to pass a sized_ptr_t to leaf::begin.
-        for (auto it = leaf::begin(node.buf); it != leaf::end(node.buf); it.step()) {
-            const btree_key_t *k = (*it).first;
-            if (!k) {
-                break;
-            }
-
+        leaf::iterate_live_entries(node, [&](const btree_key_t *k, const void *) {
             // k's in the leaf node so it should be in the range of
             // keys allowed for the leaf node.
             assert_key_in_range(k, l_excl, r_incl);
@@ -48,7 +43,9 @@ public:
             if (key_in_range(k, left_exclusive_or_null_, right_inclusive_or_null_) && tester_->key_should_be_erased(k)) {
                 keys_to_delete.push_back(store_key_t(k));
             }
-        }
+
+            return true;
+        });
 
         scoped_malloc_t<char> value(sizer_->max_possible_size());
 

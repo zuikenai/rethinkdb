@@ -3,6 +3,7 @@
 #define BTREE_LEAF_ITERATION_HPP_
 
 #include "btree/old_leaf.hpp"
+#include "btree/leaf_node.hpp"
 #include "btree/leaf_structure.hpp"
 #include "btree/main_btree.hpp"
 #include "btree/new_leaf.hpp"
@@ -17,7 +18,9 @@ using main_leaf_t = new_leaf_t<main_btree_t>;
 template <class Callable>
 void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
     if (is_old(node.buf)) {
-        for (old_leaf::iterator it = leaf::begin(node.buf), e = leaf::end(node.buf);
+        for (old_leaf::iterator
+                 it = old_leaf::begin(node.buf),
+                 e = old_leaf::end(node.buf);
              it != e;
              it.step()) {
             std::pair<const btree_key_t *, const void *> p = *it;
