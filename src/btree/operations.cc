@@ -5,6 +5,7 @@
 
 #include "btree/erase_range.hpp"
 #include "btree/internal_node.hpp"
+#include "btree/leaf_iteration.hpp"
 #include "btree/leaf_node.hpp"
 #include "btree/node.hpp"
 #include "btree/slice.hpp"
@@ -418,10 +419,10 @@ void detach_all_children(sized_ptr_t<const node_t> node, buf_parent_t parent,
     if (node::is_leaf(node.buf)) {
         sized_ptr_t<const leaf_node_t> leaf
             = sized_reinterpret_cast<const leaf_node_t>(node);
-        // Detach the values that are now in `rbuf` with `buf` as their parent.
-        for (auto it = leaf::begin(leaf.buf); it != leaf::end(leaf.buf); it.step()) {
-            detacher->delete_value(parent, (*it).second);
-        }
+        leaf::iterate_live_entries(leaf, [&](const btree_key_t *, const void *value) {
+            detacher->delete_value(parent, value);
+            return true;
+        });
     } else {
         const internal_node_t *internal =
             reinterpret_cast<const internal_node_t *>(node.buf);
