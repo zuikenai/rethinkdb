@@ -1754,7 +1754,7 @@ public:
         int current_chunk_size = 0;
         const rdb_post_construction_deletion_context_t deletion_context;
         leaf::iterate_live_entries(leaf_node, [&](const btree_key_t *const key,
-                                                  const void *const value) {
+                                                  const void *const value) -> bool {
             if (current_chunk_size == 0) {
                 // Start a write transaction and acquire the secondary index
                 // at the beginning of each chunk. We reset the transaction
@@ -1799,10 +1799,10 @@ public:
 
                     if (sindexes.empty()) {
                         interrupt_myself_->pulse_if_not_already_pulsed();
-                        return;
+                        return false;
                     }
                 } catch (const interrupted_exc_t &e) {
-                    return;
+                    return false;
                 }
             }
 
@@ -1842,6 +1842,8 @@ public:
                 wtxn.reset();
                 coro_t::yield();
             }
+
+            return true;
         });
     }
 

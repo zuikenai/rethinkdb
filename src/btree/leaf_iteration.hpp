@@ -21,7 +21,9 @@ void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
              it != e;
              it.step()) {
             std::pair<const btree_key_t *, const void *> p = *it;
-            cb(p.first, p.second);
+            if (!cb(p.first, p.second)) {
+                break;
+            }
         }
     } else {
         for (main_leaf_t::live_iter_t it(as_new(node)); !it.at_end(); it.step()) {
@@ -29,7 +31,9 @@ void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
                 = static_cast<const new_leaf::entry_t *>(it.entry());
             leaf::entry_ptrs_t ptrs = main_btree_t::entry_ptrs(entry);
             rassert(ptrs.value_or_null != nullptr);
-            cb(ptrs.key, ptrs.value_or_null);
+            if (!cb(ptrs.key, ptrs.value_or_null)) {
+                break;
+            }
         }
     }
 }
