@@ -37,7 +37,7 @@ struct state_description_t {
 using ::old_leaf::begin;
 using ::old_leaf::end;
 
-using ::old_leaf::inclusive_lower_bound;
+using ::old_leaf::lower_bound;
 using ::old_leaf::upper_bound;
 
 

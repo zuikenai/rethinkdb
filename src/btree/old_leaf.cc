@@ -1663,7 +1663,7 @@ old_leaf::iterator end(const leaf_node_t *leaf_node) {
     return old_leaf::iterator(leaf_node, leaf_node->num_pairs);
 }
 
-old_leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
+old_leaf::iterator lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node) {
     int index;
     old_leaf::find_key(leaf_node, key, &index);
     if (index == leaf_node->num_pairs ||

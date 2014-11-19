@@ -175,7 +175,7 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
         const btree_key_t *key;
 
         if (direction == FORWARD) {
-            for (auto it = leaf::inclusive_lower_bound(range.left.btree_key(), lnode);
+            for (auto it = leaf::lower_bound(range.left.btree_key(), lnode);
                  it != leaf::end(lnode);
                  it.step()) {
                 key = (*it).first;

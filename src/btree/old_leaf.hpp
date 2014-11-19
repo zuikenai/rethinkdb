@@ -28,7 +28,7 @@ class iterator;
 old_leaf::iterator begin(const leaf_node_t *leaf_node);
 old_leaf::iterator end(const leaf_node_t *leaf_node);
 
-old_leaf::iterator inclusive_lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
+old_leaf::iterator lower_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
 old_leaf::iterator upper_bound(const btree_key_t *key, const leaf_node_t *leaf_node);
 
 
