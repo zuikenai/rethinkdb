@@ -448,18 +448,18 @@ void check_and_handle_split(value_sizer_t *sizer,
                             const value_deleter_t *detacher) {
     {
         buf_read_t buf_read(buf);
-        const node_t *node = static_cast<const node_t *>(buf_read.get_data_read());
+        sized_ptr_t<const node_t> node = buf_read.get_sized_data_read<node_t>();
 
         // If the node isn't full, we don't need to split, so we're done.
-        if (!node::is_internal(node)) { // This should only be called when update_needed.
+        if (!node::is_internal(node.buf)) { // This should only be called when update_needed.
             rassert(new_value);
-            if (!leaf::is_full(sizer, reinterpret_cast<const leaf_node_t *>(node),
+            if (!leaf::is_full(sizer, reinterpret_cast<const leaf_node_t *>(node.buf),
                                key, new_value)) {
                 return;
             }
         } else {
             rassert(!new_value);
-            if (!internal_node::is_full(reinterpret_cast<const internal_node_t *>(node))) {
+            if (!internal_node::is_full(reinterpret_cast<const internal_node_t *>(node.buf))) {
                 return;
             }
         }
@@ -558,8 +558,8 @@ void check_and_handle_underfull(value_sizer_t *sizer,
             node_is_underfull = false;
         } else {
             buf_read_t buf_read(buf);
-            const node_t *const node = static_cast<const node_t *>(buf_read.get_data_read());
-            node_is_underfull = node::is_underfull(sizer, node);
+            sized_ptr_t<const node_t> node = buf_read.get_sized_data_read<node_t>();
+            node_is_underfull = node::is_underfull(sizer, node.buf);
         }
     }
     if (node_is_underfull) {
@@ -571,7 +571,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
         {
             buf_read_t last_buf_read(last_buf);
             const internal_node_t *parent_node
-                = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
+                = static_cast<const internal_node_t *>(last_buf_read.get_data_read_default());
             nodecmp_node_with_sib = internal_node::sibling(parent_node, key,
                                                            &sib_node_id,
                                                            &key_in_middle);
@@ -590,13 +590,12 @@ void check_and_handle_underfull(value_sizer_t *sizer,
 #endif
 
             buf_read_t buf_read(buf);
-            const node_t *const node
-                = static_cast<const node_t *>(buf_read.get_data_read());
+            const sized_ptr_t<const node_t> node = buf_read.get_sized_data_read<node_t>();
             buf_read_t last_buf_read(last_buf);
             const internal_node_t *parent_node
-                = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
+                = static_cast<const internal_node_t *>(last_buf_read.get_data_read_default());
 
-            node_is_mergable = node::is_mergable(sizer, node, sib_node.buf, parent_node);
+            node_is_mergable = node::is_mergable(sizer, node.buf, sib_node.buf, parent_node);
         }
 
         if (node_is_mergable) {
@@ -616,7 +615,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
             {
                 buf_read_t last_buf_read(last_buf);
                 const internal_node_t *parent_node
-                    = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
+                    = static_cast<const internal_node_t *>(last_buf_read.get_data_read_default());
                 // TODO (daniel): `is_singleton()` is a bad name. What it really
                 //    means is `is_doubleton()`, or
                 //    `will_be_singleton_after_removing_one_more_child()` (not that
@@ -643,7 +642,7 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                 detach_all_children(node, buf_parent_t(&sib_buf), detacher);
 
                 const internal_node_t *parent_node
-                    = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
+                    = static_cast<const internal_node_t *>(last_buf_read.get_data_read_default());
                 node::merge(sizer,
                             &sib_buf_write,
                             &buf_write,
@@ -679,15 +678,15 @@ void check_and_handle_underfull(value_sizer_t *sizer,
                 bool is_internal;
                 {
                     buf_read_t buf_read(buf);
-                    const node_t *node =
-                        static_cast<const node_t *>(buf_read.get_data_read());
-                    is_internal = node::is_internal(node);
+                    sized_ptr_t<const node_t> node
+                        = buf_read.get_sized_data_read<node_t>();
+                    is_internal = node::is_internal(node.buf);
                 }
                 buf_write_t buf_write(buf);
                 buf_write_t sib_buf_write(&sib_buf);
                 buf_read_t last_buf_read(last_buf);
                 const internal_node_t *parent_node
-                    = static_cast<const internal_node_t *>(last_buf_read.get_data_read());
+                    = static_cast<const internal_node_t *>(last_buf_read.get_data_read_default());
                 // We handle internal and leaf nodes separately because of the
                 // different ways their children have to be detached.
                 // (for internal nodes: call detach_child directly vs. for leaf
@@ -828,7 +827,7 @@ void find_keyvalue_location_for_write(
     for (;;) {
         {
             buf_read_t read(&buf);
-            if (!node::is_internal(static_cast<const node_t *>(read.get_data_read()))) {
+            if (!node::is_internal(read.get_sized_data_read<node_t>().buf)) {
                 break;
             }
         }
@@ -868,7 +867,7 @@ void find_keyvalue_location_for_write(
         block_id_t node_id;
         {
             buf_read_t read(&buf);
-            auto node = static_cast<const internal_node_t *>(read.get_data_read());
+            auto node = static_cast<const internal_node_t *>(read.get_data_read_default());
             node_id = internal_node::lookup(node, key);
         }
         rassert(node_id != NULL_BLOCK_ID && node_id != SUPERBLOCK_ID);
@@ -935,12 +934,12 @@ void find_keyvalue_location_for_read(
         block_id_t node_id;
         {
             buf_read_t read(&buf);
-            const void *data = read.get_data_read();
-            if (!node::is_internal(static_cast<const node_t *>(data))) {
+            sized_ptr_t<const node_t> data = read.get_sized_data_read<node_t>();
+            if (!node::is_internal(data.buf)) {
                 break;
             }
 
-            node_id = internal_node::lookup(static_cast<const internal_node_t *>(data),
+            node_id = internal_node::lookup(reinterpret_cast<const internal_node_t *>(data.buf),
                                             key);
         }
         rassert(node_id != NULL_BLOCK_ID && node_id != SUPERBLOCK_ID);
@@ -998,8 +997,8 @@ void apply_keyvalue_change(
         {
 #ifndef NDEBUG
             buf_read_t read(&kv_loc->buf);
-            auto leaf_node = static_cast<const leaf_node_t *>(read.get_data_read());
-            rassert(!leaf::is_full(sizer, leaf_node, key, kv_loc->value.get()));
+            sized_ptr_t<const leaf_node_t> leaf_node = read.get_sized_data_read<leaf_node_t>();
+            rassert(!leaf::is_full(sizer, leaf_node.buf, key, kv_loc->value.get()));
 #endif
         }
 

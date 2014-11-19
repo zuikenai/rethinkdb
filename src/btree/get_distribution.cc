@@ -43,7 +43,7 @@ public:
     void postprocess_internal_node(buf_lock_t *internal_node_buf) {
         buf_read_t read(internal_node_buf);
         const internal_node_t *node
-            = static_cast<const internal_node_t *>(read.get_data_read());
+            = static_cast<const internal_node_t *>(read.get_data_read_default());
 
         /* Notice, we iterate all but the last pair because the last pair
          * doesn't actually have a key and we're looking for the split points.
