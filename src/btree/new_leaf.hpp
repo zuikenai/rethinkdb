@@ -77,12 +77,16 @@ public:
     class live_iter_t {
     public:
         explicit live_iter_t(sized_ptr_t<const main_leaf_node_t> node, int index = 0);
+        static live_iter_t end(sized_ptr_t<const main_leaf_node_t> node);
+
         void step();
         void step_backward();
 
         const void *entry() const;
 
         bool at_end() const;
+
+        int index() const { return index_; }
 
     private:
         // Moves index forward, if at all, until it's at a live entry or num_pairs.

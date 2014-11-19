@@ -34,13 +34,6 @@ struct state_description_t {
 };
 
 
-using ::old_leaf::begin;
-using ::old_leaf::end;
-
-using ::old_leaf::lower_bound;
-using ::old_leaf::upper_bound;
-
-
 void validate(value_sizer_t *sizer, sized_ptr_t<const leaf_node_t> node);
 
 bool is_empty(sized_ptr_t<const leaf_node_t> node);
@@ -88,7 +81,25 @@ bool dump_entries_since_time(value_sizer_t *sizer,
 
 buf_ptr_t init();
 
-using ::old_leaf::iterator;
+class leaf_node_index_t;
+
+leaf_node_index_t lower_bound(sized_ptr_t<const leaf_node_t> leaf_node,
+                              const btree_key_t *key);
+leaf_node_index_t upper_bound(sized_ptr_t<const leaf_node_t> leaf_node,
+                              const btree_key_t *key);
+
+leaf_node_index_t begin(sized_ptr_t<const leaf_node_t> leaf_node);
+leaf_node_index_t end(sized_ptr_t<const leaf_node_t> leaf_node);
+
+class leaf_node_index_t {
+public:
+    int value() const { return value_; }
+    explicit leaf_node_index_t(int value) : value_(value) { }
+
+private:
+    int value_;
+};
+
 
 
 }  // namespace leaf

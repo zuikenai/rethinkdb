@@ -202,5 +202,45 @@ buf_ptr_t init() {
     return main_leaf_t::init();
 }
 
+leaf_node_index_t lower_bound(sized_ptr_t<const leaf_node_t> leaf_node,
+                              const btree_key_t *key) {
+    if (is_old(leaf_node)) {
+        return leaf_node_index_t(old_leaf::lower_bound(key, leaf_node.buf).index());
+    } else {
+        sized_ptr_t<const main_leaf_node_t> newnode = as_new(leaf_node);
+        int index;
+        UNUSED bool found = main_leaf_t::find_key(newnode, key, &index);
+        return leaf_node_index_t(main_leaf_t::live_iter_t(newnode, index).index());
+    }
+}
+
+leaf_node_index_t upper_bound(sized_ptr_t<const leaf_node_t> leaf_node,
+                              const btree_key_t *key) {
+    if (is_old(leaf_node)) {
+        return leaf_node_index_t(old_leaf::upper_bound(key, leaf_node.buf).index());
+    } else {
+        sized_ptr_t<const main_leaf_node_t> newnode = as_new(leaf_node);
+        int index;
+        bool found = main_leaf_t::find_key(newnode, key, &index);
+        return leaf_node_index_t(main_leaf_t::live_iter_t(newnode, index + (found ? 1 : 0)).index());
+    }
+}
+
+leaf_node_index_t begin(sized_ptr_t<const leaf_node_t> leaf_node) {
+    if (is_old(leaf_node)) {
+        return leaf_node_index_t(old_leaf::begin(leaf_node.buf).index());
+    } else {
+        return leaf_node_index_t(main_leaf_t::live_iter_t(as_new(leaf_node), 0).index());
+    }
+}
+
+leaf_node_index_t end(sized_ptr_t<const leaf_node_t> leaf_node) {
+    if (is_old(leaf_node)) {
+        return leaf_node_index_t(old_leaf::end(leaf_node.buf).index());
+    } else {
+        return leaf_node_index_t(main_leaf_t::live_iter_t::end(as_new(leaf_node)).index());
+    }
+}
+
 }  // namespace leaf
 

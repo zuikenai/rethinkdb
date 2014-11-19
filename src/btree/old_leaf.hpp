@@ -106,6 +106,7 @@ public:
     void step_backward();
     bool operator==(const iterator &other) const;
     bool operator!=(const iterator &other) const;
+    int index() const { return index_; }
 private:
     const leaf_node_t *node_;
     int index_;

@@ -782,6 +782,12 @@ new_leaf_t<btree_type>::live_iter_t::live_iter_t(sized_ptr_t<const main_leaf_nod
 }
 
 template <class btree_type>
+typename new_leaf_t<btree_type>::live_iter_t new_leaf_t<btree_type>::live_iter_t::end(
+        sized_ptr_t<const main_leaf_node_t> node) {
+    return live_iter_t(node, node.buf->num_pairs);
+}
+
+template <class btree_type>
 void new_leaf_t<btree_type>::live_iter_t::advance_index() {
     while (index_ < node_.buf->num_pairs && !btree_type::is_live(entry_for_index(node_, index_))) {
         ++index_;

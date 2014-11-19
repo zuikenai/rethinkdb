@@ -2,6 +2,7 @@
 #include "btree/depth_first_traversal.hpp"
 
 #include "btree/internal_node.hpp"
+#include "btree/leaf_iteration.hpp"
 #include "btree/leaf_node.hpp"
 #include "btree/node.hpp"
 #include "btree/operations.hpp"
@@ -131,9 +132,9 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
                                  const btree_key_t *left_excl_or_null,
                                  const btree_key_t *right_incl_or_null) {
     auto read = make_counted<counted_buf_read_t>(block.get());
-    const node_t *node = static_cast<const node_t *>(read->get_data_read());
-    if (node::is_internal(node)) {
-        const internal_node_t *inode = reinterpret_cast<const internal_node_t *>(node);
+    sized_ptr_t<const node_t> node = read->get_sized_data_read<node_t>();
+    if (node::is_internal(node.buf)) {
+        const internal_node_t *inode = reinterpret_cast<const internal_node_t *>(node.buf);
         int start_index = internal_node::get_offset_index(inode, range.left.btree_key());
         int end_index;
         if (range.right.unbounded) {
@@ -171,49 +172,56 @@ bool btree_depth_first_traversal(counted_t<counted_buf_lock_t> block,
         }
         return true;
     } else {
-        const leaf_node_t *lnode = reinterpret_cast<const leaf_node_t *>(node);
-        const btree_key_t *key;
+        sized_ptr_t<const leaf_node_t> lnode
+            = sized_reinterpret_cast<const leaf_node_t>(node);
 
         if (direction == FORWARD) {
-            for (auto it = leaf::lower_bound(range.left.btree_key(), lnode);
-                 it != leaf::end(lnode);
-                 it.step()) {
-                key = (*it).first;
-                if (!range.right.unbounded &&
-                    btree_key_cmp(key, range.right.key.btree_key()) >= 0) {
-                    break;
-                }
-                if (done_traversing_t::YES
-                    == cb->handle_pair(scoped_key_value_t(key, (*it).second,
-                                                          movable_t<counted_buf_lock_t>(block),
-                                                          movable_t<counted_buf_read_t>(read)))) {
-                    return false;
-                }
-            }
+
+            bool retval = true;
+            leaf::iterate_live_entries(
+                    lnode,
+                    leaf::lower_bound(lnode, range.left.btree_key()),
+                    leaf::end(lnode),
+                    [&](const btree_key_t *key, const void *value) {
+                        if (!range.right.unbounded &&
+                            btree_key_cmp(key, range.right.key.btree_key()) >= 0) {
+                            return false;
+                        }
+                        if (done_traversing_t::YES
+                            == cb->handle_pair(scoped_key_value_t(key, value,
+                                                                  movable_t<counted_buf_lock_t>(block),
+                                                                  movable_t<counted_buf_read_t>(read)))) {
+                            retval = false;
+                            return false;
+                        }
+                        return true;
+                    });
+            return retval;
         } else {
-            leaf::iterator it;
-            if (range.right.unbounded) {
-                it = leaf::end(lnode);
-            } else {
-                it = leaf::upper_bound(range.right.key.btree_key(), lnode);
-            }
-            const leaf::iterator begin = leaf::begin(lnode);
-            while (it != begin) {
-                it.step_backward();
-                key = (*it).first;
+            bool retval = true;
+            leaf::reverse_iterate_live_entries(
+                    lnode,
+                    leaf::begin(lnode),
+                    range.right.unbounded
+                      ? leaf::end(lnode)
+                      : leaf::upper_bound(lnode, range.right.key.btree_key()),
+                    [&](const btree_key_t *key, const void *value) {
 
-                if (btree_key_cmp(key, range.left.btree_key()) <= 0) {
-                    break;
-                }
+                        if (btree_key_cmp(key, range.left.btree_key()) <= 0) {
+                            return false;
+                        }
 
-                if (done_traversing_t::YES
-                    == cb->handle_pair(scoped_key_value_t(key, (*it).second,
-                                                          movable_t<counted_buf_lock_t>(block),
-                                                          movable_t<counted_buf_read_t>(read)))) {
-                    return false;
-                }
-            }
+                        if (done_traversing_t::YES
+                            == cb->handle_pair(scoped_key_value_t(key, value,
+                                                                  movable_t<counted_buf_lock_t>(block),
+                                                                  movable_t<counted_buf_read_t>(read)))) {
+                            retval = false;
+                            return false;
+                        }
+
+                        return true;
+                    });
+            return retval;
         }
-        return true;
     }
 }

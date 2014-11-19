@@ -16,11 +16,14 @@ using main_leaf_t = new_leaf_t<main_btree_t>;
 // type that repeats the is-old/is-new check every time.
 
 template <class Callable>
-void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
+void iterate_live_entries(sized_ptr_t<const leaf_node_t> node,
+                          leaf_node_index_t begin,
+                          leaf_node_index_t end,
+                          Callable &&cb) {
     if (is_old(node)) {
         for (old_leaf::iterator
-                 it = old_leaf::begin(node.buf),
-                 e = old_leaf::end(node.buf);
+                 it = old_leaf::iterator(node.buf, begin.value()),
+                 e = old_leaf::iterator(node.buf, end.value());
              it != e;
              it.step()) {
             std::pair<const btree_key_t *, const void *> p = *it;
@@ -29,7 +32,52 @@ void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
             }
         }
     } else {
-        for (main_leaf_t::live_iter_t it(as_new(node)); !it.at_end(); it.step()) {
+        for (main_leaf_t::live_iter_t it(as_new(node), begin.value());
+             it.index() != end.value();
+             it.step()) {
+            const new_leaf::entry_t *entry
+                = static_cast<const new_leaf::entry_t *>(it.entry());
+            leaf::entry_ptrs_t ptrs = main_btree_t::entry_ptrs(entry);
+            rassert(ptrs.value_or_null != nullptr);
+            if (!cb(ptrs.key, ptrs.value_or_null)) {
+                break;
+            }
+        }
+    }
+}
+
+
+template <class Callable>
+void iterate_live_entries(sized_ptr_t<const leaf_node_t> node, Callable &&cb) {
+    iterate_live_entries(node, leaf::begin(node), leaf::end(node),
+                         std::forward<Callable>(cb));
+}
+
+template <class Callable>
+void reverse_iterate_live_entries(sized_ptr_t<const leaf_node_t> node,
+                                  leaf_node_index_t begin,
+                                  leaf_node_index_t end,
+                                  Callable &&cb) {
+    if (is_old(node)) {
+        old_leaf::iterator it = old_leaf::iterator(node.buf, end.value());
+        const old_leaf::iterator b = old_leaf::iterator(node.buf, begin.value());
+
+        for (;;) {
+            if (it == b) {
+                return;
+            }
+
+            it.step_backward();
+
+            std::pair<const btree_key_t *, const void *> p = *it;
+            if (!cb(p.first, p.second)) {
+                break;
+            }
+        }
+    } else {
+        main_leaf_t::live_iter_t it(as_new(node), end.value());
+        while (it.index() != begin.value()) {
+            it.step_backward();
             const new_leaf::entry_t *entry
                 = static_cast<const new_leaf::entry_t *>(it.entry());
             leaf::entry_ptrs_t ptrs = main_btree_t::entry_ptrs(entry);
