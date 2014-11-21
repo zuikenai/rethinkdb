@@ -164,7 +164,8 @@ public:
     test_txn_t()
         : test_cache_t(),
           cache_conn_t(test_cache_t::get_cache()),
-          txn_t(this, write_durability_t::SOFT, repli_timestamp_t::distant_past) { }
+          txn_t(this, write_durability_t::SOFT, repli_timestamp_t::distant_past,
+                2 /* some expected number of blocks written */) { }
 };
 
 scoped_malloc_t<void> make_live_entry(std::string key,

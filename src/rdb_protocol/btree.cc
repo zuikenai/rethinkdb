@@ -1742,7 +1742,6 @@ public:
                         const btree_key_t *, const btree_key_t *,
                         signal_t *, int *) THROWS_ONLY(interrupted_exc_t) {
 
-        // KSI: FML
         scoped_ptr_t<txn_t> wtxn;
         store_t::sindex_access_vector_t sindexes;
 
@@ -1763,8 +1762,8 @@ public:
                 // the cache to go into throttling, and that would interfere
                 // with other transactions on this table.
                 try {
-                    write_token_pair_t token_pair;
-                    store_->new_write_token_pair(&token_pair);
+                    write_token_t token;
+                    store_->new_write_token(&token);
 
                     scoped_ptr_t<real_superblock_t> superblock;
 
@@ -1778,7 +1777,7 @@ public:
                             repli_timestamp_t::distant_past,
                             2 + MAX_CHUNK_SIZE,
                             write_durability_t::HARD,
-                            &token_pair,
+                            &token,
                             &wtxn,
                             &superblock,
                             interruptor_);
@@ -1786,10 +1785,8 @@ public:
                     // Acquire the sindex block.
                     const block_id_t sindex_block_id = superblock->get_sindex_block_id();
 
-                    buf_lock_t sindex_block
-                        = store_->acquire_sindex_block_for_write(
-                            superblock->expose_buf(),
-                            sindex_block_id);
+                    buf_lock_t sindex_block(superblock->expose_buf(), sindex_block_id,
+                                            access_t::write);
 
                     superblock.reset();
 
@@ -1894,7 +1891,7 @@ void post_construct_secondary_indexes(
         store->add_progress_tracker(&*sentry, *it, &progress_tracker);
     }
 
-    object_buffer_t<fifo_enforcer_sink_t::exit_read_t> read_token;
+    read_token_t read_token;
     store->new_read_token(&read_token);
 
     // Mind the destructor ordering.
