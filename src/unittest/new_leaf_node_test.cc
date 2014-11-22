@@ -127,7 +127,7 @@ public:
 
 default_block_size_t bs() { return default_block_size_t::unsafe_make(4096); }
 
-using test_leaf_t = new_leaf_t<test_btree_t>;
+typedef new_leaf_t<test_btree_t> test_leaf_t;
 
 scoped_ptr_t<standard_serializer_t> create_and_construct_serializer(serializer_file_opener_t *opener) {
     standard_serializer_t::create(opener, standard_serializer_t::static_config_t());

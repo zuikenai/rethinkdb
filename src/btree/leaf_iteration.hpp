@@ -10,7 +10,7 @@
 
 namespace leaf {
 
-using main_leaf_t = new_leaf_t<main_btree_t>;
+typedef new_leaf_t<main_btree_t> main_leaf_t;
 
 // We define templated iteration methods here instead of having some leaf::iterator
 // type that repeats the is-old/is-new check every time.

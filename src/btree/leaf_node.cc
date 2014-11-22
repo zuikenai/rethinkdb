@@ -7,7 +7,7 @@
 
 namespace leaf {
 
-using main_leaf_t = new_leaf_t<main_btree_t>;
+typedef new_leaf_t<main_btree_t> main_leaf_t;
 
 inline const main_leaf_node_t *as_new(const leaf_node_t *node) {
     rassert(is_new(node));
