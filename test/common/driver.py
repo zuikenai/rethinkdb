@@ -15,10 +15,14 @@ module. """
 
 from __future__ import print_function
 
-import atexit, copy, os, random, re, shutil, signal, socket, subprocess, sys, tempfile, thread, time, warnings
+import atexit, copy, os, random, re, shutil, signal, socket, subprocess, sys, tempfile, time, warnings
 
 import utils
 
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 try:
     xrange
 except NameError:
@@ -68,22 +72,22 @@ class Metacluster(object):
     
     __unique_id_counter = None
     
-    def __init__(self, outputFolder=None):
+    def __init__(self, output_folder=None):
         self.clusters = set()
         self.__unique_id_counter = 0
         self.closed = False
         
-        if outputFolder is None:
+        if output_folder is None:
             self.dbs_path = tempfile.mkdtemp()
             atexit.register(cleanupMetaclusterFolder, self.dbs_path)
         else:
-            if not os.path.exists(outputFolder):
-                os.makedirs(outputFolder)
+            if not os.path.exists(output_folder):
+                os.makedirs(output_folder)
             
-            if os.path.isdir(outputFolder):
-                self.dbs_path = os.path.realpath(outputFolder)
+            if os.path.isdir(output_folder):
+                self.dbs_path = os.path.realpath(output_folder)
             else:
-                raise ValueError('bad value for outputFolder: %s' % str(outputFolder))
+                raise ValueError('bad value for output_folder: %s' % str(output_folder))
     
     def close(self):
         """Kills all processes and deletes all files. Also, makes the
@@ -144,25 +148,33 @@ class Cluster(object):
     metacluster = None
     processes = None
     
-    def __init__(self, metacluster=None, initial_servers=0, outputFolder=None, console_output=True, executable_path=None, command_prefix=None, extra_options=None, wait_until_ready=True):
+    def __init__(self, metacluster=None, initial_servers=0, output_folder=None, console_output=True, executable_path=None, command_prefix=None, extra_options=None, wait_until_ready=True):
         
         # -- input validation
         
         # - initial_servers
         
-        try:
-            initial_servers = int(initial_servers)
-        except ValueError:
-            raise ValueError('the initial_servers input must be a number, got: %s' % str(initial_servers))
-        if initial_servers < 0:
-            raise ValueError('the initial_servers input must be 0 or more, got: %d' % initial_servers)
+        if isinstance(initial_servers, int):
+            if initial_servers < 0:
+                raise ValueError('the initial_servers input must be 0 or more, got: %d' % initial_servers)
+            initial_servers = [None for _ in range(initial_servers)]
+        elif hasattr(initial_servers, '__iter__'):
+            replacement = []
+            for entry in initial_servers:
+                if not isinstance(entry, Files):
+                    # not a files object, then a name
+                    entry = str(entry)
+                replacement.append(entry)
+            initial_servers = replacement
+        else:
+            raise ValueError('the initial_servers input must be a number or a list of names or files objects, got: %s' % str(initial_servers))
         
         # - metacluster
         
-        if metacluster is not None and outputFolder is not None:
-            raise NotImplementedError('supplying a metacluster and an outputFolder does not currently work')
+        if metacluster is not None and output_folder is not None:
+            raise NotImplementedError('supplying a metacluster and an output_folder does not currently work')
         elif metacluster is None:
-            metacluster = Metacluster(outputFolder=outputFolder)
+            metacluster = Metacluster(output_folder=output_folder)
         
         assert isinstance(metacluster, Metacluster)
         assert not metacluster.closed
@@ -175,8 +187,8 @@ class Cluster(object):
         
         # -- start servers
         
-        for i in xrange(initial_servers):
-            self.processes.add(Process(cluster=self, console_output=console_output, executable_path=executable_path, command_prefix=command_prefix, extra_options=extra_options))
+        for nameOrFiles in initial_servers:
+            self.processes.add(Process(cluster=self, files=nameOrFiles, console_output=console_output, executable_path=executable_path, command_prefix=command_prefix, extra_options=extra_options))
         
         # -- wait for servers
         
@@ -231,9 +243,15 @@ class Cluster(object):
             unblock_path(other_process.cluster_port, process.local_cluster_port)
     
     def __getitem__(self, pos):
-        if len(self.processes) <= pos or pos < 0:
-            raise IndexError('This cluster only has %d servers, so index %s is invalid' % (len(self.processes), str(pos)))
-        return list(self.processes)[pos]
+        if isinstance(pos, slice):
+            items = list(self.processes)
+            return [items[x] for x in xrange(*pos.indices(len(items)))]
+        elif isinstance(pos, int):
+            if len(self.processes) <= pos or pos < 0:
+                raise IndexError('This cluster only has %d servers, so index %s is invalid' % (len(self.processes), str(pos)))
+            return list(self.processes)[pos]
+        else:
+            raise TypeError("Invalid argument type: %s" % repr(pos))
     
     def __iter__(self):
         return iter(self.processes)
@@ -247,7 +265,7 @@ class Files(object):
     server_name = None
     metacluster = None
     
-    def __init__(self, metacluster=None, server_name=None, server_tags=None, db_path=None, console_output=None, executable_path=None, command_prefix=None):
+    def __init__(self, metacluster=None, server_name=None, server_tags=None, db_path=None, db_containter=None, console_output=None, executable_path=None, command_prefix=None):
         
         # -- input validation/defaulting
         
@@ -265,14 +283,24 @@ class Files(object):
             self.server_name = str(server_name)
         
         if db_path is None:
-            self.db_path = os.path.join(self.metacluster.dbs_path, 'db-%d' % self.id_number)
+            folderName = server_name + '_data' if server_name else 'db-%d' % self.id_number
+            if db_containter is None:
+                self.db_path = os.path.join(self.metacluster.dbs_path, folderName)
+            else:
+                assert os.path.isdir(db_containter)
+                self.db_path = os.path.join(db_containter, folderName)
         else:
-            self.db_path = str(db_path)
-            assert not os.path.exists(self.db_path)
-
+            db_containter = db_containter or '.'
+            self.db_path = os.path.join(db_containter, str(db_path))
+        assert not os.path.exists(self.db_path)
+        
+        moveConsole = False
         if console_output is None:
             print("Redirecting console_output to /dev/null.")
             console_output = "/dev/null"
+        elif console_output is True:
+            console_output = tempfile.NamedTemporaryFile('w+', dir=self.metacluster.dbs_path)
+            moveConsole = True
         elif console_output is False:
             console_output = tempfile.NamedTemporaryFile('w+')
         
@@ -331,6 +359,7 @@ class _Process(object):
     process_group_id = None
     
     logfilePortRegex = re.compile('Listening for (?P<type>intracluster|client driver|administrative HTTP) connections on port (?P<port>\d+)$')
+    logfileServerIDRegex = re.compile('Our server ID is (?P<uuid>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})$')
     logfileReadyRegex = re.compile('Server ready, "(?P<name>\w+)" (?P<uuid>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})$')
     
     def __init__(self, cluster, options, console_output=None, executable_path=None, command_prefix=None):
@@ -444,8 +473,9 @@ class _Process(object):
         while deadline > time.time():
             if self._cluster_port:
                 return self._cluster_port
+            time.sleep(.1)
         else:
-            raise RuntimeError('Timed out after waiting for cluster port')
+            raise RuntimeError('Timed out waiting for cluster port')
     
     @property
     def driver_port(self):
@@ -456,8 +486,9 @@ class _Process(object):
         while deadline > time.time():
             if self._driver_port:
                 return self._driver_port
+            time.sleep(.1)
         else:
-            raise RuntimeError('Timed out after waiting for driver port')
+            raise RuntimeError('Timed out waiting for driver port')
     
     @property
     def http_port(self):
@@ -468,8 +499,9 @@ class _Process(object):
         while deadline > time.time():
             if self._http_port:
                 return self._http_port
+            time.sleep(.1)
         else:
-            raise RuntimeError('Timed out after waiting for http port')
+            raise RuntimeError('Timed out waiting for http port')
     
     @property
     def name(self):
@@ -480,8 +512,9 @@ class _Process(object):
         while deadline > time.time():
             if self._name:
                 return self._name
+            time.sleep(.1)
         else:
-            raise RuntimeError('Timed out after waiting for name')
+            raise RuntimeError('Timed out waiting for name')
 
     @property
     def uuid(self):
@@ -492,21 +525,25 @@ class _Process(object):
         while deadline > time.time():
             if self._uuid:
                 return self._uuid
+            time.sleep(.1)
         else:
-            raise RuntimeError('Timed out after waiting for uuid')
+            raise RuntimeError('Timed out waiting for uuid')
         
     def wait_until_started_up(self, timeout=30):
         deadline = time.time() + timeout
         while deadline > time.time():
-            if not all((self._cluster_port, self._driver_port, self._http_port, self._uuid)):
+            if not self._check_all_ports_read():
                 self.check()
                 time.sleep(0.05)
             else:
                 self.check()
                 return
         else:
-            raise RuntimeError("Timed out waiting %d seconds for startup." % timeout)
-
+            raise RuntimeError("Timed out after waiting %d seconds for startup." % timeout)
+    
+    def _check_all_ports_read(self):
+        return all((self._cluster_port, self._driver_port, self._http_port, self._uuid, self._name))
+    
     def read_ports_from_log(self, timeout=30):
         deadline = time.time() + timeout
         
@@ -529,7 +566,8 @@ class _Process(object):
             
             # - bail out if we have everything
             
-            if all((self._cluster_port, self._driver_port, self._http_port, self._uuid)):
+            if self._check_all_ports_read():
+                self.ready = True
                 return
             
             # - get a new line or sleep
@@ -555,11 +593,14 @@ class _Process(object):
                     self._http_port = int(parsedLine.group('port'))
                 continue
             
+            parsedLine = self.logfileServerIDRegex.search(logLine)
+            if parsedLine:
+                self._uuid = parsedLine.group('uuid')
+            
             parsedLine = self.logfileReadyRegex.search(logLine)
             if parsedLine:
                 self._name = parsedLine.group('name')
                 self._uuid = parsedLine.group('uuid')
-                self.ready = True
         else:
             raise RuntimeError("Timeout while trying to read cluster port from log file")
     
@@ -654,20 +695,31 @@ class Process(_Process):
     """A `Process` object represents a running RethinkDB server. It cannot be
     restarted; stop it and then create a new one instead. """
 
-    def __init__(self, cluster=None, files=None, outputFolder=None, console_output=None, executable_path=None, command_prefix=None, extra_options=None, wait_until_ready=False):
+    def __init__(self, cluster=None, files=None, output_folder=None, console_output=None, executable_path=None, server_tags=None, command_prefix=None, extra_options=None, wait_until_ready=False):
+        
+        assert isinstance(cluster, (Cluster, None.__class__)), 'cluster must be a Cluster or None, got: %s' % repr(cluster)
+        assert isinstance(files, (Files, str, None.__class__)), 'files must be a Files, string (name), or None, got: %s' % repr(cluster)
+        assert output_folder is None or os.path.isdir(output_folder)
+        
+        # -- validate bad combinations
+        
+        if isinstance(files, Files):
+            if output_folder is not None:
+                raise ValueError('output_folder can not be provided alongside files')
+            if server_tags is not None:
+                raise ValueError('server_tags can not be provided alongside files')
+        
+        # -- validate/default cluster
         
         if cluster is None and files is None:
-            cluster = Cluster(outputFolder=outputFolder)
-        elif cluster is None:
-            if outputFolder is not None:
-                raise ValueError('outputFolder can not be provided alongside files')
-            assert isinstance(files, Files)
+            cluster = Cluster(output_folder=output_folder)
+        elif cluster is None and isinstance(files, Files):
             cluster = Cluster(metacluster=files.metacluster)
+        
         assert isinstance(cluster, Cluster)
         assert cluster.metacluster is not None
         
-        if outputFolder is None:
-            outputFolder = '.'
+        # -- validate/default console_output/console_file
         
         moveConsoleFile = False
         if console_output is None:
@@ -677,7 +729,10 @@ class Process(_Process):
             if console_output is False:
                 self.console_file = tempfile.NamedTemporaryFile(mode='w+')
             elif self.files is None:
-                self.console_file = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+                outerDir = cluster.metacluster.dbs_path
+                if output_folder:
+                    outerDir = output_folder
+                self.console_file = tempfile.NamedTemporaryFile(mode='w+', dir=outerDir, delete=False)
                 moveConsoleFile = True
             else:
                 self.console_file = open(os.path.join(self.files.db_path, 'console.txt'), 'w+')
@@ -687,33 +742,44 @@ class Process(_Process):
             self._close_console_output = True
             self.console_file = open(console_output, "a")
         
-        if files is None:
+        # -- default files
+        
+        if isinstance(files, (str, None.__class__)):
             self.console_file.write('========== Start Create Console ===========\n')
             self.console_file.flush()
-            files = Files(metacluster=cluster.metacluster, console_output=self.console_file, executable_path=executable_path, command_prefix=command_prefix)
+            files = Files(metacluster=cluster.metacluster, server_name=files, server_tags=server_tags, db_containter=output_folder, console_output=self.console_file, executable_path=executable_path, command_prefix=command_prefix)
+            self.console_file.write('=========== End Create Console ============\n\n')
+            self.console_file.flush()
             if moveConsoleFile:
-                self.console_file.write('=========== End Create Console ============\n\n')
-                self.console_file.flush()
                 os.rename(self.console_file.name, os.path.join(files.db_path, 'console.txt'))
             os.rename(os.path.join(files.db_path, 'log_file'), os.path.join(files.db_path, 'create_log_file'))
         assert isinstance(files, Files)
         
+        # -- default command_prefix
+        
         if command_prefix is None:
             command_prefix = []
+        
+        # -- default extra_options
+        
         if extra_options is None:
-            extra_options = []
+            extra_options = ['--cache-size', '512']
         else:
             extra_options = copy.copy(extra_options)
+            if not '--cache-size' in extra_options:
+                extra_options += ['--cache-size', '512']
+        
+        # -- store values
         
         self.files = files
         self.logfile_path = os.path.join(files.db_path, "log_file")
-
-        if not '--cache-size' in extra_options:
-            extra_options += ['--cache-size', '512']
+        
+        # -- run command
         
         options = ["serve", "--directory", self.files.db_path] + extra_options
-
-        _Process.__init__(self, cluster, options, executable_path=executable_path, command_prefix=command_prefix)
+        super(Process, self).__init__(cluster, options, executable_path=executable_path, command_prefix=command_prefix)
+        
+        # -- wait untill ready (if requested)
         
         if wait_until_ready:
             self.wait_until_started_up()
@@ -738,6 +804,9 @@ class ProxyProcess(_Process):
         options = ["proxy", "--log-file", self.logfile_path] + extra_options
 
         _Process.__init__(self, cluster, options, console_output=console_output, executable_path=executable_path, command_prefix=command_prefix)
+    
+    def _check_all_ports_read(self):
+        return all((self._driver_port, self._http_port, self._uuid))
 
 if __name__ == "__main__":
     with Metacluster() as mc:

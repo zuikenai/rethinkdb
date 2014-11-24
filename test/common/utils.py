@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 
-import collections, fcntl, os, signal, socket, subprocess, sys, tempfile, threading, time
+import collections, fcntl, os, random, signal, socket, string, subprocess, sys, tempfile, threading, time
 
 import test_exceptions
+
+try:
+    unicode
+except NameError:
+    unicode = str
 
 # -- constants
 
@@ -45,7 +50,7 @@ def find_rethinkdb_executable(mode=None):
     result_path = os.environ.get('RDB_EXE_PATH') or os.path.join(latest_build_dir(check_executable=True, mode=mode), 'rethinkdb')
     
     if not os.access(result_path, os.X_OK):
-    	raise test_exceptions.NotBuiltException(detail='The rethinkdb server executable is not avalible: %s' % str(result_path))
+        raise test_exceptions.NotBuiltException(detail='The rethinkdb server executable is not avalible: %s' % str(result_path))
     
     return result_path
 
@@ -278,6 +283,26 @@ def supportsTerminalColors():
         return False
     return True
 
+def get_test_db_table():
+    '''Get the standard name for the table for this test'''
+    
+    # - name of __main__ module or a random name
+    
+    name = None
+    if hasattr(sys.modules['__main__'], '__file__'):
+        name = os.path.basename(sys.modules['__main__'].__file__).split('.')[0]
+    else:
+        name = 'random_' + ''.join(random.choice(string.ascii_uppercase for _ in range(4)))
+    
+    # - interpreter version
+    
+    interpreter = '_py' + '_'.join([str(x) for x in sys.version_info[:3]])
+    
+    # -
+    
+    return ('test', name + interpreter)
+    
+
 def get_avalible_port(interface='localhost'):
     testSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     testSocket.bind((interface, 0))
@@ -428,7 +453,7 @@ def nonblocking_readline(source):
         # - process the block into lines
         
         endsWithNewline = unprocessed[-1] == '\n'
-        waitingLines += unprocessed.splitlines()
+        waitingLines.extend(unprocessed.splitlines())
         
         if endsWithNewline:
             unprocessed = ''
