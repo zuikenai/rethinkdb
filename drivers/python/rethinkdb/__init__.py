@@ -1,7 +1,7 @@
 # Copyright 2010-2014 RethinkDB, all rights reserved.
 # This file includes all public facing Python API functions
 
-class r():
+class r(object):
     pass
 
 from .net import *

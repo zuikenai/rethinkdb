@@ -18,6 +18,18 @@ proto_r = utils.import_python_driver()
 sys.path.insert(0, os.path.dirname(os.path.realpath(proto_r.__file__)))
 from rethinkdb import *
 
+# -- import tests
+
+assert r == rethinkdb
+assert issubclass(r, object)
+assert issubclass(rethinkdb, object)
+
+assert issubclass(RqlError, Exception)
+assert issubclass(RqlClientError, RqlError)
+assert issubclass(RqlCompileError, RqlError)
+assert issubclass(RqlRuntimeError, RqlError)
+assert issubclass(RqlDriverError, Exception)
+
 # -- simple tests
 
 with driver.Process(wait_until_ready=True) as server:
