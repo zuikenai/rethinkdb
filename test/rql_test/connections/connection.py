@@ -5,7 +5,7 @@
 
 from __future__ import print_function
 
-import datetime, os, random, re, socket, sys, tempfile, threading, time, unittest
+import datetime, os, random, re, socket, sys, tempfile, threading, time, traceback, unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, "common"))
 import driver, utils
@@ -95,7 +95,7 @@ class TestCaseCompatible(unittest.TestCase):
         try:
             callable_func(*args, **kwds)
         except Exception as e:
-            self.assertTrue(isinstance(e, exception), '%s expected to raise %s but instead raised %s: %s' % (repr(callable_func), repr(exception), e.__class__.__name__, str(e)))
+            self.assertTrue(isinstance(e, exception), '%s expected to raise %s but instead raised %s: %s\n%s' % (repr(callable_func), repr(exception), e.__class__.__name__, str(e), traceback.format_exc()))
             self.assertTrue(re.search(regexp, str(e)), '%s did not raise the expected message "%s", but rather: %s' % (repr(callable_func), str(regexp), str(e)))
         else:
             self.fail('%s failed to raise a %s' % (repr(callable_func), repr(exception)))            

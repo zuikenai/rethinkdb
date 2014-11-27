@@ -1033,7 +1033,7 @@ def main():
                 pass
             
             if testProcess.wait() != 0:
-                if server is not None:
+                if server is not None and not isinstance(server, RethinkDBRunningServer):
                     try:
                         server.check_and_stop()
                     except Exception as e:
@@ -1041,12 +1041,12 @@ def main():
                         if serverOutput:
                             serverOutput.seek(0)
                             serverLog = '\nServer log:\n%s' % serverOutput.read()
-                        sys.stderr.write('RethinkDB server failed: %s' % (str(e), serverLog))
+                        sys.stderr.write('RethinkDB server failed: %s%s' % (str(e), serverLog))
                     server = None
                     serverOutput = None
                 
                 failedTests.append("%s (%s)" % (test.name, test.language.display_name))
-                sys.stderr.write("== Failed %s test with result code %s (%s)" % (test.name, str(testProcess.returncode), test.path))
+                sys.stderr.write("== Failed %s test with result code %s (%s)" % (test.name, str(), test.path))
                 if outputChannel is not None and os.path.getsize(outputChannel.name) > 0:
                     outputChannel.seek(0)
                     sys.stderr.write(' Output:\n')
