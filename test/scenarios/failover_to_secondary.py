@@ -45,8 +45,9 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     print("Pinning table to first server (%.2fs)" % (time.time() - startTime))
     
     assert r.db(dbName).table_config(tableName).update({'shards':[{'director':primary.name, 'replicas':[primary.name, secondary.name]}]}).run(conn1)['errors'] == 0
+    r.db(dbName).table_wait().run(conn1)
     
-    print("Starting workload (%.2fs)" % (time.time() - startTime))
+    print("Starting workload before (%.2fs)" % (time.time() - startTime))
     
     with workload_runner.SplitOrContinuousWorkload(opts, workload_ports) as workload:
         workload.run_before()
@@ -65,6 +66,8 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
         issues = [x for x in r.db('rethinkdb').table('issues').run(conn2)]
         assert len(issues) > 0, 'The server did not record the issue for the killed server'
         assert len(issues) == 1, 'The server recorded more issues than the single one expected: %s' % str(issues)
+        
+        print("Running workload after (%.2fs)" % (time.time() - startTime))
         workload.run_after()
         
         print("Declaring the primary dead (%.2fs)" % (time.time() - startTime))

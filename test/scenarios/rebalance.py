@@ -85,8 +85,7 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
         cluster.check()
         
         currentShards = numNodes
-        for changeInShards in opts["sequence"]:
-            currentShards += changeInShards
+        for currentShards in opts["sequence"]:
             print("Sharding table to %d shards (%.2fs)" % (currentShards, time.time() - startTime))
             
             r.db(dbName).reconfigure(shards=currentShards, replicas=numNodes).run(conn)
