@@ -20,7 +20,7 @@ class Sequence(tuple):
             try:
                 returnValue += (int(step),)
             except:
-                workingValue = 0
+                workingValue = returnValue[-1]
                 for char in step:
                     if char == '-':
                         workingValue -= 1

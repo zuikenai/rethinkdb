@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # Copyright 2010-2014 RethinkDB, all rights reserved.
 
+from __future__ import print_function
+
 import sys, os, time
 
 startTime = time.time()
@@ -22,7 +24,7 @@ files = None
 # == start first instance of server
 
 print("Starting server (%.2fs)" % (time.time() - startTime))
-with driver.Process(console_output=True, command_prefix=command_prefix, extra_options=serve_options, wait_until_ready=True) as server:
+with driver.Process(console_output=True, output_folder='.', command_prefix=command_prefix, extra_options=serve_options, wait_until_ready=True) as server:
     
     files = server.files
     

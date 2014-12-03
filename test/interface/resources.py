@@ -15,9 +15,7 @@ scenario_common.prepare_option_parser_mode_flags(op)
 _, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
 print("Spinning up a server (%.2fs)" % (time.time() - startTime))
-files = driver.Files(db_path="db", console_output="create-output", command_prefix=command_prefix)
-with driver.Process(files=files, console_output="serve-output", command_prefix=command_prefix, extra_options=serve_options) as server:
-    server.wait_until_started_up()
+with driver.Process(output_folder='.', command_prefix=command_prefix, extra_options=serve_options, wait_until_ready=True) as server:
     
     baseURL = 'http://%s:%d/' % (server.host, server.http_port)
     
@@ -71,5 +69,4 @@ with driver.Process(files=files, console_output="serve-output", command_prefix=c
     # -- ending
     
     print("Cleaning up (%.2fs)" % (time.time() - startTime))
-
 print("Done. (%.2fs)" % (time.time() - startTime))

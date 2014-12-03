@@ -1,34 +1,31 @@
 #!/usr/bin/env python
 # Copyright 2010-2014 RethinkDB, all rights reserved.
 
-"""The `interface.table_doc_count_estimates` test checks that the `doc_count_estimates`
-field on `r.table(...).info()` behaves as expected."""
+"""The `interface.table_doc_count_estimates` test checks that the `doc_count_estimates` field on `r.table(...).info()` behaves as expected."""
 
 import os, pprint, re, sys, time
+
+startTime = time.time()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import driver, scenario_common, utils, vcoptparse
 
-r = utils.import_python_driver()
-
 op = vcoptparse.OptParser()
 scenario_common.prepare_option_parser_mode_flags(op)
-opts = op.parse(sys.argv)
+_, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
-with driver.Metacluster() as metacluster:
-    cluster1 = driver.Cluster(metacluster)
-    _, command_prefix, serve_options = scenario_common.parse_mode_flags(opts)
+r = utils.import_python_driver()
+
+print("Spinning up two servers (%.2fs)" % (time.time() - startTime))
+with driver.Cluster(initial_servers=['a', 'b'], output_folder='.', command_prefix=command_prefix, extra_options=serve_options) as cluster:
+    cluster.check()
     
-    print("Spinning up two processes...")
-    files1 = driver.Files(metacluster, console_output="create-output-1", server_name="a", command_prefix=command_prefix)
-    proc1 = driver.Process(cluster1, files1, console_output = "serve-output-1", command_prefix=command_prefix, extra_options=serve_options)
-    files2 = driver.Files(metacluster, console_output="create-output-2", server_name="b", command_prefix=command_prefix)
-    proc2 = driver.Process(cluster1, files2, console_output="serve-output-2", command_prefix=command_prefix, extra_options=serve_options)
-    proc1.wait_until_started_up()
-    proc2.wait_until_started_up()
-    cluster1.check()
-    conn = r.connect("localhost", proc1.driver_port)
-
+    print("Establishing ReQL connection (%.2fs)" % (time.time() - startTime))
+    
+    conn = r.connect(host=cluster[0].host, port=cluster[0].driver_port)
+    
+    print("Starting testing (%.2fs)" % (time.time() - startTime))
+    
     res = r.db_create("test").run(conn)
     assert res["created"] == 1
     res = r.table_create("test").run(conn)
@@ -82,6 +79,5 @@ with driver.Metacluster() as metacluster:
     pprint.pprint(res)
     assert res["doc_count_estimates"] == [2]
 
-    cluster1.check_and_stop()
-print("Done.")
-
+    print("Cleaning up (%.2fs)" % (time.time() - startTime))
+print("Done. (%.2fs)" % (time.time() - startTime))

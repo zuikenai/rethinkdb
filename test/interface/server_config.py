@@ -51,6 +51,7 @@ with driver.Cluster(output_folder='.') as cluster:
     print("Checking changing name locally (%.2fs)" % (time.time() - startTime))
     res = r.db("rethinkdb").table("server_config").get(process1.uuid).update({"name": "a2"}).run(reql_conn1)
     assert res["errors"] == 0
+    time.sleep(.2)
     check_name(process1.uuid, "a2")
     check_name(process2.uuid, "b")
     cluster.check()
@@ -58,6 +59,7 @@ with driver.Cluster(output_folder='.') as cluster:
     print("Checking changing name remotely (%.2fs)" % (time.time() - startTime))
     res = r.db("rethinkdb").table("server_config").get(process2.uuid).update({"name": "b2"}).run(reql_conn1)
     assert res["errors"] == 0
+    time.sleep(.2)
     check_name(process1.uuid, "a2")
     check_name(process2.uuid, "b2")
     cluster.check()
@@ -66,6 +68,7 @@ with driver.Cluster(output_folder='.') as cluster:
     res = r.db("rethinkdb").table("server_config").get(process1.uuid).update({"name": "b2"}).run(reql_conn1)
     assert res["errors"] == 1
     assert "already exists" in res["first_error"]
+    time.sleep(.2)
     check_name(process1.uuid, "a2")
     check_name(process2.uuid, "b2")
     cluster.check()
@@ -80,6 +83,7 @@ with driver.Cluster(output_folder='.') as cluster:
     print("Checking changing tags locally (%.2fs)" % (time.time() - startTime))
     res = r.db("rethinkdb").table("server_config").get(process1.uuid).update({"tags": ["baz"]}).run(reql_conn1)
     assert res["errors"] == 0
+    time.sleep(.2)
     check_tags(process1.uuid, ["baz"])
     check_tags(process2.uuid, ["default", "foo", "bar"])
     cluster.check()
@@ -87,6 +91,7 @@ with driver.Cluster(output_folder='.') as cluster:
     print("Checking changing tags remotely (%.2fs)" % (time.time() - startTime))
     res = r.db("rethinkdb").table("server_config").get(process2.uuid).update({"tags": ["quz"]}).run(reql_conn1)
     assert res["errors"] == 0
+    time.sleep(.2)
     check_tags(process1.uuid, ["baz"])
     check_tags(process2.uuid, ["quz"])
     cluster.check()
@@ -94,6 +99,7 @@ with driver.Cluster(output_folder='.') as cluster:
     print("Checking that invalid tags are rejected (%.2fs)" % (time.time() - startTime))
     res = r.db("rethinkdb").table("server_config").get(process1.uuid).update({"tags": [":-)"]}).run(reql_conn1)
     assert res["errors"] == 1, "It shouldn't be possible to set tags that aren't valid names."
+    time.sleep(.2)
     check_tags(process1.uuid, ["baz"])
     check_tags(process2.uuid, ["quz"])
     cluster.check()

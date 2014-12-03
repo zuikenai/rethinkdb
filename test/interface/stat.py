@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # Copyright 2010-2012 RethinkDB, all rights reserved.
+
+raise NotImplementedError('Needs new web interface')
+
 import sys, os, time, re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import driver, http_admin, scenario_common
