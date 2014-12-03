@@ -37,22 +37,23 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
 
     print("Inserting some data (%.2fs)" % (time.time() - startTime))
     rdb_workload_common.insert_many(host=server1.host, port=server1.driver_port, database=dbName, table=tableName, count=10000)
-    r.db(dbName).table_wait().run(conn)
+    r.db(dbName).table_wait(tableName).run(conn)
     cluster.check()
     
     print("Splitting into two shards (%.2fs)" % (time.time() - startTime))
     shards = [
-        {'director':server1.uuid, 'replicas':[server2.uuid]},
-        {'director':server2.uuid, 'replicas':[server1.uuid]}
+        {'director':server1.name, 'replicas':[server1.name, server2.name]},
+        {'director':server2.name, 'replicas':[server2.name, server1.name]}
     ]
-    assert r.db(dbName).table_config(tableName).update({'shards':shards}).run(conn)['errors'] == 0
+    res = r.db(dbName).table_config(tableName).update({'shards':shards}).run(conn)
+    assert res['errors'] == 0, 'Errors after splitting into two shards: %s' % repr(res)
     r.db(dbName).table_wait().run(conn)
     cluster.check()
 
     print("Changing the primary (%.2fs)" % (time.time() - startTime))
     shards = [
-        {'director':server2.uuid, 'replicas':[server1.uuid]},
-        {'director':server1.uuid, 'replicas':[server2.uuid]}
+        {'director':server2.name, 'replicas':[server2.name, server1.name]},
+        {'director':server1.name, 'replicas':[server1.name, server2.name]}
     ]
     assert r.db(dbName).table_config(tableName).update({'shards':shards}).run(conn)['errors'] == 0
 
@@ -60,8 +61,8 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
 
     print("Changing it back (%.2fs)" % (time.time() - startTime))
     shards = [
-        {'director':server2.uuid, 'replicas':[server1.uuid]},
-        {'director':server1.uuid, 'replicas':[server2.uuid]}
+        {'director':server2.name, 'replicas':[server2.name, server1.name]},
+        {'director':server1.name, 'replicas':[server1.name, server2.name]}
     ]
     assert r.db(dbName).table_config(tableName).update({'shards':shards}).run(conn)['errors'] == 0
 

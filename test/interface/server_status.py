@@ -10,23 +10,23 @@ startTime = time.time()
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import driver, scenario_common, utils, vcoptparse
 
-r = utils.import_python_driver()
-
 op = vcoptparse.OptParser()
 scenario_common.prepare_option_parser_mode_flags(op)
 opts = op.parse(sys.argv)
+_, command_prefix, serve_options = scenario_common.parse_mode_flags(opts)
 
-with driver.Metacluster() as metacluster:
-    cluster = driver.Cluster(metacluster)
-    _, command_prefix, serve_options = scenario_common.parse_mode_flags(opts)
+r = utils.import_python_driver()
+
+print("Spinning up two servers (%.2fs)" % (time.time() - startTime))
+with driver.Cluster(output_folder='.') as cluster:
     
-    print("Spinning up two servers (%.2fs)" % (time.time() - startTime))
-    files1 = driver.Files(metacluster, db_path="db-1", console_output="create-output-1", server_name="a", server_tags=["foo"], command_prefix=command_prefix)
-    files2 = driver.Files(metacluster, db_path="db-2", console_output="create_output-2", server_name="b", server_tags=["foo", "bar"], command_prefix=command_prefix)
-    process1 = driver.Process(cluster, files1, console_output="serve-output-1", command_prefix=command_prefix, extra_options=serve_options)
-    process2 = driver.Process(cluster, files2, console_output="serve-output-2", command_prefix=command_prefix, extra_options=serve_options + ["--cache-size", "123"])
+    process1 = driver.Process(cluster, files='a', server_tags=["foo"], command_prefix=command_prefix, extra_options=serve_options)
+    process2 = driver.Process(cluster, files='b', server_tags=["foo", "bar"], command_prefix=command_prefix, extra_options=serve_options + ["--cache-size", "123"])
     
     cluster.wait_until_ready()
+    
+    print("Establishing ReQL connection (%.2fs)" % (time.time() - startTime))
+    
     conn = r.connect(process1.host, process1.driver_port)
     
     # -- general assertions

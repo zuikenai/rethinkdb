@@ -47,15 +47,13 @@ with driver.Process(output_folder='.', command_prefix=command_prefix, extra_opti
     
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
-    
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
-    r.db(dbName).table_wait().run(conn)
     
     print("Starting workload: %s (%.2fs)" % (opts["workload"], time.time() - startTime))
 
-    workload_ports = scenario_common.get_workload_ports(ns, [proxy_process])
+    workload_ports = scenario_common.get_workload_ports([proxy_process], tableName, dbName)
     workload_runner.run(opts["workload"], workload_ports, opts["timeout"])
     
     print("Ended workload: %s (%.2fs)" % (opts["workload"], time.time() - startTime))

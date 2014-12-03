@@ -5,8 +5,14 @@ from __future__ import print_function
 
 import os, multiprocessing, sys, time
 
+startTime = time.time()
+
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.path.pardir, 'common'))
-import driver, http_admin, utils
+import driver, utils, vcoptparse
+
+op = vcoptparse.OptParser()
+scenario_common.prepare_option_parser_mode_flags(op)
+_, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
 r = utils.import_python_driver()
 
@@ -68,14 +74,17 @@ def check_data(conn):
         print("  primary - %d" % pkey_count)
         print("  secondary - %d (%d)" % (sindex_count, len(rows)))
 
-with driver.Metacluster() as metacluster:
-    cluster = driver.Cluster(metacluster)
-    print("Starting server...")
-    files = driver.Files(metacluster, db_path="db", console_output="create-output")
-    process = driver.Process(cluster, files, console_output="serve-output")
-
-    process.wait_until_started_up()
-
+print("Spinning a cluster with one server (%.2fs)" % (time.time() - startTime))
+with driver.Cluster(initial_servers=1, output_folder='.', command_prefix=command_prefix, extra_options=serve_options) as cluster:
+    process = cluster[0]
+    files = process.files
+    
+    print("Establishing ReQL connection (%.2fs)" % (time.time() - startTime))
+    
+    conn = r.connect(process.host, process.driver_port, db=db_name)
+    
+    print("Starting replace/delete processes (%.2fs)" % (time.time() - startTime))
+    
     # Get the replace/delete processes ready ahead of time -
     # Time is critical during the sindex post-construction
     ready_events = [multiprocessing.Event(), multiprocessing.Event()]
@@ -91,16 +100,14 @@ with driver.Metacluster() as metacluster:
     replace_proc.start()
     delete_proc.start()
 
-    conn = r.connect(process.host, process.driver_port, db=db_name)
-
-    print("Creating and populating table...")
+    print("Creating and populating table (%.2fs)" % (time.time() - startTime))
     populate_table(conn)
 
-    print("Creating secondary index...")
+    print("Creating secondary index (%.2fs)" % (time.time() - startTime))
     add_index(conn)
     conn.close()
 
-    print("Killing the server during a replace/delete workload...")
+    print("Killing the server during a replace/delete workload (%.2fs)" % (time.time() - startTime))
     for event in ready_events:
         event.wait()
     start_event.set()
@@ -111,8 +118,8 @@ with driver.Metacluster() as metacluster:
 
     # Restart the process
     time.sleep(1)
-    print("Restarting the server...")
-    process = driver.Process(cluster, files, console_output="serve-output")
+    print("Restarting the server (%.2fs)" % (time.time() - startTime))
+    process = driver.Process(cluster, files)
     process.wait_until_started_up()
 
     conn = r.connect(process.host, process.driver_port, db=db_name)
@@ -120,4 +127,5 @@ with driver.Metacluster() as metacluster:
     check_data(conn)
     conn.close()
 
-    cluster.check_and_stop()
+    print("Cleaning up (%.2fs)" % (time.time() - startTime))
+print("Done. (%.2fs)" % (time.time() - startTime))

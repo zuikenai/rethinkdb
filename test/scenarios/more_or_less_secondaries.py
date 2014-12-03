@@ -44,7 +44,7 @@ dbName, tableName = utils.get_test_db_table()
 numReplicas = opts["sequence"].peak()
 
 print('Starting cluster (%.2fs)' % (time.time() - startTime))
-with driver.Cluster() as cluster:
+with driver.Cluster(output_folder='.') as cluster:
     
     print('Starting primary server (%.2fs)' % (time.time() - startTime))
     

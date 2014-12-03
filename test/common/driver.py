@@ -402,6 +402,11 @@ class _Process(object):
                 self._close_console_output = True
                 self.console_file = open(console_output, "a")
         
+        # - add to the cluster
+        
+        self.cluster = cluster
+        self.cluster.processes.add(self)
+        
         # - set defaults
         
         if not '--bind' in options:
@@ -420,16 +425,17 @@ class _Process(object):
             self.local_cluster_port = utils.get_avalible_port()
             options += ['--client-port', str(self.local_cluster_port)]
         
+        # - set to join the cluster
+        
+        for peer in cluster.processes:
+            if peer != self:
+                options += ["--join", peer.host + ":" + str(peer.cluster_port)]
+                break
+        
         # -
         
         try:
             self.args = command_prefix + [self.executable_path] + options
-            for peer in cluster.processes:
-                if peer is not self:
-                    # TODO(OSX) Why did we ever use socket.gethostname() and not localhost?
-                    # self.args.append("--join",  socket.gethostname() + ":" + str(peer.cluster_port))
-                    self.args.append("--join")
-                    self.args.append("localhost" + ":" + str(peer.cluster_port))
 
             if os.path.exists(self.logfile_path):
                 os.unlink(self.logfile_path)
@@ -442,6 +448,8 @@ class _Process(object):
             self.process_group_id = self.process.pid
             self.running = True
             
+            # - start thread to tail output for needed info
+            
             thread.start_new_thread(self.read_ports_from_log, ())
 
         except Exception:
@@ -450,11 +458,9 @@ class _Process(object):
             for other_cluster in cluster.metacluster.clusters:
                 if other_cluster is not cluster:
                     other_cluster._unblock_process(self)
+            if self.cluster and self in self.cluster.processes:
+                self.cluster.processes.remove(self)
             raise
-
-        else:
-            self.cluster = cluster
-            self.cluster.processes.add(self)
     
     def __enter__(self):
         self.wait_until_started_up()
@@ -711,10 +717,11 @@ class Process(_Process):
         
         # -- validate/default cluster
         
-        if cluster is None and files is None:
-            cluster = Cluster(output_folder=output_folder)
-        elif cluster is None and isinstance(files, Files):
-            cluster = Cluster(metacluster=files.metacluster)
+        if cluster is None:
+            if isinstance(files, Files):
+                cluster = Cluster(metacluster=files.metacluster)
+            else:
+                cluster = Cluster(output_folder=output_folder)
         
         assert isinstance(cluster, Cluster)
         assert cluster.metacluster is not None
