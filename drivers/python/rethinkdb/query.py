@@ -75,9 +75,9 @@ def branch(*args):
 def map(*args):
     if len(args) > 0:
         # `func_wrap` only the last argument
-        return Map(*(args[:-1] + (func_wrap(args[-1]), )))
+        return ast.Map(*(args[:-1] + (func_wrap(args[-1]), )))
     else:
-        return Map()
+        return ast.Map()
 
 # orderBy orders
 
