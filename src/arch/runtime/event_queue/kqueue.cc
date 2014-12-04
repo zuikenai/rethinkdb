@@ -90,6 +90,8 @@ kqueue_event_queue_t::~kqueue_event_queue_t() {
 
 void kqueue_event_queue_t::add_filters(fd_t resource, const std::set<int16_t> &filters,
                                        linux_event_callback_t *cb) {
+    rassert(cb != NULL);
+
     for (auto filter : filters) {
         struct kevent ev;
         EV_SET(&ev, static_cast<uintptr_t>(resource), filter, EV_ADD, 0, 0, cb);
@@ -99,6 +101,8 @@ void kqueue_event_queue_t::add_filters(fd_t resource, const std::set<int16_t> &f
 
 void kqueue_event_queue_t::del_filters(fd_t resource, const std::set<int16_t> &filters,
                                        linux_event_callback_t *cb) {
+    rassert(cb != NULL);
+
     for (auto filter : filters) {
         struct kevent ev;
         EV_SET(&ev, static_cast<uintptr_t>(resource), filter, EV_DELETE, 0, 0, cb);
@@ -108,7 +112,7 @@ void kqueue_event_queue_t::del_filters(fd_t resource, const std::set<int16_t> &f
 
 void kqueue_event_queue_t::watch_resource(fd_t resource, int event_mask,
                                           linux_event_callback_t *cb) {
-    rassert(cb);
+    rassert(cb != NULL);
 
     // Start watching the events on `resource`
     std::set<int16_t> filters = user_to_kevent_filters(event_mask);
@@ -120,6 +124,8 @@ void kqueue_event_queue_t::watch_resource(fd_t resource, int event_mask,
 
 void kqueue_event_queue_t::adjust_resource(fd_t resource, int event_mask,
                                            linux_event_callback_t *cb) {
+    rassert(cb);
+
     auto ev = watched_events.find(resource);
     guarantee(ev != watched_events.end());
 
@@ -131,7 +137,9 @@ void kqueue_event_queue_t::adjust_resource(fd_t resource, int event_mask,
     // On the other hand We re-add all events, which will cause kqueue to update the
     // `udata` field (the callback) of the existing events in case it has changed.
     std::set<int16_t> filters_to_del = current_filters;
-    filters_to_del.erase(new_filters.begin(), new_filters.end());
+    for (auto f : new_filters) {
+        filters_to_del.erase(f);
+    }
 
     // Apply the diff
     del_filters(resource, filters_to_del, cb);
@@ -151,8 +159,8 @@ void kqueue_event_queue_t::adjust_resource(fd_t resource, int event_mask,
             if (filters_to_del.count(events[i].filter) > 0) {
                 // No longer watching this event
                 events[i].udata = NULL;
-            } else {
-                // Just update the cb
+            } else if (events[i].udata != NULL) {
+                // Just update the cb, unless we had previously deleted this one.
                 events[i].udata = cb;
             }
         }
@@ -176,7 +184,7 @@ void kqueue_event_queue_t::forget_resource(fd_t resource, linux_event_callback_t
     // being asked to forget.
     for (int i = 0; i < nevents; i++) {
         if (events[i].ident == static_cast<uintptr_t>(resource)) {
-            rassert(events[i].udata == cb);
+            rassert(events[i].udata == cb || events[i].udata == NULL);
             events[i].udata = NULL;
         }
     }

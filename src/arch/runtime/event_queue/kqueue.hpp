@@ -9,7 +9,7 @@
 
 #include "arch/runtime/event_queue_types.hpp"
 #include "arch/runtime/runtime_utils.hpp"
-#include "errors.hpp"
+#include "config/args.hpp"
 
 // Event queue using `kqueue`/`kevent`
 class kqueue_event_queue_t {
