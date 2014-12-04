@@ -4,6 +4,7 @@
 
 // TODO!
 
+#include <sys/event.h>
 #include <map>
 #include <vector>
 
@@ -27,11 +28,11 @@ private:
     linux_queue_parent_t *parent;
 
     fd_t kqueue_fd;
-    std::vector<kevent> watched_events;
+    std::vector<struct kevent> watched_events;
 
     std::map<fd_t, linux_event_callback_t *> callbacks;
 
-    DISABLE_COPYING(poll_event_queue_t);
+    DISABLE_COPYING(kqueue_event_queue_t);
 };
 
 
