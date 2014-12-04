@@ -20,9 +20,9 @@
 std::set<int16_t> user_to_kevent_filters(int mode) {
     rassert((mode & (poll_event_in | poll_event_out)) == mode);
 
-    std::vector<int16_t> filters;
-    if (mode == poll_event_in) filters.push_back(EVFILT_READ);
-    if (mode == poll_event_out) filters.push_back(EVFILT_WRITE);
+    std::set<int16_t> filters;
+    if (mode == poll_event_in) filters.insert(EVFILT_READ);
+    if (mode == poll_event_out) filters.insert(EVFILT_WRITE);
 
     return filters;
 }
@@ -58,12 +58,9 @@ int call_kevent(int kq, const struct kevent *changelist, int nchanges,
 }
 
 void kqueue_event_queue_t::run() {
-    int res;
-
     // Now, start the loop
     while (!parent->should_shut_down()) {
         // Grab the events from the kqueue!
-        struct kevent ev;
         nevents = call_kevent(kqueue_fd, NULL, 0,
                               events, MAX_IO_EVENT_PROCESSING_BATCH_SIZE, NULL);
 
@@ -109,25 +106,25 @@ void kqueue_event_queue_t::del_filters(fd_t resource, const std::set<int16_t> &f
     }
 }
 
-void kqueue_event_queue_t::watch_resource(fd_t resource, int watch_mode,
+void kqueue_event_queue_t::watch_resource(fd_t resource, int event_mask,
                                           linux_event_callback_t *cb) {
     rassert(cb);
 
     // Start watching the events on `resource`
-    std::set<int16_t> filters = user_to_kevent_filters(watch_mode);
+    std::set<int16_t> filters = user_to_kevent_filters(event_mask);
     add_filters(resource, filters, cb);
 
     guarantee(watched_events.count(resource) == 0);
-    watched_events[resource] = watch_mode;
+    watched_events[resource] = event_mask;
 }
 
-void kqueue_event_queue_t::adjust_resource(fd_t resource, int events,
+void kqueue_event_queue_t::adjust_resource(fd_t resource, int event_mask,
                                            linux_event_callback_t *cb) {
     auto ev = watched_events.find(resource);
     guarantee(ev != watched_events.end());
 
     const std::set<int16_t> current_filters = user_to_kevent_filters(ev->second);
-    const std::set<int16_t> new_filters = user_to_kevent_filters(events);
+    const std::set<int16_t> new_filters = user_to_kevent_filters(event_mask);
 
     // We generate a diff to find out which filters we have to delete from the
     // kqueue.
@@ -139,7 +136,7 @@ void kqueue_event_queue_t::adjust_resource(fd_t resource, int events,
     // Apply the diff
     del_filters(resource, filters_to_del, cb);
     add_filters(resource, new_filters, cb);
-    ev->second = events;
+    ev->second = event_mask;
 
     // Go through the queue of messages in the current poll cycle and
     // clean out the ones that are referencing the filters that are being
@@ -151,7 +148,7 @@ void kqueue_event_queue_t::adjust_resource(fd_t resource, int events,
     //   and there's no reason for why we should not support it here.
     for (int i = 0; i < nevents; i++) {
         if (events[i].ident == static_cast<uintptr_t>(resource)) {
-            if (del_filters.count(events[i].filter) > 0) {
+            if (filters_to_del.count(events[i].filter) > 0) {
                 // No longer watching this event
                 events[i].udata = NULL;
             } else {

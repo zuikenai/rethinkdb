@@ -42,7 +42,7 @@ private:
     // We store this as a class member because forget_resource needs
     // to go through the events and remove queued messages for
     // resources that are being destroyed.
-    epoll_event events[MAX_IO_EVENT_PROCESSING_BATCH_SIZE];
+    struct kevent events[MAX_IO_EVENT_PROCESSING_BATCH_SIZE];
     int nevents;
 
     DISABLE_COPYING(kqueue_event_queue_t);
