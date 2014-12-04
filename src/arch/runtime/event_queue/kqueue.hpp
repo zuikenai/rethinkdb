@@ -2,17 +2,16 @@
 #ifndef ARCH_RUNTIME_EVENT_QUEUE_KQUEUE_HPP_
 #define ARCH_RUNTIME_EVENT_QUEUE_KQUEUE_HPP_
 
-// TODO!
-
 #include <sys/event.h>
+
 #include <map>
-#include <vector>
+#include <set>
 
 #include "arch/runtime/event_queue_types.hpp"
 #include "arch/runtime/runtime_utils.hpp"
 #include "errors.hpp"
 
-// Event queue structure
+// Event queue using `kqueue`/`kevent`
 class kqueue_event_queue_t {
 public:
     explicit kqueue_event_queue_t(linux_queue_parent_t *parent);
@@ -25,12 +24,26 @@ public:
     void forget_resource(fd_t resource, linux_event_callback_t *cb);
 
 private:
+    // Helper functions
+    void add_filters(fd_t resource, const std::set<int16_t> &filters,
+                     linux_event_callback_t *cb);
+    void del_filters(fd_t resource, const std::set<int16_t> &filters,
+                     linux_event_callback_t *cb);
+
     linux_queue_parent_t *parent;
 
     fd_t kqueue_fd;
-    std::vector<struct kevent> watched_events;
 
-    std::map<fd_t, linux_event_callback_t *> callbacks;
+    // Keep track of which event types we are currently watching for a resource,
+    // so that `adjust_resource` can generate an appropriate diff and
+    // `forget_resource` knows which events to unwatch.
+    std::map<fd_t, int> watched_events;
+
+    // We store this as a class member because forget_resource needs
+    // to go through the events and remove queued messages for
+    // resources that are being destroyed.
+    epoll_event events[MAX_IO_EVENT_PROCESSING_BATCH_SIZE];
+    int nevents;
 
     DISABLE_COPYING(kqueue_event_queue_t);
 };
