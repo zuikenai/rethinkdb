@@ -381,6 +381,14 @@ private:
     boost::variant<request_vote_t, install_snapshot_t, append_entries_t> reply;
 };
 
+/* `raft_mode_t` describes the three states that a Raft member can be in, as described in
+Section 5.1 of the Raft paper. */
+enum class raft_mode_t {
+    follower,
+    candidate,
+    leader
+};
+
 /* This implementation deviates from the Raft paper in that the Raft members communicate
 via two mechanisms: via RPCs as in the paper, and also by each one broadcasting a piece
 of state from one to the others. The latter mechanism is implemented using the directory.
@@ -389,18 +397,12 @@ class raft_network_state_t {
 private:
     template<class state2_t> friend class raft_member_t;
 
-    /* `mode_t` describes the three states that a Raft member can be in, as described in
-    Section 5.1 of the Raft paper. */
-    enum class mode_t {
-        follower,
-        candidate,
-        leader
-    };
+    raft_network_state_t(raft_mode_t m) : mode(m) { }
 
     /* We broadcast our current mode to all the other members of the cluster. We deviate
     from the Raft paper in that we use this mechanism in place of heartbeats to detect
     when it's time to elect a new leader. */
-    mode_t mode;
+    raft_mode_t mode;
 };
 
 /* `raft_network_interface_t` is the abstract class that `raft_member_t` uses to send
@@ -427,7 +429,15 @@ public:
     /* `get_connected_members()` has an entry for every member of the Raft cluster that's
     currently "visible" from this member, meaning that an RPC is likely to succeed. The
     values of the `raft_network_state_t`s in the map must be the value of that member's
-    `get_network_state()` watchable. */
+    `get_network_state()` watchable.
+
+    Updates to this state may take arbitrarily long to propagate. However, the Raft
+    cluster may stall if updates do not propagate. Updates may also be merged; i.e. if
+    the state changes from A to B and then from B to C, some members of the cluster may
+    see a transition from A to C.
+
+    It is undefined whether or not a member is visible to itself in
+    `get_connected_members()`.*/
     virtual watchable_map_t<raft_member_id_t, raft_network_state_t>
         *get_connected_members() = 0;
 
@@ -546,7 +556,7 @@ public:
     members in the Raft cluster and exposed through `get_connected_members()` on their
     `raft_network_interface_t`s. */
     clone_ptr_t<watchable_t<raft_network_state_t> > get_network_state() {
-        return network_state.get_watchable();
+        return ns.get_watchable();
     }
 
     /* `check_invariants()` asserts that the given collection of Raft cluster members are
@@ -591,11 +601,6 @@ private:
     other, of course). In general we call it whenever we acquire or release the mutex,
     because we know that the variables should be consistent at those times. */
     void check_invariants(const new_mutex_acq_t *mutex_acq);
-
-    /* `on_watchdog_timer()` is called periodically. If we're a follower and we haven't
-    heard from a leader within the election timeout, it starts a new election by spawning
-    `candidate_and_leader_coro()`. */
-    void on_watchdog_timer();
 
     /* `apply_log_entries()` updates `state_and_config` with the entries from `log` with
     indexes `first <= index <= last`. */
@@ -730,6 +735,13 @@ private:
     name is so abbreviated. */
     raft_persistent_state_t<state_t> ps;
 
+    /* This describes the current network state of this member, which is broadcast to the
+    other members of the Raft cluster. We end up writing `ns.*` a lot, which is why the
+    name is so abbreviated.
+
+    Only `candidate_and_leader_coro()` should ever change the `mode` field. */
+    watchable_variable_t<raft_network_state_t> ns;
+
     /* `committed_state` describes the state after all committed log entries have been
     applied. The `state` field of `committed_state` is equivalent to the "state machine"
     in the Raft paper. The `log_index` field is equal to the `lastApplied` and
@@ -745,20 +757,10 @@ private:
     `latest_state` must be updated to keep in sync. */
     watchable_variable_t<state_and_config_t> latest_state;
 
-    /* Only `candidate_and_leader_coro()` should ever change `mode` */
-    mode_t mode;
-
     /* `current_term_leader_id` is the ID of the member that is leader during this term.
     If we haven't seen any node acting as leader this term, it's `nil_uuid()`. We use it
-    to redirect clients as described in Figure 2 and Section 8. */
+    to detect when we should start a new election. */
     raft_member_id_t current_term_leader_id;
-
-    /* `last_heard_from_candidate` and `last_heard_from_leader` are the times we last
-    received a message from a candidate or leader. When `on_watchdog_timer()` is deciding
-    whether or not to start a new election, it uses the later of the two. The reason they
-    are separate is because `on_request_vote_rpc()` should only disregard RPCs if it
-    hasn't heard from a leader recently, even if it has heard from a candidate. */
-    microtime_t last_heard_from_candidate, last_heard_from_leader;
 
     /* `readiness_for_change` and `readiness_for_config_change` track whether this member
     is ready to accept changes. A member is ready for changes if it is leader and in
@@ -801,13 +803,9 @@ private:
     that the destructor can destroy it early. */
     scoped_ptr_t<auto_drainer_t> drainer;
 
-    /* This periodically calls `on_watchdog_timer()` to check if we need to start a new
-    election. It's in a `scoped_ptr_t` so that the destructor can destroy it early. */
-    scoped_ptr_t<repeating_timer_t> watchdog_timer;
-
-    /* This calls `on_connected_members_change()` whenever a peer connects or
+    /* This calls `update_readiness_for_change()` whenever a peer connects or
     disconnects. */
-    scoped_ptr_t<watchable_map_t<raft_member_id_t, std::nullptr_t>::all_subs_t>
+    scoped_ptr_t<watchable_map_t<raft_member_id_t, raft_network_state_t>::all_subs_t>
         connected_members_subs;
 };
 
