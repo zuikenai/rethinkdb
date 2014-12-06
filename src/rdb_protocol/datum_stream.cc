@@ -958,8 +958,12 @@ changefeed::keyspec_t slice_datum_stream_t::get_change_spec() {
         if (rspec != NULL) {
             std::copy(transforms.begin(), transforms.end(),
                       std::back_inserter(rspec->transforms));
+            rcheck(static_cast<decltype(right)>(static_cast<size_t>(right)) == right,
+                   base_exc_t::GENERIC,
+                   strprintf("Limit of `%" PRIu64 "` is too large.", right));
             return changefeed::keyspec_t(
-                changefeed::keyspec_t::limit_t{std::move(*rspec), right},
+                changefeed::keyspec_t::limit_t{
+                    std::move(*rspec), static_cast<size_t>(right)},
                 std::move(subspec.table),
                 std::move(subspec.table_name));
         }
