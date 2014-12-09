@@ -21,6 +21,7 @@ dbName, tableName = utils.get_test_db_table()
 numNodes = 2
 numShards = 2
 numReplicas = 2
+numRecords = 500
 
 print("Starting cluster of %d servers (%.2fs)" % (numNodes, time.time() - startTime))
 with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_ready=True) as cluster:
@@ -35,29 +36,30 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Adding data to table (%.2fs)" % (time.time() - startTime))
-    insertSet = [{} for x in xrange(50)]
-    for i in xrange(10):
-        r.db(dbName).table(tableName).insert(insertSet).run(conn)
+    r.db(dbName).table(tableName).insert(r.range(numRecords).map(lambda x: {})).run(conn)
 
     print("Splitting into %d shards (%.2fs)" % (numShards, time.time() - startTime))
     r.db(dbName).table(tableName).reconfigure(shards=numShards, replicas=1).run(conn)
-    r.table_wait().run(conn)
+    r.db(dbName).table_wait().run(conn)
     cluster.check()
 
     print("Setting replication factor to %d (%.2fs)" % (numReplicas, time.time() - startTime))
     r.db(dbName).table(tableName).reconfigure(shards=numShards, replicas=numReplicas).run(conn)
-    r.table_wait().run(conn)
+    r.db(dbName).table_wait().run(conn)
     cluster.check()
 
     print("Merging shards together again (%.2fs)" % (time.time() - startTime))
-    r.db(dbName).table(tableName).reconfigure(shards=numShards, replicas=numReplicas).run(conn)
-    r.table_wait().run(conn)
+    r.db(dbName).table(tableName).reconfigure(shards=1, replicas=numReplicas).run(conn)
+    r.db(dbName).table_wait().run(conn)
     cluster.check()
+    
+    print("Checking that table has the expected number of items (%.2fs)" % (time.time() - startTime))
+    assert numRecords == r.db(dbName).table(tableName).count().run(conn)
     
     print("Cleaning up (%.2fs)" % (time.time() - startTime))
 

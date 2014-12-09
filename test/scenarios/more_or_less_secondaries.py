@@ -74,9 +74,9 @@ with driver.Cluster(output_folder='.') as cluster:
     
     assert r.db(dbName).table_config(tableName).update({'shards':[{'director':primary.name, 'replicas':[primary.name, replicaPool[0].name]}]}).run(conn)['errors'] == 0
     
-    r.table_wait().run(conn)
+    r.db(dbName).table_wait().run(conn)
     cluster.check()
-    issues = [x for x in r.db('rethinkdb').table('issues').run(conn)]
+    issues = list(r.db('rethinkdb').table('issues').run(conn))
     assert len(issues) == 0, 'There were issues on the server: %s' % str(issues)
     
     print('Starting workload (%.2fs)' % (time.time() - startTime))
@@ -87,7 +87,7 @@ with driver.Cluster(output_folder='.') as cluster:
         workload.run_before()
         
         cluster.check()
-        assert [x for x in r.db('rethinkdb').table('issues').run(conn)] == []
+        assert list(r.db('rethinkdb').table('issues').run(conn)) == []
         workload.check()
         
         current = opts["sequence"].initial
@@ -98,13 +98,13 @@ with driver.Cluster(output_folder='.') as cluster:
             current += s
             
             assert r.db(dbName).table_config(tableName).update({'shards':[{'director':primary.name, 'replicas':[primary.name] + [x.name for x in replicaPool[:current]]}]}).run(conn)['errors'] == 0
-            r.table_wait().run(conn) # ToDo: add timeout when avalible
+            r.db(dbName).table_wait().run(conn) # ToDo: add timeout when avalible
             
             cluster.check()
-            assert [x for x in r.db('rethinkdb').table('issues').run(conn)] == []
+            assert list(r.db('rethinkdb').table('issues').run(conn)) == []
         workload.run_after()
 
-    assert [x for x in r.db('rethinkdb').table('issues').run(conn)] == []
+    assert list(r.db('rethinkdb').table('issues').run(conn)) == []
     
     print('Cleaning up (%.2fs)' % (time.time() - startTime))
 print('Done. (%.2fs)' % (time.time() - startTime))

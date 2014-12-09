@@ -34,8 +34,8 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Pinning database to only the first server (%.2fs)" % (time.time() - startTime))
@@ -45,7 +45,7 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     cluster.check()
     assert [] == list(r.db('rethinkdb').table('issues').run(conn))
     
-    sys.stderr.write('before workoad: %s\n' % (repr([x for x in r.db(dbName).table_config(tableName).run(conn)])))
+    sys.stderr.write('before workoad: %s\n' % (repr(list(r.db(dbName).table_config(tableName).run(conn)))))
     
     print("Starting workload (%.2fs)" % (time.time() - startTime))
     
@@ -68,13 +68,13 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
         
         # Don't bother stopping the workload, just exit and it will get killed
     
-    sys.stderr.write('before kill: %s\n' % repr([x for x in r.db(dbName).table_config(tableName).run(conn)]))
+    sys.stderr.write('before kill: %s\n' % repr(list(r.db(dbName).table_config(tableName).run(conn))))
     print("Removing the stopped server (%.2fs)" % (time.time() - startTime))
     
     r.db('rethinkdb').table('server_config').get(access_server.uuid).delete().run(conn)
     time.sleep(.5)
     
-    sys.stderr.write('after kill: %s\n' % repr([x for x in r.db(dbName).table_config(tableName).run(conn)]))
+    sys.stderr.write('after kill: %s\n' % repr(list(r.db(dbName).table_config(tableName).run(conn))))
     
     issues = list(r.db('rethinkdb').table('issues').run(conn))
     assert [] == issues, 'The issues list was not empty: %s' % repr(issues)

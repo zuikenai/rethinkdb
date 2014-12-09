@@ -37,8 +37,8 @@ with driver.Process(console_output=True, output_folder='.', command_prefix=comma
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Collecting metadata for first run (%.2fs)" % (time.time() - startTime))
@@ -58,7 +58,7 @@ with driver.Process(files=files, console_output=True, command_prefix=command_pre
     
     afterMetaData = r.db('rethinkdb').table('server_config').get(server.uuid).run(conn)
     
-    assert afterMetaData == beforeMetaData, "The server metadata did not match between runs:\n%s\nvs.\n%s" % (str(beforeMetaData), afterMetaData)
+    assert afterMetaData == beforeMetaData, "The server metadata did not match between runs:\n%s\nvs.\n%s" % (str(beforeMetaData), str(afterMetaData))
 
     print("Cleaning up (%.2fs)" % (time.time() - startTime))
 print("Done. (%.2fs)" % (time.time() - startTime))

@@ -37,7 +37,7 @@ with driver.Process(output_folder='.', command_prefix=command_prefix, extra_opti
     try:
         fetchResult = urllib2.urlopen(os.path.join(baseURL, 'foobar'), timeout=2)
     except urllib2.HTTPError as e:
-        assert e.code == 403, 'Got a non 200 code when requesting bad url /foobar: %s' % str(e.code)
+        assert e.code == 403, 'Got a non 403 code when requesting bad url /foobar: %s' % str(e.code)
     else:
         assert False, "Did not raise a 403 error code when requesting a bad url"
     

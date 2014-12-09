@@ -15,30 +15,30 @@ scenario_common.prepare_option_parser_mode_flags(op)
 _, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
 r = utils.import_python_driver()
+dbName, tableName = utils.get_test_db_table()
 
-table_name = 'regression_2925'
-db_name = 'test'
 num_rows = 30000
 
 def populate_table(conn):
-    r.db_create(db_name).run(conn)
-    r.table_create(table_name).run(conn)
+    r.db_create(dbName).run(conn)
+    res = r.db(dbName).table_create(tableName).run(conn)
+    assert res == {"created": 1}
     next_id = 0
     while next_id < num_rows:
         batch = [{'id':next_id + i, 'data': r.random(1, 100)} for i in xrange(min(1000, num_rows - next_id))]
         next_id += len(batch)
-        r.table(table_name).insert(batch).run(conn)
+        r.db(dbName).table(tableName).insert(batch).run(conn)
 
 def add_index(conn):
-    r.table(table_name).index_create('data').run(conn)
+    r.db(dbName).table(tableName).index_create('data').run(conn)
 
 def replace_rows(host, port, ready_event, start_event):
-    conn = r.connect(host, port, db=db_name)
+    conn = r.connect(host, port, db=dbName)
     ready_event.set()
     start_event.wait()
     try:
         for i in xrange(num_rows // 2):
-            r.table(table_name).get(i).update({'data': r.random(1, 100)}, non_atomic=True).run(conn)
+            r.db(dbName).table(tableName).get(i).update({'data': r.random(1, 100)}, non_atomic=True).run(conn)
     except Exception as ex:
         if ex.message != "Connection is closed." and ex.message != "Connection is broken.":
             print("ERROR: Expected to be interrupted by the connection closing, actual error: %s" % ex.message)
@@ -46,12 +46,12 @@ def replace_rows(host, port, ready_event, start_event):
     print("ERROR: Was not interrupted while replacing entries.")
 
 def delete_rows(host, port, ready_event, start_event):
-    conn = r.connect(host, port, db=db_name)
+    conn = r.connect(host, port, db=dbName)
     ready_event.set()
     start_event.wait()
     try:
         for i in xrange(num_rows // 2, num_rows):
-            r.table(table_name).get(i).delete().run(conn)
+            r.db(dbName).table(tableName).get(i).delete().run(conn)
     except Exception as ex:
         if ex.message != "Connection is closed." and ex.message != "Connection is broken.":
             print("ERROR: Expected to be interrupted by the connection closing, actual error: %s" % ex.message)
@@ -60,13 +60,13 @@ def delete_rows(host, port, ready_event, start_event):
 
 def check_data(conn):
     print("Waiting for index...")
-    r.table(table_name).index_wait('data').run(conn)
+    r.db(dbName).table(tableName).index_wait('data').run(conn)
     print("Index ready, checking data...")
-    pkey_count = r.table(table_name).count().run(conn)
+    pkey_count = r.db(dbName).table(tableName).count().run(conn)
 
     # Actually read out all of the rows from the sindexes in case of corruption
-    sindex_count = r.table(table_name).order_by(index='data').count().run(conn)
-    sindex_cursor = r.table(table_name).order_by(index='data').run(conn)
+    sindex_count = r.db(dbName).table(tableName).order_by(index='data').count().run(conn)
+    sindex_cursor = r.db(dbName).table(tableName).order_by(index='data').run(conn)
     rows = list(sindex_cursor)
 
     if len(rows) != pkey_count or pkey_count != sindex_count:
@@ -81,7 +81,7 @@ with driver.Cluster(initial_servers=1, output_folder='.', command_prefix=command
     
     print("Establishing ReQL connection (%.2fs)" % (time.time() - startTime))
     
-    conn = r.connect(process.host, process.driver_port, db=db_name)
+    conn = r.connect(process.host, process.driver_port, db=dbName)
     
     print("Starting replace/delete processes (%.2fs)" % (time.time() - startTime))
     
@@ -122,7 +122,7 @@ with driver.Cluster(initial_servers=1, output_folder='.', command_prefix=command
     process = driver.Process(cluster, files)
     process.wait_until_started_up()
 
-    conn = r.connect(process.host, process.driver_port, db=db_name)
+    conn = r.connect(process.host, process.driver_port, db=dbName)
     time.sleep(1)
     check_data(conn)
     conn.close()
