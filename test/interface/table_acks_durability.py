@@ -22,6 +22,7 @@ scenario_common.prepare_option_parser_mode_flags(op)
 _, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
 r = utils.import_python_driver()
+dbName, _ = utils.get_test_db_table()
 
 num_live = num_dead = 3
 
@@ -100,12 +101,12 @@ with driver.Cluster(output_folder='.') as cluster:
         conf = {"shards": shards, "write_acks": write_acks}
         t = "table%d" % (i+1)
         print(t, conf)
-        res = r.table_create(t).run(conn)
+        res = r.db(dbName).table_create(t).run(conn)
         assert res["created"] == 1, res
-        res = r.table_config(t).update(conf).run(conn)
+        res = r.db(dbName).table_config(t).update(conf).run(conn)
         assert res["errors"] == 0, res
-        r.table_wait(t).run(conn)
-        res = r.table(t).insert([{}]*1000).run(conn)
+        r.db(dbName).table_wait(t).run(conn)
+        res = r.db(dbName).table(t).insert([{}]*1000).run(conn)
         assert res["errors"] == 0 and res["inserted"] == 1000, res
 
     issues = list(r.db("rethinkdb").table("issues").run(conn))
@@ -119,7 +120,7 @@ with driver.Cluster(output_folder='.') as cluster:
     def check_table_status(name, expected_readiness):
         tested_readiness = ""
         try:
-            res = r.table(name).update({"x": r.row["x"].default(0).add(1)}).run(conn)
+            res = r.db(dbName).table(name).update({"x": r.row["x"].default(0).add(1)}).run(conn)
         except r.RqlRuntimeError, e:
             # This can happen if we aren't available for reading either
             pass
@@ -127,20 +128,20 @@ with driver.Cluster(output_folder='.') as cluster:
             assert res["errors"] == 0 and res["replaced"] == 1000
             tested_readiness += "w"
         try:
-            res = r.table(name).count().run(conn)
+            res = r.db(dbName).table(name).count().run(conn)
         except r.RqlRuntimeError, e:
             pass
         else:
             assert res == 1000
             tested_readiness += "r"
         try:
-            res = r.table(name).count().run(conn, use_outdated = True)
+            res = r.db(dbName).table(name).count().run(conn, use_outdated = True)
         except r.RqlRuntimeError, e:
             pass
         else:
             assert res == 1000
             tested_readiness += "o"
-        res = r.table_status(name).nth(0).run(conn)
+        res = r.db(dbName).table_status(name).nth(0).run(conn)
         reported_readiness = ""
         if res["status"]["all_replicas_ready"]:
             reported_readiness += "a"
@@ -186,20 +187,19 @@ with driver.Cluster(output_folder='.') as cluster:
             assert t not in issues_by_table
 
     print("Running auxiliary tests (%.2fs)" % (time.time() - startTime))
-    res = r.table_create("aux").run(conn)
+    res = r.db(dbName).table_create("aux").run(conn)
     assert res["created"] == 1, res
-    res = r.table_config("aux") \
-           .update({"shards": [{"director": "l1", "replicas": ["l1"]}]}).run(conn)
+    res = r.db(dbName).table_config("aux").update({"shards": [{"director": "l1", "replicas": ["l1"]}]}).run(conn)
     assert res["errors"] == 0, res
-    r.table_wait("aux").run(conn)
+    r.db(dbName).table_wait("aux").run(conn)
     def test_ok(change):
         print(repr(change))
-        res = r.table_config("aux").update(change).run(conn)
+        res = r.db(dbName).table_config("aux").update(change).run(conn)
         assert res["errors"] == 0 and res["replaced"] == 1, res
         print("OK")
     def test_fail(change):
         print(repr(change))
-        res = r.table_config("aux").update(change).run(conn)
+        res = r.db(dbName).table_config("aux").update(change).run(conn)
         assert res["errors"] == 1 and res["replaced"] == 0, res
         print("Failed (as expected):", repr(res["first_error"]))
     test_ok({"durability": "soft"})

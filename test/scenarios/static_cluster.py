@@ -41,13 +41,13 @@ with driver.Cluster(initial_servers=opts["num-nodes"], output_folder='.', wait_u
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Splitting into %d shards (%.2fs)" % (opts["num-shards"], time.time() - startTime))
     
-    r.db(dbName).table(tableName).reconfigure(shards=opts["num-shards"], replicas=opts["num-shards"]).run(conn)
+    r.db(dbName).table(tableName).reconfigure(shards=opts["num-shards"], replicas=1).run(conn)
     r.db(dbName).table_wait().run(conn)
     
     print("Starting workload: %s (%.2fs)" % (opts["workload"], time.time() - startTime))

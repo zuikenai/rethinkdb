@@ -26,10 +26,10 @@ if dbName not in r.db_list().run(conn):
 	r.db_create(dbName).run(conn)
 
 try:
-	r.table_create(tableName).run(conn)
+	r.db(dbName).table_create(tableName).run(conn)
 except r.RqlRuntimeError:
-	r.table_drop(tableName).run(conn)
-	r.table_create(tableName).run(conn)
+	r.db(dbName).table_drop(tableName).run(conn)
+	r.db(dbName).table_create(tableName).run(conn)
 
 # -- thread methods
 
@@ -38,7 +38,7 @@ class FillTable(utils.PerformContinuousAction):
 		tableName = os.path.splitext(os.path.basename(__file__))[0]
 		if 'tableName' in self.kwargs:
 			tableName = self.kwargs['tableName']
-		r.table(tableName).insert({'id':self.sucessCount + 1, 'data':self.sucessCount + 1}, durability='hard', conflict='error').run(self.connection)
+		r.db(dbName).table(tableName).insert({'id':self.sucessCount + 1, 'data':self.sucessCount + 1}, durability='hard', conflict='error').run(self.connection)
 
 class WaitForTable(utils.PerformContinuousAction):
     def runAction(self):
@@ -52,7 +52,7 @@ class WaitForTable(utils.PerformContinuousAction):
         
         while time.time() < deadline:
             try:
-                r.table(tableName).limit(1).run(self.connection)
+                r.db(dbName).table(tableName).limit(1).run(self.connection)
                 break
             except r.RqlRuntimeError:
                 pass
@@ -71,7 +71,7 @@ time.sleep(3) # give it a moment to have something
 
 # - start reading the table
 
-readTableProcess = utils.PerformContinuousAction(connection=r.connect(host=server.host, port=server.driver_port), action=r.table(tableName).sample(1))
+readTableProcess = utils.PerformContinuousAction(connection=r.connect(host=server.host, port=server.driver_port), action=r.db(dbName).table(tableName).sample(1))
 
 # - perform the shard
 
@@ -131,7 +131,7 @@ except r.errors.RqlDriverError:
 # - everything made it to the database that we expected
 
 try:
-    actualRecordCount = r.table(tableName).count().run(conn)
+    actualRecordCount = r.db(dbName).table(tableName).count().run(conn)
     if actualRecordCount != fillTableProcess.sucessCount:
         allPassed = False
         sys.stderr.write('Failure: The count of records in the table (%d) does not match the number we added (%d)\n' % (actualRecordCount, fillTableProcess.sucessCount))
@@ -139,7 +139,7 @@ try:
         print('Success: correct number of records: %d' % actualRecordCount)
     
     expectedSum = (fillTableProcess.sucessCount * (fillTableProcess.sucessCount + 1)) / 2
-    actualSum = r.table(tableName).sum('data').run(conn)
+    actualSum = r.db(dbName).table(tableName).sum('data').run(conn)
     if expectedSum != actualSum:
         allPassed = False
         sys.stderr.write('Failure: The sum of the data in the table (%d) does not match the number we expected (%d)\n' % (actualSum, expectedSum))

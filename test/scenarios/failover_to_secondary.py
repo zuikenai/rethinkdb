@@ -38,8 +38,8 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn1):
         r.db_create(dbName).run(conn1)
     
-    if tableName in r.db_list().run(conn1):
-        r.table_drop(tableName).run(conn1)
+    if tableName in r.db(dbName).table_list().run(conn1):
+        r.db(dbName).table_drop(tableName).run(conn1)
     r.db(dbName).table_create(tableName).run(conn1)
     
     print("Pinning table to first server (%.2fs)" % (time.time() - startTime))
@@ -52,7 +52,7 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     with workload_runner.SplitOrContinuousWorkload(opts, workload_ports) as workload:
         workload.run_before()
         cluster.check()
-        issues = [x for x in r.db('rethinkdb').table('issues').run(conn1)]
+        issues = list(r.db('rethinkdb').table('issues').run(conn1))
         assert len(issues) == 0, 'The server recorded the following issues: %s' % str(issues)
         
         print("Killing the primary (%.2fs)" % (time.time() - startTime))
@@ -63,7 +63,7 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
         assert r.db(dbName).table_config(tableName).update({'shards':[{'director':secondary.name, 'replicas':[secondary.name]}]}).run(conn2)['errors'] == 0
         r.db(dbName).table_wait().run(conn2)
         cluster.check()
-        issues = [x for x in r.db('rethinkdb').table('issues').run(conn2)]
+        issues = list(r.db('rethinkdb').table('issues').run(conn2))
         assert len(issues) > 0, 'The server did not record the issue for the killed server'
         assert len(issues) == 1, 'The server recorded more issues than the single one expected: %s' % str(issues)
         

@@ -43,8 +43,8 @@ with driver.Process(output_folder='.', command_prefix=command_prefix, extra_opti
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Trying to set impossible goals with reconfigure (%.2fs)" % (time.time() - startTime))

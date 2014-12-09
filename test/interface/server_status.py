@@ -68,7 +68,7 @@ with driver.Cluster(output_folder='.') as cluster:
     
     # -- server b
     
-    print("Second serevr info (%.2fs)" % (time.time() - startTime))
+    print("Second server info (%.2fs)" % (time.time() - startTime))
     
     st2 = r.db("rethinkdb").table("server_status").filter({"name":process2.name}).nth(0).run(conn)
     assert st2["process"]["cache_size_mb"] == 123

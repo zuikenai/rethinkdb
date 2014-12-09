@@ -29,8 +29,8 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
 
     print("Increasing replication factor (%.2fs)" % (time.time() - startTime))
@@ -40,7 +40,6 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
 
     print("Inserting some data (%.2fs)" % (time.time() - startTime))
     rdb_workload_common.insert_many(host=server.host, port=server.driver_port, database=dbName, table=tableName, count=20000)
-    r.db(dbName).table_wait().run(conn)
     cluster.check()
 
     print("Decreasing replication factor (%.2fs)" % (time.time() - startTime))
@@ -53,14 +52,14 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
 
     print("Confirming that the progress meter indicates a backfill happening (%.2fs)" % (time.time() - startTime))
     # ToDo: replace this with ReQL command once issue is done: https://github.com/rethinkdb/rethinkdb/issues/3115
-    raise NotImplementedError('Wating for process table: https://github.com/rethinkdb/rethinkdb/issues/3115')
+    raise NotImplementedError('Waiting for process table: https://github.com/rethinkdb/rethinkdb/issues/3115')
     
     cluster.check()
     
     print("Cleaning up (%.2fs)" % (time.time() - startTime))
     
-    # The large backfill might take time, and for this test we don't care about it suceeding
+    # The large backfill might take time, and for this test we don't care about it succeeding
     for server in cluster:
-        server.close()
+        server.kill()
 
 print("Done. (%.2fs)" % (time.time() - startTime))

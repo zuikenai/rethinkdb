@@ -3,40 +3,36 @@
 
 from __future__ import print_function
 
-import os, random, shlex, sys, time
+import os, sys, time
 
 startTime = time.time()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'common')))
 import driver, rdb_workload_common, scenario_common, utils, vcoptparse, workload_runner
 
-class Sequence(tuple):
-    """A Sequence series showing the changes in the shards to have"""
-
-    @classmethod
-    def from_string(cls, string):
-        returnValue = tuple()
-        for step in string.split(","):
-            try:
-                returnValue += (int(step),)
-            except:
-                workingValue = returnValue[-1]
-                for char in step:
-                    if char == '-':
-                        workingValue -= 1
-                    elif char == '+':
-                        workingValue += 1
-                    else:
-                        raise ValueError('Got a bad step value: %s' % repr(char))
-                    assert char in ('-', '+')
-                returnValue += (workingValue,)
-        return returnValue
+def sequence_from_string(string):
+    returnValue = tuple()
+    for step in string.split(","):
+        try:
+            returnValue += (int(step),)
+        except:
+            workingValue = returnValue[-1]
+            for char in step:
+                if char == '-':
+                    workingValue -= 1
+                elif char == '+':
+                    workingValue += 1
+                else:
+                    raise ValueError('Got a bad step value: %s' % repr(char))
+                assert char in ('-', '+')
+            returnValue += (workingValue,)
+    return returnValue
 
 op = vcoptparse.OptParser()
 scenario_common.prepare_option_parser_mode_flags(op)
 workload_runner.prepare_option_parser_for_split_or_continuous_workload(op, allow_between = True)
 op["num-nodes"] = vcoptparse.IntFlag("--num-nodes", 3)
-op["sequence"] = vcoptparse.ValueFlag("--sequence", converter=Sequence.from_string, default=Sequence([2, 3]))
+op["sequence"] = vcoptparse.ValueFlag("--sequence", converter=sequence_from_string, default=(2, 3))
 opts = op.parse(sys.argv)
 _, command_prefix, serve_options = scenario_common.parse_mode_flags(opts)
 
@@ -61,10 +57,9 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
-    r.db(dbName).table_wait().run(conn)
     
     print("Sharding table (%.2fs)" % (time.time() - startTime))
     

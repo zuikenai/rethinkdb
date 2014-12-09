@@ -232,10 +232,10 @@ class TestHttpTerm(unittest.TestCase):
         self.assertEqual(res, None)
     
     def test_verify_http(self):
-        self.part_test_helper('http://dev.rethinkdb.com')
+        self.part_test_helper('http://dev.rethinkdb.com') # 301 redirection to https://dev.rethinkdb.com/
     
     def test_verify_https(self):
-        self.part_test_helper('https://dev.rethinkdb.com') # 301 redirection to https://dev.rethinkdb.com/
+        self.part_test_helper('https://dev.rethinkdb.com')
     
     def test_binary(self):
         res = r.http('www.rethinkdb.com/assets/images/docs/api_illustrations/quickstart.png') \

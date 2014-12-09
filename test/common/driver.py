@@ -55,7 +55,7 @@ def cleanupMetaclusterFolder(path):
 
 runningServers = []
 def endRunningServers():
-    for server in runningServers[:]:
+    for server in copy.copy(runningServers):
         try:
             server.check_and_stop()
         except Exception as e:
@@ -247,7 +247,7 @@ class Cluster(object):
             items = list(self.processes)
             return [items[x] for x in xrange(*pos.indices(len(items)))]
         elif isinstance(pos, int):
-            if len(self.processes) <= pos or pos < 0:
+            if not (-1 * len(self.processes) <= pos < len(self.processes) ):
                 raise IndexError('This cluster only has %d servers, so index %s is invalid' % (len(self.processes), str(pos)))
             return list(self.processes)[pos]
         else:
@@ -470,75 +470,41 @@ class _Process(object):
         # ToDo: handle non-normal exits
         self.close()
     
-    @property
-    def cluster_port(self):
-        if self._cluster_port:
-            return self._cluster_port
+    def __wait_for_value(self, valueName):
         
         deadline = time.time() + self.startupTimeout
         while deadline > time.time():
-            if self._cluster_port:
-                return self._cluster_port
+            value = getattr(self, '_%s' % valueName)
+            if value:
+                return value
             time.sleep(.1)
         else:
-            raise RuntimeError('Timed out waiting for cluster port')
+            raise RuntimeError('Timed out waiting for %s value' % valueName.replace('_', ' '))
+    
+    @property
+    def cluster_port(self):
+        return self.__wait_for_value('cluster_port')
     
     @property
     def driver_port(self):
-        if self._driver_port:
-            return self._driver_port
+        return self.__wait_for_value('driver_port')
         
-        deadline = time.time() + self.startupTimeout
-        while deadline > time.time():
-            if self._driver_port:
-                return self._driver_port
-            time.sleep(.1)
-        else:
-            raise RuntimeError('Timed out waiting for driver port')
-    
     @property
     def http_port(self):
-        if self._http_port:
-            return self._http_port
-        
-        deadline = time.time() + self.startupTimeout
-        while deadline > time.time():
-            if self._http_port:
-                return self._http_port
-            time.sleep(.1)
-        else:
-            raise RuntimeError('Timed out waiting for http port')
+        return self.__wait_for_value('http_port')
     
     @property
     def name(self):
-        if self._name:
-            return self._name
-        
-        deadline = time.time() + self.startupTimeout
-        while deadline > time.time():
-            if self._name:
-                return self._name
-            time.sleep(.1)
-        else:
-            raise RuntimeError('Timed out waiting for name')
+        return self.__wait_for_value('name')
 
     @property
     def uuid(self):
-        if self._uuid:
-            return self._uuid
-        
-        deadline = time.time() + self.startupTimeout
-        while deadline > time.time():
-            if self._uuid:
-                return self._uuid
-            time.sleep(.1)
-        else:
-            raise RuntimeError('Timed out waiting for uuid')
+        return self.__wait_for_value('uuid')
         
     def wait_until_started_up(self, timeout=30):
         deadline = time.time() + timeout
         while deadline > time.time():
-            if not self._check_all_ports_read():
+            if not self._check_all_ports_known():
                 self.check()
                 time.sleep(0.05)
             else:
@@ -547,7 +513,7 @@ class _Process(object):
         else:
             raise RuntimeError("Timed out after waiting %d seconds for startup." % timeout)
     
-    def _check_all_ports_read(self):
+    def _check_all_ports_known(self):
         return all((self._cluster_port, self._driver_port, self._http_port, self._uuid, self._name))
     
     def read_ports_from_log(self, timeout=30):
@@ -572,7 +538,7 @@ class _Process(object):
             
             # - bail out if we have everything
             
-            if self._check_all_ports_read():
+            if self._check_all_ports_known():
                 self.ready = True
                 return
             
@@ -731,7 +697,7 @@ class Process(_Process):
         moveConsoleFile = False
         if console_output is None:
             self.console_file = sys.stdout
-        elif console_output in (False, True):
+        elif isinstance(console_output, bool):
             self._close_console_output = True
             if console_output is False:
                 self.console_file = tempfile.NamedTemporaryFile(mode='w+')
@@ -786,7 +752,7 @@ class Process(_Process):
         options = ["serve", "--directory", self.files.db_path] + extra_options
         super(Process, self).__init__(cluster, options, executable_path=executable_path, command_prefix=command_prefix)
         
-        # -- wait untill ready (if requested)
+        # -- wait until ready (if requested)
         
         if wait_until_ready:
             self.wait_until_started_up()
@@ -803,16 +769,14 @@ class ProxyProcess(_Process):
             command_prefix = []
         if extra_options is None:
             extra_options = []
-        else:
-            extra_options = copy.copy(extra_options)
-
+        
         self.logfile_path = logfile_path
 
         options = ["proxy", "--log-file", self.logfile_path] + extra_options
 
         _Process.__init__(self, cluster, options, console_output=console_output, executable_path=executable_path, command_prefix=command_prefix)
     
-    def _check_all_ports_read(self):
+    def _check_all_ports_known(self):
         return all((self._driver_port, self._http_port, self._uuid))
 
 if __name__ == "__main__":

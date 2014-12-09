@@ -35,8 +35,8 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Reconfiguring table to have 1 shard but %d replicas (%.2fs)" % (numNodes, time.time() - startTime))

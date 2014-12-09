@@ -17,7 +17,7 @@ scenario_common.prepare_option_parser_mode_flags(op)
 _, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
 r = utils.import_python_driver()
-dbName, tableName = utils.get_test_db_table()
+dbName, _ = utils.get_test_db_table()
 
 print("Starting cluster of %d servers (%.2fs)" % (3, time.time() - startTime))
 with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.', command_prefix=command_prefix, extra_options=serve_options, wait_until_ready=True) as cluster:
@@ -28,7 +28,7 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
     conn = r.connect(host=server.host, port=server.driver_port)
     
     def check_foo_config_matches(expected):
-        config = r.table_config("foo").nth(0).run(conn)
+        config = r.db(dbName).table_config("foo").nth(0).run(conn)
         assert config["name"] == "foo" and config["db"] == "test"
         found = config["shards"]
         if len(expected) != len(found):
@@ -111,14 +111,21 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
     res = r.db("rethinkdb").table("server_config").filter({"name": "never_used"}).update({"tags": []}).run(conn)
     assert res["replaced"] == 1, res
 
-    print("Creating a table (%.2fs)" % (time.time() - startTime))
-    r.db_create("test").run(conn)
-    r.table_create("foo").run(conn)
-    r.table_create("bar").run(conn)
-    r.db_create("test2").run(conn)
+    print("Creating dbs and tables (%.2fs)" % (time.time() - startTime))
+    
+    if dbName not in r.db_list().run(conn):
+        r.db_create(dbName).run(conn)
+    r.db(dbName).table_create("foo").run(conn)
+    r.db(dbName).table_create("bar").run(conn)
+    
+    if "test2" not in r.db_list().run(conn):
+        r.db_create("test2").run(conn)
     r.db("test2").table_create("bar2").run(conn)
-    r.table("foo").insert([{"i": i} for i in xrange(10)]).run(conn)
-    assert set(row["i"] for row in r.table("foo").run(conn)) == set(xrange(10))
+    
+    print("Inserting data into foo (%.2fs)" % (time.time() - startTime))
+    
+    r.db(dbName).table("foo").insert([{"i": i} for i in xrange(10)]).run(conn)
+    assert set(row["i"] for row in r.db(dbName).table("foo").run(conn)) == set(xrange(10))
 
     print("Testing that table_config and table_status are sane (%.2fs)" % (time.time() - startTime))
     wait_until(lambda: check_tables_named(
@@ -128,11 +135,11 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
     print("Testing that we can move around data by writing to table_config (%.2fs)" % (time.time() - startTime))
     def test_shards(shards):
         print("Reconfiguring:", {"shards": shards})
-        res = r.table_config("foo").update({"shards": shards}).run(conn)
+        res = r.db(dbName).table_config("foo").update({"shards": shards}).run(conn)
         assert res["errors"] == 0, repr(res)
         wait_until(lambda: check_foo_config_matches(shards))
         wait_until(check_status_matches_config)
-        assert set(row["i"] for row in r.table("foo").run(conn)) == set(xrange(10))
+        assert set(row["i"] for row in r.db(dbName).table("foo").run(conn)) == set(xrange(10))
         print("OK (%.2fs)" % (time.time() - startTime))
     test_shards([{"replicas": ["a"], "director": "a"}])
     test_shards([{"replicas": ["b"], "director": "b"}])
@@ -171,13 +178,13 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
     test_invalid(r.row.without("shards"))
 
     print("Testing that we can rename tables through table_config (%.2fs)" % (time.time() - startTime))
-    res = r.table_config("bar").update({"name": "bar2"}).run(conn)
+    res = r.db(dbName).table_config("bar").update({"name": "bar2"}).run(conn)
     assert res["errors"] == 0
     wait_until(lambda: check_tables_named(
         [("test", "foo"), ("test", "bar2"), ("test2", "bar2")]))
 
     print("Testing that we can't rename a table so as to cause a name collision (%.2fs)" % (time.time() - startTime))
-    res = r.table_config("bar2").update({"name": "foo"}).run(conn)
+    res = r.db(dbName).table_config("bar2").update({"name": "foo"}).run(conn)
     assert res["errors"] == 1
 
     print("Testing that we can create a table through table_config (%.2fs)" % (time.time() - startTime))
@@ -186,19 +193,19 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
                .insert(doc, return_changes=True).run(conn)
         assert res["errors"] == 0, repr(res)
         assert res["inserted"] == 1, repr(res)
-        assert doc["name"] in r.table_list().run(conn)
+        assert doc["name"] in r.db(dbName).table_list().run(conn)
         assert res["changes"][0]["new_val"]["primary_key"] == pkey
         assert "shards" in res["changes"][0]["new_val"]
         for i in xrange(10):
             try:
-                r.table(doc["name"]).insert({}).run(conn)
+                r.db(dbName).table(doc["name"]).insert({}).run(conn)
             except r.RqlRuntimeError:
                 time.sleep(1)
             else:
                 break
         else:
             raise ValueError("Table took too long to become available")
-        rows = list(r.table(doc["name"]).run(conn))
+        rows = list(r.db(dbName).table(doc["name"]).run(conn))
         assert len(rows) == 1 and list(rows[0].keys()) == [pkey]
     test_create({
         "name": "baz",
@@ -217,10 +224,10 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
         }, "id")
 
     print("Testing that we can delete a table through table_config (%.2fs)" % (time.time() - startTime))
-    res = r.table_config("baz").delete().run(conn)
+    res = r.db(dbName).table_config("baz").delete().run(conn)
     assert res["errors"] == 0, repr(res)
     assert res["deleted"] == 1, repr(res)
-    assert "baz" not in r.table_list().run(conn)
+    assert "baz" not in r.db(dbName).table_list().run(conn)
 
     print("Testing that identifier_format works (%.2fs)" % (time.time() - startTime))
     a_uuid = r.db("rethinkdb").table("server_config") \
@@ -241,7 +248,7 @@ with driver.Cluster(initial_servers=['a', 'b', 'never_used'], output_folder='.',
     res = r.db("rethinkdb").table("table_config", identifier_format="name") \
            .filter({"name": "idf_test"}).nth(0).run(conn)
     assert res["shards"] == [{"replicas": ["a"], "director": "a"}], repr(res)
-    r.table_wait("idf_test").run(conn)
+    r.db(dbName).table_wait("idf_test").run(conn)
     res = r.db("rethinkdb").table("table_status", identifier_format="uuid") \
            .filter({"name": "idf_test"}).nth(0).run(conn)
     assert res["shards"] == [{

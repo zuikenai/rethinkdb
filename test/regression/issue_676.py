@@ -29,13 +29,12 @@ with driver.Cluster(initial_servers=numNodes, output_folder='.', wait_until_read
     if dbName not in r.db_list().run(conn):
         r.db_create(dbName).run(conn)
     
-    if tableName in r.db_list().run(conn):
-        r.table_drop(tableName).run(conn)
+    if tableName in r.db(dbName).table_list().run(conn):
+        r.db(dbName).table_drop(tableName).run(conn)
     r.db(dbName).table_create(tableName).run(conn)
     
     print("Inserting some data (%.2fs)" % (time.time() - startTime))
     rdb_workload_common.insert_many(host=server.host, port=server.driver_port, database=dbName, table=tableName, count=10000)
-    r.db(dbName).table_wait().run(conn)
     cluster.check()
     
     print("Splitting into two shards (%.2fs)" % (time.time() - startTime))

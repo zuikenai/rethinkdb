@@ -36,8 +36,8 @@ with driver.Cluster(initial_servers=['first'], output_folder='.', command_prefix
     if dbName not in r.db_list().run(conn1):
         r.db_create(dbName).run(conn1)
     
-    if tableName in r.db_list().run(conn1):
-        r.table_drop(tableName).run(conn1)
+    if tableName in r.db(dbName).table_list().run(conn1):
+        r.db(dbName).table_drop(tableName).run(conn1)
     r.db(dbName).table_create(tableName).run(conn1)
 
     print("Starting first workload (%.2fs)" % (time.time() - startTime))
@@ -78,11 +78,10 @@ with driver.Cluster(initial_servers=['first'], output_folder='.', command_prefix
     
     assert r.db('rethinkdb').table('server_config').get(server1.uuid).delete().run(conn2)['errors'] == 0
     time.sleep(.1)
+    r.db(dbName).table_wait().run(conn2)
     
     issues = list(r.db('rethinkdb').table('issues').run(conn2))
     assert [] == issues, 'The issues list was not empty: %s' % repr(issues)
-    
-    r.db(dbName).table_wait().run(conn2)
     
     print("Starting second workload (%.2fs)" % (time.time() - startTime))
 

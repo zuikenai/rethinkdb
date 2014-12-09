@@ -15,6 +15,7 @@ scenario_common.prepare_option_parser_mode_flags(op)
 _, command_prefix, serve_options = scenario_common.parse_mode_flags(op.parse(sys.argv))
 
 r = utils.import_python_driver()
+dbName, _ = utils.get_test_db_table()
 
 print("Starting servers PrinceHamlet and KingHamlet (%.2fs)" % (time.time() - startTime))
 with driver.Cluster(output_folder='.') as cluster:
@@ -32,13 +33,13 @@ with driver.Cluster(output_folder='.') as cluster:
 
     print("Creating three tables (%.2fs)" % (time.time() - startTime))
     
-    if not 'test' in r.db_list().run(conn):
-        r.db_create("test").run(conn)
+    if dbName not in r.db_list().run(conn):
+        r.db_create(dbName).run(conn)
     
     res = r.db("rethinkdb").table("table_config").insert([
         # The `test` table will remain readable when `KingHamlet` is removed.
         {
-            "db": "test",
+            "db": dbName,
             "name": "test",
             "primary_key": "id",
             "shards": [{
@@ -49,7 +50,7 @@ with driver.Cluster(output_folder='.') as cluster:
         },
         # The `test2` table will raise a `table_needs_primary` issue
         {
-            "db": "test",
+            "db": dbName,
             "name": "test2",
             "primary_key": "id",
             "shards": [{
@@ -60,7 +61,7 @@ with driver.Cluster(output_folder='.') as cluster:
         },
         # The `test3` table will raise a `data_lost` issue
         {
-            "db": "test",
+            "db": dbName,
             "name": "test3",
             "primary_key": "id",
             "shards": [{
@@ -71,15 +72,15 @@ with driver.Cluster(output_folder='.') as cluster:
         }
         ]).run(conn)
     assert res["inserted"] == 3, res
-    r.table_wait("test", "test2", "test3").run(conn)
+    r.db(dbName).table_wait("test", "test2", "test3").run(conn)
     
     print("Inserting data into tables (%.2fs)" % (time.time() - startTime))
     
-    res = r.table("test").insert([{}]*100).run(conn)
+    res = r.db(dbName).table("test").insert([{}]*100).run(conn)
     assert res["inserted"] == 100
-    res = r.table("test2").insert([{}]*100).run(conn)
+    res = r.db(dbName).table("test2").insert([{}]*100).run(conn)
     assert res["inserted"] == 100
-    res = r.table("test3").insert([{}]*100).run(conn)
+    res = r.db(dbName).table("test3").insert([{}]*100).run(conn)
     assert res["inserted"] == 100
 
     print("Killing KingHamlet (%.2fs)" % (time.time() - startTime))
@@ -102,7 +103,7 @@ with driver.Cluster(output_folder='.') as cluster:
     assert issues[0]["info"]["server"] == king_hamlet.uuid
     assert issues[0]["info"]["affected_servers"] == [prince_hamlet.uuid]
 
-    test_status, test2_status, test3_status = r.table_status("test", "test2", "test3").run(conn)
+    test_status, test2_status, test3_status = r.db(dbName).table_status("test", "test2", "test3").run(conn)
     assert test_status["status"]["ready_for_writes"], test_status
     assert not test_status["status"]["all_replicas_ready"], test_status
     assert test2_status["status"]["ready_for_outdated_reads"], test2_status
@@ -130,20 +131,20 @@ with driver.Cluster(output_folder='.') as cluster:
     assert dl_issue["info"]["table"] == "test3"
     assert "Some data has probably been lost permanently" in dl_issue["description"]
 
-    test_status, test2_status, test3_status = r.table_status("test", "test2", "test3").run(conn)
+    test_status, test2_status, test3_status = r.db(dbName).table_status("test", "test2", "test3").run(conn)
     assert test_status["status"]["all_replicas_ready"]
     assert test2_status["status"]["ready_for_outdated_reads"]
     assert not test2_status["status"]["ready_for_reads"]
     assert not test3_status["status"]["ready_for_outdated_reads"]
-    assert r.table_config("test").nth(0)["shards"].run(conn) == [{
+    assert r.db(dbName).table_config("test").nth(0)["shards"].run(conn) == [{
         "director": "PrinceHamlet",
         "replicas": ["PrinceHamlet"]
         }]
-    assert r.table_config("test2").nth(0)["shards"].run(conn) == [{
+    assert r.db(dbName).table_config("test2").nth(0)["shards"].run(conn) == [{
         "director": None,
         "replicas": ["PrinceHamlet"]
         }]
-    assert r.table_config("test3").nth(0)["shards"].run(conn) == [{
+    assert r.db(dbName).table_config("test3").nth(0)["shards"].run(conn) == [{
         "director": None,
         "replicas": []
         }]
@@ -151,22 +152,22 @@ with driver.Cluster(output_folder='.') as cluster:
     print("Testing that having director=None doesn't break `table_config` (%.2fs)" % (time.time() - startTime))
     # By changing the table's name, we force a write to `table_config`, which tests the
     # code path that writes `"director": None`.
-    res = r.table_config("test2").update({"name": "test2x"}).run(conn)
+    res = r.db(dbName).table_config("test2").update({"name": "test2x"}).run(conn)
     assert res["errors"] == 0
-    res = r.table_config("test2x").update({"name": "test2"}).run(conn)
+    res = r.db(dbName).table_config("test2x").update({"name": "test2"}).run(conn)
     assert res["errors"] == 0
-    assert r.table_config("test2").nth(0)["shards"].run(conn) == [{
+    assert r.db(dbName).table_config("test2").nth(0)["shards"].run(conn) == [{
         "director": None,
         "replicas": ["PrinceHamlet"]
         }]
 
     print("Fixing table `test2` (%.2fs)" % (time.time() - startTime))
-    r.table("test2").reconfigure(shards=1, replicas=1).run(conn)
-    r.table_wait("test2").run(conn)
+    r.db(dbName).table("test2").reconfigure(shards=1, replicas=1).run(conn)
+    r.db(dbName).table_wait("test2").run(conn)
 
     print("Fixing table `test3` (%.2fs)" % (time.time() - startTime))
-    r.table("test3").reconfigure(shards=1, replicas=1).run(conn)
-    r.table_wait("test3").run(conn)
+    r.db(dbName).table("test3").reconfigure(shards=1, replicas=1).run(conn)
+    r.db(dbName).table_wait("test3").run(conn)
 
     print("Bringing the dead server back as a ghost (%.2fs)" % (time.time() - startTime))
     ghost_of_king_hamlet = driver.Process(cluster, king_hamlet_files, console_output="king-hamlet-ghost-log", command_prefix=command_prefix)
@@ -184,9 +185,9 @@ with driver.Cluster(output_folder='.') as cluster:
     assert issues[0]["info"]["pid"] == ghost_of_king_hamlet.process.pid
 
     print("Checking table contents (%.2fs)" % (time.time() - startTime))
-    assert r.table("test").count().run(conn) == 100
-    assert r.table("test2").count().run(conn) == 100
-    assert r.table("test3").count().run(conn) == 0
+    assert r.db(dbName).table("test").count().run(conn) == 100
+    assert r.db(dbName).table("test2").count().run(conn) == 100
+    assert r.db(dbName).table("test3").count().run(conn) == 0
 
     print("Cleaning up (%.2fs)" % (time.time() - startTime))
 print("Done. (%.2fs)" % (time.time() - startTime))
