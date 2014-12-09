@@ -475,7 +475,7 @@ class _Process(object):
         deadline = time.time() + self.startupTimeout
         while deadline > time.time():
             value = getattr(self, '_%s' % valueName)
-            if value:
+            if value is not None:
                 return value
             time.sleep(.1)
         else:
