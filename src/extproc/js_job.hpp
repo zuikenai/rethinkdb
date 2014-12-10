@@ -5,6 +5,16 @@
 #include <vector>
 #include <string>
 
+// RSI
+//#if defined(__GNUC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 406)
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wunused-parameter"
+//#endif
+#include <v8.h>
+//#if defined(__GNUC__) && (100 * __GNUC__ + __GNUC_MINOR__ >= 406)
+//#pragma GCC diagnostic pop
+//#endif
+
 #include "errors.hpp"
 #include <boost/make_shared.hpp>
 

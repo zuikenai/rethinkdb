@@ -124,8 +124,9 @@ js_result_t js_runner_t::eval(const std::string &source,
     object_buffer_t<js_timeout_t::sentry_t> sentry;
     sentry.create(&job_data->js_timeout, config.timeout_ms);
 
-    try {
+    // try {
         result = job_data->js_job.eval(source);
+    /*
     } catch (...) {
         // Sentry must be destroyed before the js_timeout
         sentry.reset();
@@ -134,7 +135,9 @@ js_result_t js_runner_t::eval(const std::string &source,
         job_data->js_job.worker_error();
         job_data.reset();
         throw;
+    
     }
+    */
 
     // If the eval returned a function, cache it
     js_id_t *any_id = boost::get<js_id_t>(&result);

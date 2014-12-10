@@ -1,14 +1,22 @@
 
-version=3.22.24.17
+version=3.29.88.17
 
 # Other versions of v8 to test against:
-# version=3.7.12.22 # Ubuntu Lucid
-# version=3.17.4.1  # A pre-3.19 version
-# version=3.19.18.4 # A post-3.19 version
-# version=3.24.30.1 # A future version, with incompatible API changes
+# version=3.7.12.22  # Ubuntu Lucid
+# version=3.17.4.1   # A pre-3.19 version
+# version=3.19.18.4  # A post-3.19 version
+# version=3.22.24.17 # The version that shipped with RethinkDB 1.15
+# version=3.24.30.1  # A version with incompatible API changes
 # See http://omahaproxy.appspot.com/ for the current stable/beta/dev versions of v8
 
 src_url=http://commondatastorage.googleapis.com/chromium-browser-official/v8-$version.tar.bz2
+
+pkg_install-include () {
+    rm -rf "$install_dir/include"
+    mkdir -p "$install_dir/include"
+    cp -RL "$src_dir/include/." "$install_dir/include"
+    sed -i 's/include\///' "$install_dir/include/libplatform/libplatform.h"
+}
 
 pkg_install () {
     pkg_copy_src_to_build
@@ -34,6 +42,16 @@ pkg_install () {
             # Some versions of GCC 4.4 crash with "pure virtual method called" unless these flag are passed
             CXXFLAGS="${CXXFLAGS:-} -fno-function-sections -fno-inline-functions"
     esac
-    pkg_make $arch.release CXX=$CXX LINK=$CXX LINK.target=$CXX werror=no $makeflags CXXFLAGS="${CXXFLAGS:-} -Wno-error"
-    find "$build_dir/out/$arch.release/obj.target" -iname "*.o" | grep -v '\/preparser_lib\/' | xargs ${AR:-ar} cqs "$install_dir/lib/libv8.a"
+    mode=debug # ATN release
+    pkg_make $arch.$mode CXX=$CXX LINK=$CXX LINK.target=$CXX werror=no $makeflags CXXFLAGS="${CXXFLAGS:-} -Wno-error"
+    local libs="`find "$build_dir/out/$arch.$mode/obj.target" -name \*.a`"
+    cp $libs "$install_dir/lib"
+}
+
+pkg_link-flags () {
+    # These are the necessary libraries recommended by the docs:
+    # https://developers.google.com/v8/get_started#hello
+    for lib in libv8_{base,libbase,snapshot,libplatform} libicu{i18n,uc,data}; do
+        echo "$install_dir/lib/$lib.a"
+    done
 }

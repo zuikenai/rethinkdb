@@ -49,6 +49,7 @@ public:
 
     // Returning from this indicates an error, orderly shutdown will exit() manually
     void main_loop() {
+        debugf("ATN entering main worker loop\n");
         // Receive and run a function from the main process until one returns false
         bool (*fn) (read_stream_t *, write_stream_t *);
         while (true) {
