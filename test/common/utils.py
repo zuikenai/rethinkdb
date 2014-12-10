@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import collections, fcntl, os, random, signal, socket, string, subprocess, sys, tempfile, threading, time
+import atexit, collections, fcntl, os, random, shutil, signal, socket, string, subprocess, sys, tempfile, threading, time, warnings
 
 import test_exceptions
 
@@ -358,7 +358,11 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
     # -- allow processes to gracefully exit
     
     if shudown_grace > 0:
-        os.killpg(processGroupId, signal.SIGTERM)
+        try:
+            os.killpg(processGroupId, signal.SIGTERM)
+        except OSError as e:
+            if e.errno == 3: # No such process
+                return
         
         while time.time() < graceDeadline:
             try:
@@ -461,3 +465,22 @@ def nonblocking_readline(source):
             unprocessed = waitingLines.pop()
         
         # wrap around to pass the data
+
+def cleanupPath(path):
+    '''meant to be used with atexit, this deletes the given folder'''
+    path = str(path)
+    if os.path.isdir(path):
+        try:
+            shutil.rmtree(path)
+        except Exception as e:
+            warnings.warn('Warning: unable to cleanup folder: %s - got error: %s' % (str(path), str(e)))
+    elif os.path.isfile(path):
+        try:
+            os.unlink(path)
+        except Exception as e:
+            warnings.warn('Warning: unable to cleanup file: %s - got error: %s' % (str(path), str(e)))
+
+def cleanupPathAtExit(path):
+    '''helper for cleanupPath'''
+    atexit.register(cleanupPath, path)
+
