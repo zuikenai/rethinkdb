@@ -357,6 +357,8 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
     
     # -- allow processes to gracefully exit
     
+    psOutput = ''
+    
     if shudown_grace > 0:
         try:
             os.killpg(processGroupId, signal.SIGTERM)
@@ -367,6 +369,13 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         while time.time() < graceDeadline:
             try:
                 os.killpg(processGroupId, 0) # 0 checks to see if the process is there
+                
+                # -- check with `ps` that it too thinks there is something there
+            
+                psOutput, _ = subprocess.Popen(['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()
+                if len(psOutput.splitlines()) < 2:
+                    return
+            
             except OSError as e:
                 if e.errno == 3: # No such process
                     return
@@ -382,6 +391,12 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         try:
             os.killpg(processGroupId, 0) # 0 checks to see if the process is there
             os.killpg(processGroupId, signal.SIGKILL)
+            
+            # -- check with `ps` that it too thinks there is something there
+            
+            psOutput, _ = subprocess.Popen(['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()
+            if len(psOutput.splitlines()) < 2:
+                return
         except OSError as e:
             if e.errno == 3: # No such process
                 return
@@ -392,15 +407,9 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         else:
             time.sleep(.1)
     
-    # -- check with `ps` that it too thinks there is something there
-    
-    output, _ = subprocess.Popen(['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()
-    if len(output.splitlines()) < 2:
-        return
-    
     # --
     
-    raise Warning('Unable to kill all of the processes for process group %d after %d seconds:\n%s\n' % (processGroupId, timeout, output))
+    raise Warning('Unable to kill all of the processes for process group %d after %d seconds:\n%s\n' % (processGroupId, timeout, psOutput))
     # ToDo: better categorize the error
 
 def nonblocking_readline(source):

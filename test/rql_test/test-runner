@@ -732,6 +732,7 @@ class Test(object):
     
     envVariables = None
     
+    writeToStdout = False
     __console_output = None
     returncode = None
     errorMessage = None # single-line description
@@ -845,7 +846,8 @@ class Test(object):
         
         # -- start the test process
         
-        self.__console_output = tempfile.NamedTemporaryFile() # ToDo: allow this to be redirected
+        if self.writeToStdout is False:
+            self.__console_output = tempfile.NamedTemporaryFile()
         
         self.testProcess = subprocess.Popen(self.command, stdout=self.__console_output, stderr=self.__console_output, preexec_fn=os.setpgrp, env=self.envVariables)
     
@@ -1053,7 +1055,9 @@ class WorkerThread(threading.Thread):
     serverLogFile = None
     reqlConnection = None
     
-    def __init__(self, workQueue, outputQueue, existingServer=None):
+    writeToStdout = False
+    
+    def __init__(self, workQueue, outputQueue, existingServer=None, writeToStdout=False):
         if workQueue is None or not isinstance(workQueue, Queue.Queue):
             raise ValueError('workQueue must be a Queue object')
         self.workQueue = workQueue
@@ -1068,6 +1072,8 @@ class WorkerThread(threading.Thread):
                 self.server = existingServer
             else:
                 raise Exception('existingServer must be an instance of RethinkDBRunningServer, got: %s' % repr(existingServer))
+        
+        self.writeToStdout = writeToStdout == True
         
         super(WorkerThread, self).__init__()
         self.start()
@@ -1183,6 +1189,10 @@ class WorkerThread(threading.Thread):
                 except Queue.Empty:
                     break
                 
+                # -- set writeToStdout
+                
+                test.writeToStdout = self.writeToStdout
+                
                 # -- pre-process the test
                 
                 if self.outputQueue:
@@ -1230,6 +1240,7 @@ class WorkerThread(threading.Thread):
                         except Exception as e:
                             test.endTest(errorMessage='Exception while monitoring', errorDetails=traceback.format_exc())
                             self.outputQueue.put((test.status, test))
+                            break
                     else:
                         # ToDo: sample running processes
                         test.endTest(result='timed out', errorMessage='Timed out after %d seconds' % test.timeout)
@@ -1271,7 +1282,7 @@ class WorkerThread(threading.Thread):
                     self.server.close()
                 except Exception: pass # ToDo: mark the last test bad if this fell over
                 self.server = None
-                
+        
         except Exception as e:
             traceback.print_exc()
             raise Warning("Worker failure: " + unicode(e))
@@ -1300,7 +1311,9 @@ def main():
     parser.add_option('-d', '--driver-port', dest='driver_port', default=None, type='int', help='driver port of an already-running rethinkdb instance')
     parser.add_option('-t', '--table', dest='table', default=None, type='string', help='name of pre-existing table to run queries against')
     
-    parser.add_option('-j', '--worker-threads', dest='workerThreads', default=2, type='int', help='number of worker threads to use (default 2)')
+    parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true', help='show test output while running (disables -j/--jobs')
+    
+    parser.add_option('-j', '--jobs', dest='workerThreads', default=2, type='int', help='tests to run simultaneously (default 2)')
     
     options, args = parser.parse_args()
     
@@ -1321,6 +1334,18 @@ def main():
     
     if options.table and options.table.count(".") != 1:
         parser.error('Parameter to -t/--table should be of the form db.table')
+    
+    # workerThreads
+    
+    if options.workerThreads < 1:
+        parser.error('-j/--jobs value must be 1 or greater')
+    
+    # verbose
+    
+    if options.verbose is True:
+        if options.workerThreads > 2:
+            warnings.warn('-v/--verbose disables running more than one test in parallel')
+        options.workerThreads = 1
     
     # - add filters
     
@@ -1466,7 +1491,7 @@ def main():
     
     # -- start the worker threads
     
-    workerThreads = [WorkerThread(workQueue=testQueue, outputQueue=outputQueue, existingServer=existingServer) for x in range(options.workerThreads)]
+    workerThreads = [WorkerThread(workQueue=testQueue, outputQueue=outputQueue, existingServer=existingServer, writeToStdout=options.verbose) for x in range(options.workerThreads)]
     
     # -- monitor progress
     
@@ -1531,9 +1556,12 @@ def main():
                     elif test.result == 'timed out':
                         extraMessage = ' after %d seconds' % test.durration
                     
-                    sys.stderr.write('>>> %s%s: %s after %s (%s)\n\n' % (test.result.capitalize(), extraMessage, test.name, durrationString, timeString))
-                    sys.stderr.write(test.console_output)
-                    sys.stderr.write('\n<<< end %s: %s\n' % (test.result.capitalize(), test.name))
+                    if options.verbose is True:
+                        sys.stderr.write('>>> %s %s%s after %s (%s) <<<\n' % (test.result.capitalize(), test.name, extraMessage, durrationString, timeString))
+                    else:
+                        sys.stderr.write('>>> %s %s%s after %s (%s)\n\n' % (test.result.capitalize(), test.name, extraMessage, durrationString, timeString))
+                        sys.stderr.write(test.console_output)
+                        sys.stderr.write('\n<<< end %s: %s\n' % (test.result.capitalize(), test.name))
         
         # - end if there are no worker threads
         
