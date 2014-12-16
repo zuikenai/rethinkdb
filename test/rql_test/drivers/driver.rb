@@ -33,10 +33,14 @@ def bag(list, partial=false)
 end
 
 def partial(expected)
-    if expected.kind_of?(Array) || expected.kind_of?(Bag)
+    if expected.kind_of?(Array)
         bag(expected, true)
+    elsif expected.kind_of?(Bag)
+        bag(expected.list, true)
     elsif expected.kind_of?(Hash)
         PartitalHash.new(expected)
+    else
+        raise("partial can only handle Hashs, Arrays, or Bags. Got: #{expected.class}")
     end
 end
 

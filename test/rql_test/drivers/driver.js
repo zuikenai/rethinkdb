@@ -11,7 +11,7 @@ var r = require(path.resolve(__dirname, '..', 'importRethinkDB.js')).r;
 var DRIVER_PORT = process.argv[2] || process.env.RDB_DRIVER_PORT
 var DB_AND_TABLE_NAME = process.argv[3] || process.env.TEST_DB_AND_TABLE_NAME || 'no_table_specified'
 
-var TRACE_ENABLED = true;
+var TRACE_ENABLED = process.env.VERBOSE || false;
 
 // -- utilities --
 
@@ -539,7 +539,6 @@ function bag(expected, compOpts, partial) {
     fun.toString = function() {
         return "bag(" + expected + ")";
     };
-    return fun;
 }
 
 function partial(expected, compOpts) {
@@ -553,6 +552,8 @@ function partial(expected, compOpts) {
             return "partial dict(" + expected + ")";
         };
         return fun;
+    } else {
+        unexpectedException("partial can only handle Arrays and Objects, got: " + typeof(expected));
     }
 }
 
