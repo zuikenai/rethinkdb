@@ -123,12 +123,10 @@ class Bag(Lst):
             
             otherIter = iter(other)
             for mine in self.lst:
-                foundIt = False
                 for theirs in otherIter:
                     if eq(mine, **self.kwargs)(theirs):
-                        foundIt = True
                         break
-                if foundIt is False:
+                else:
                     return False
         else:
             if len(self.lst) != len(other):
@@ -428,6 +426,8 @@ def partial(expected):
         return Dct(expected, partial=True)
     elif hasattr(expected, '__iter__'):
         return Bag(expected, partial=True)
+    else:
+        raise ValueError('partial can only work on dicts or interables, got: %s (%s)' % (type(expected).__name__, repr(expected)))
 
 def err(err_type, err_msg=None, frames=None):
     return Err(err_type, err_msg, frames)
