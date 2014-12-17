@@ -36,7 +36,7 @@ def partial(expected)
     if expected.kind_of?(Array)
         bag(expected, true)
     elsif expected.kind_of?(Bag)
-        bag(expected.list, true)
+        bag(expected.items, true)
     elsif expected.kind_of?(Hash)
         PartitalHash.new(expected)
     else
