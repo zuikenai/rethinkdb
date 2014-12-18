@@ -19,7 +19,11 @@ from flask import Flask, Response, request, render_template, redirect, jsonify, 
 from werkzeug.datastructures import WWWAuthenticate
 from werkzeug.http import http_date
 from werkzeug.wrappers import BaseResponse
-from six.moves import range as xrange
+
+try:
+    xrange
+except NameError:
+    xrange = range
 
 from . import filters
 from .helpers import get_headers, status_code, get_dict, check_basic_auth, check_digest_auth, H, ROBOT_TXT, ANGRY_ASCII
@@ -375,13 +379,14 @@ def digest_auth(qop=None, user='user', passwd='passwd'):
             os.urandom(10)
         ]))
         opaque = H(os.urandom(10))
-
         auth = WWWAuthenticate("digest")
         auth.set_digest('me@kennethreitz.com', nonce, opaque=opaque,
                         qop=('auth', 'auth-int') if qop is None else (qop, ))
         response.headers['WWW-Authenticate'] = auth.to_header()
         response.headers['Set-Cookie'] = 'fake=fake_value'
         return response
+    elif not request.headers.get('Authorization', '').startswith('Digest '):
+        return status_code(401)
     elif not (check_digest_auth(user, passwd) and
               request.headers.get('Cookie')):
         return status_code(401)

@@ -1,3 +1,5 @@
 This is version 0.1.2 of httpbin from http://httpbin.org
 
-We have made no changes from that version.
+We have made two minor changes: one to remove the need for the "six" module and the other to fix a pair of problems in the digest-auth route. These changes have been submitted back:
+https://github.com/Runscope/httpbin/pull/181
+https://github.com/Runscope/httpbin/pull/182 (submitted changes differ due to changes since 0.1.2)

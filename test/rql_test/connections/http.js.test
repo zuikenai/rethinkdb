@@ -13,8 +13,7 @@ httpbinPort = utils.get_avalible_port()
 httpPort = utils.get_avalible_port()
 sslPort = utils.get_avalible_port()
 httpServerProcess = subprocess.Popen([httpServerPath, '--httpbin-port', str(httpbinPort), '--http-port', str(httpPort), '--ssl-port', str(sslPort)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-time.sleep(.5)
-assert httpServerProcess.poll() is None
+utils.wait_for_port(httpPort)
 
 os.environ['HTTPBIN_TEST_ADDRESS'] = 'localhost:%d' % httpbinPort
 os.environ['HTTP_TEST_ADDRESS'] = 'localhost:%d' % httpPort
