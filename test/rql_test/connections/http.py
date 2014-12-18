@@ -31,8 +31,7 @@ class WithServer(unittest.TestCase):
             self.__class__.httpPort = utils.get_avalible_port()
             self.__class__.sslPort = utils.get_avalible_port()
             self.__class__._httpServerProcess = subprocess.Popen([self._httpServerPath, '--httpbin-port', str(self.httpbinPort), '--http-port', str(self.httpPort), '--ssl-port', str(self.sslPort)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            time.sleep(.5)
-            self.assertTrue(self._httpServerProcess.poll() is None)
+            utils.wait_for_port(self.httpPort)
         
         # -- startup the RethinkDB server
         
@@ -49,7 +48,7 @@ class WithServer(unittest.TestCase):
         # -- patch the Python2.6 version of unittest to have assertRaisesRegexp
         
         if not hasattr(self, 'assertRaisesRegexp'):
-            def assertRaisesRegexp_replacement(exception, regexp, function, *args, **kwds):
+            def assertRaisesRegexp_replacement(self, exception, regexp, function, *args, **kwds):
                 result = None
                 try:
                     result = function(*args, **kwds)
@@ -234,19 +233,18 @@ class TestHttpTerm(WithServer):
             r.http(url, header={'Cookie':'dummy'}, redirects=5, auth={'type':'digest','user':'azure','pass':'wrong'}).run, self.conn
         )
         
-        # httpbin apparently doesn't check the username, just the password
         # Wrong username
-        #self.assertRaisesRegexp(
-        #   r.RqlRuntimeError, self.err_string('GET', url, 'status code 401')
-        #   r.httpurl(header={'Cookie':'dummy'}, redirects=5, auth={'type':'digest','user':'fake','pass':'hunter2'}).run, self.conn
-        #)
+        self.assertRaisesRegexp(
+           r.RqlRuntimeError, self.err_string('GET', url, 'status code 401'),
+           r.http(url, header={'Cookie':'dummy'}, redirects=5, auth={'type':'digest','user':'fake','pass':'hunter2'}).run, self.conn
+        )
         
         # httpbin has a 500 error on this
         # Wrong authentication type
-        #self.assertRaisesRegexp(
-        #   r.RqlRuntimeError, self.err_string('GET', url, 'status code 401'))
-        #   r.http, url(header={'Cookie':'dummy'}, redirects=5, auth={'type':'basic','user':'azure','pass':'hunter2'}).run, self.conn
-        #)
+        self.assertRaisesRegexp(
+           r.RqlRuntimeError, self.err_string('GET', url, 'status code 401'),
+           r.http(url, header={'Cookie':'dummy'}, redirects=5, auth={'type':'basic','user':'azure','pass':'hunter2'}).run, self.conn
+        )
         
         # Correct credentials
         res = r.http(url, header={'Cookie':'dummy'}, redirects=5,auth={'type':'digest','user':'azure','pass':'hunter2'}).run(self.conn)

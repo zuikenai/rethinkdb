@@ -11,6 +11,12 @@ $httpbinAddress = ARGV[1] || ENV['HTTPBIN_TEST_ADDRESS'] || 'httpbin.org'
 $httpAddress = ARGV[2] || ENV['HTTP_TEST_ADDRESS'] || 'dev.rethinkdb.com'
 $httpsAddress = ARGV[3] || ENV['HTTPS_TEST_ADDRESS'] || 'dev.rethinkdb.com'
 
+if $httpAddress == 'dev.rethinkdb.com'
+    $imageAddress = 'www.rethinkdb.com/assets/images/docs/api_illustrations'
+else
+    $imageAddress = $httpAddress
+end
+
 $c = r.connect(:host => 'localhost', :port => $port).repl
 
 def expect_eq(left, right)
@@ -230,12 +236,12 @@ def test_verify()
         expect_eq(res, nil)
     end
 
-    test_part('http://' + $httpAddress + 'redirect')
+    test_part('http://' + $httpAddress + '/redirect')
     test_part('https://' + $httpsAddress)
 end
 
 def test_binary()
-    res = r.http('http://' + $httpAddress + 'quickstart.png') \
+    res = r.http('http://' + $imageAddress + '/quickstart.png') \
            .do{|row| [row.type_of(), row.count().gt(0)]} \
            .run()
     expect_eq(res, ['PTYPE<BINARY>', true])

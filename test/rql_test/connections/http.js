@@ -19,10 +19,15 @@ var r = require(path.resolve(__dirname, '..', 'importRethinkDB.js')).r;
 
 // --
 
-var httpbinAddress = process.env.HTTPBIN_TEST_ADDRESS || 'httpbin.org'
-var httpAddress = process.env.HTTP_TEST_ADDRESS || 'dev.rethinkdb.com'
-var httpsAddress = process.env.HTTPS_TEST_ADDRESS || 'dev.rethinkdb.com'
-var port = parseInt(process.env.RDB_DRIVER_PORT, 10)
+var httpbinAddress = process.env.HTTPBIN_TEST_ADDRESS || 'httpbin.org';
+var httpAddress = process.env.HTTP_TEST_ADDRESS || 'dev.rethinkdb.com';
+var httpsAddress = process.env.HTTPS_TEST_ADDRESS || 'dev.rethinkdb.com';
+var port = parseInt(process.env.RDB_DRIVER_PORT, 10);
+
+var imageAddress = httpAddress
+if (imageAddress == 'dev.rethinkdb.com') {
+    imageAddress = 'www.rethinkdb.com/assets/images/docs/api_illustrations';
+}
 
 var withConnection = function(f){
     return function(done){
@@ -413,7 +418,7 @@ describe('Javascript HTTP test - ', function() {
 
     describe('binary', function() {
         it('resultFormat: auto', withConnection(function(done, conn) {
-            r.http('http://' + httpAddress + '/quickstart.png')
+            r.http('http://' + imageAddress + '/quickstart.png')
              .do(function(row){return [row.typeOf(), row.count().gt(0)]})
              .run(conn, function(err, res) {
                 expect_no_error(err);
