@@ -4,6 +4,7 @@
 
 #include <string>
 #include <iterator>
+#include <functional>
 
 class datum_string_t;
 
@@ -48,6 +49,11 @@ Iterator && next_codepoint(const Iterator &start, const Iterator &end,
 template <class Iterator>
 Iterator && next_codepoint(const Iterator &start, const Iterator &end,
                           char32_t *codepoint, reason_t *reason);
+
+template <class Iterator>
+Iterator && next_textual_element(const Iterator &start, const Iterator &end,
+                                const std::function<bool(char32_t)> &keep_going,
+                                reason_t *reason);
 
 template <class Iterator>
 class iterator_t : public std::iterator<std::forward_iterator_tag, char32_t> {

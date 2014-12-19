@@ -235,6 +235,35 @@ Iterator && next_codepoint(const Iterator &start, const Iterator &end,
     }
 }
 
+template <class Iterator>
+Iterator && next_textual_element(const Iterator &begin, const Iterator &end,
+                                const std::function<bool(char32_t)> &keep_going,
+                                reason_t *reason) {
+    char32_t codepoint;
+    Iterator cbegin = begin;
+    Iterator cend = begin;
+    do {
+        cend = next_codepoint(cbegin, end, &codepoint, reason);
+        if (*(reason->explanation) != 0) {
+            // need to correct offset, because `next_codepoint`
+            // computes from `cbegin` not `begin`
+            reason->position += cbegin - begin;
+            // ensure we advance at least a bit
+            if (cbegin == begin) {
+                return std::move(cend);
+            } else {
+                return std::move(cbegin);
+            }
+        }
+        if (cbegin != begin && !keep_going(codepoint)) {
+            // first codepoint is free
+            return std::move(cbegin);
+        }
+        cbegin = cend;
+    } while (cbegin != end);
+    return std::move(cbegin);
+}
+
 /*
 inline bool is_combining_character(char32_t c) {
     return (U_GET_GC_MASK(c) & U_GC_M_MASK);
@@ -253,6 +282,22 @@ next_codepoint<std::string::const_iterator>(const std::string::const_iterator &s
                                             const std::string::const_iterator &end,
                                             char32_t *codepoint, reason_t *reason);
 
+template const char *&&
+next_textual_element<const char *>(const char * const &start, const char * const &end,
+                                   const std::function<bool(char32_t)> &keep_going,
+                                   reason_t *reason);
+template std::string::iterator &&
+next_textual_element<std::string::iterator>(const std::string::iterator &start,
+                                            const std::string::iterator &end,
+                                            const std::function<bool(char32_t)> &keep_going,
+                                            reason_t *reason);
+template std::string::const_iterator &&
+next_textual_element<std::string::const_iterator>(const std::string::const_iterator &start,
+                                            const std::string::const_iterator &end,
+                                            const std::function<bool(char32_t)> &keep_going,
+                                            reason_t *reason);
+
+template class iterator_t<std::string::iterator>;
 template class iterator_t<std::string::const_iterator>;
 template class iterator_t<const char *>;
 

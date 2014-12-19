@@ -575,4 +575,85 @@ TEST(UTF8IterationTest, Zalgo) {
     ASSERT_EQ(66, seen);
 }
 
+bool NotASpace(char32_t c) {
+    return c != U' ';
+}
+
+TEST(UTF8IterationTest, SkippingStringRange) {
+    std::string demo = "this  is   a demonstration string";
+
+    utf8::reason_t reason;
+
+    auto start = demo.cbegin();
+    auto end = demo.cend();
+    auto cbegin = start;
+    auto cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ("this", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" ", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" is", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" ", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" ", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" a", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_NE(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" demonstration", std::string(cbegin, cend));
+    cbegin = cend;
+    cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_EQ(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(" string", std::string(cbegin, cend));
+}
+
+TEST(UTF8IterationTest, NoSpacesStringRange) {
+    std::string demo = "thisisademonstrationstring";
+
+    utf8::reason_t reason;
+
+    auto start = demo.cbegin();
+    auto end = demo.cend();
+    auto cbegin = start;
+    auto cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_EQ(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(demo, std::string(cbegin, cend));
+}
+
+TEST(UTF8IterationTest, EmptyStringRange) {
+    std::string demo = "";
+
+    utf8::reason_t reason;
+
+    auto start = demo.cbegin();
+    auto end = demo.cend();
+    auto cbegin = start;
+    auto cend = utf8::next_textual_element(cbegin, end, NotASpace, &reason);
+    ASSERT_EQ(end, cend);
+    ASSERT_STREQ("", reason.explanation);
+    ASSERT_EQ(demo, std::string(cbegin, cend));
+}
+
 } // namespace unittest
