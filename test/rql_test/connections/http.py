@@ -7,16 +7,16 @@ import datetime, os, re, subprocess, sys, tempfile, time, unittest
 sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'common'))
 import driver, utils
 
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import http_support
+
 r = utils.import_python_driver()
 
 class WithServer(unittest.TestCase):
     
-    _httpServerPath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'http_support', 'server')
-    _httpServerProcess = None
     host = 'localhost'
-    httpbinPort = None
-    httpPort = None
-    sslPort = None
+    
+    targetServer = None
     
     conn = None
     _server = None
@@ -26,12 +26,8 @@ class WithServer(unittest.TestCase):
         
         # -- startup local httpbin server
         
-        if self._httpServerProcess is None or self._httpServerProcess.poll() is not None:
-            self.__class__.httpbinPort = utils.get_avalible_port()
-            self.__class__.httpPort = utils.get_avalible_port()
-            self.__class__.sslPort = utils.get_avalible_port()
-            self.__class__._httpServerProcess = subprocess.Popen([self._httpServerPath, '--httpbin-port', str(self.httpbinPort), '--http-port', str(self.httpPort), '--ssl-port', str(self.sslPort)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            utils.wait_for_port(self.httpPort)
+        if self.targetServer is None or self.targetServer.poll() is not None:
+             self.targetServer = http_support.HttpTargetServer()
         
         # -- startup the RethinkDB server
         
@@ -70,7 +66,7 @@ class TestHttpTerm(WithServer):
     def getHttpBinURL(self, *path):
         if len(path) == 0:
             path = ['get']
-        return os.path.join('http://%s:%d' % (self.host, self.httpbinPort), *path)
+        return os.path.join('http://%s:%d' % (self.host, self.targetServer.httpbinPort), *path)
     
     # =============
     
@@ -177,7 +173,7 @@ class TestHttpTerm(WithServer):
         self.assertRaisesRegexp(r.RqlRuntimeError, self.err_string('GET', url, 'status code 302'), r.http(url, redirects=0).run, self.conn)
         self.assertRaisesRegexp(r.RqlRuntimeError, self.err_string('GET', url, 'Number of redirects hit maximum amount'), r.http(url, redirects=1).run, self.conn)
         res = r.http(url, redirects=2).run(self.conn)
-        self.assertEqual(res['headers']['Host'], '%s:%d' % (self.host, self.httpbinPort))
+        self.assertEqual(res['headers']['Host'], '%s:%d' % (self.host, self.targetServer.httpbinPort))
     
     def test_gzip(self):
         url = self.getHttpBinURL('gzip')
@@ -260,7 +256,7 @@ class TestHttpTerm(WithServer):
         )
     
     def test_binary(self):
-        res = r.http('http://%s:%d/quickstart.png' % (self.host, self.httpPort)) \
+        res = r.http('http://%s:%d/quickstart.png' % (self.host, self.targetServer.httpPort)) \
            .do(lambda row: [row.type_of(), row.count().gt(0)]) \
            .run(self.conn)
         self.assertEqual(res, ['PTYPE<BINARY>', True])
@@ -282,10 +278,10 @@ class TestHttpTerm(WithServer):
         self.assertEqual(res, None)
     
     def test_redirect_http_to_bad_https(self):
-        self.bad_https_helper('http://%s:%d/redirect' % (self.host, self.httpPort)) # 302 redirection to https port
+        self.bad_https_helper('http://%s:%d/redirect' % (self.host, self.targetServer.httpPort)) # 302 redirection to https port
     
     def test_bad_https(self):
-        self.bad_https_helper('https://%s:%d' % (self.host, self.sslPort))
+        self.bad_https_helper('https://%s:%d' % (self.host, self.targetServer.sslPort))
 
 if __name__ == '__main__':
     unittest.main(argv=[sys.argv[0]])

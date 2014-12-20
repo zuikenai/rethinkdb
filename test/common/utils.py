@@ -433,7 +433,7 @@ def nonblocking_readline(source):
         except Exception as e:
             raise ValueError('bad source file: %s got error: %s' % (str(source), str(e)))
     
-    elif isinstance(source, file):
+    elif hasattr(source, 'read'):
         try:
             int(source.fileno())
         except:
