@@ -368,22 +368,20 @@ describe('Javascript HTTP test - ', function() {
                 done();
             });
         }));
-        // httpbin apparently doesn't check the username, just the password
-        // it('wrong username', withConnection(function(done, conn) {
-        //     r.http(url, {header:{'Cookie':'dummy'}, redirects:5,
-        //         auth:{type:'digest',user:'fake',pass:'hunter2'}}).run(conn, function(err, res) {
-        //         expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'status code 401'));
-        //         done();
-        //     });
-        // }));
-        // httpbin has a 500 error on this
-        // it('wrong auth type', withConnection(function(done, conn) {
-        //     r.http(url, {header:{'Cookie':'dummy'}, redirects:5,
-        //         auth:{type:'basic',user:'azure',pass:'hunter2'}}).run(conn, function(err, res) {
-        //         expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'status code 401'));
-        //         done();
-        //     });
-        // }));
+        it('wrong username', withConnection(function(done, conn) {
+            r.http(url, {header:{'Cookie':'dummy'}, redirects:5,
+                auth:{type:'digest',user:'fake',pass:'hunter2'}}).run(conn, function(err, res) {
+                expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'status code 401'));
+                done();
+            });
+        }));
+        it('wrong auth type', withConnection(function(done, conn) {
+            r.http(url, {header:{'Cookie':'dummy'}, redirects:5,
+                auth:{type:'basic',user:'azure',pass:'hunter2'}}).run(conn, function(err, res) {
+                expect_error(res, err, 'RqlRuntimeError', err_string('GET', url, 'status code 401'));
+                done();
+            });
+        }));
         it('correct credentials', withConnection(function(done, conn) {
             r.http(url, {header:{Cookie:'dummy'}, redirects:5,
                    auth:{type:'digest',user:'azure',pass:'hunter2'}}).run(conn, function(err, res) {

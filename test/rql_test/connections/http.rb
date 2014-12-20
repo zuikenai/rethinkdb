@@ -17,6 +17,8 @@ else
     $imageAddress = $httpAddress
 end
 
+puts 'RethinkDB Driver Port: ' + $port.to_s
+
 $c = r.connect(:host => 'localhost', :port => $port).repl
 
 def expect_eq(left, right)
@@ -206,19 +208,17 @@ def test_digest_auth()
                               :auth => {:type => 'digest', :user => 'azure', :pass => 'wrong'}}),
                  RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
 
-    # httpbin apparently doesn't check the username, just the password
     # Wrong username
-    #expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
-    #                          :redirects => 5,
-    #                          :auth => {:type => 'digest', :user => 'fake', :pass => 'hunter2'}}),
-    #             RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
+    expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
+                              :redirects => 5,
+                              :auth => {:type => 'digest', :user => 'fake', :pass => 'hunter2'}}),
+                 RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
 
-    # httpbin has a 500 error on this
     # Wrong authentication type
-    #expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
-    #                          :redirects => 5,
-    #                          :auth => {:type => 'basic', :user => 'azure', :pass => 'hunter2'}}),
-    #             RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
+    expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
+                              :redirects => 5,
+                              :auth => {:type => 'basic', :user => 'azure', :pass => 'hunter2'}}),
+                 RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
 
     # Correct credentials
     res = r.http(url, {:header => {'Cookie' => 'dummy'},
