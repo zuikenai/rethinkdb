@@ -97,12 +97,6 @@ bool is_valid(const char *start, const char *end, reason_t *reason) {
     return is_valid_internal(start, end, reason);
 }
 
-bool is_valid(const char *str, reason_t *reason) {
-    size_t len = strlen(str);
-    const char *end = str + len;
-    return is_valid_internal(str, end, reason);
-}
-
 template <class Iterator>
 void iterator_t<Iterator>::advance(void) {
     if (seen_end) return;
