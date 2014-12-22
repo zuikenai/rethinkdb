@@ -9,11 +9,15 @@ This module provides helper functions for httpbin.
 
 import json
 import base64
-import copy
 from hashlib import md5
 from werkzeug.http import parse_authorization_header
 
 from flask import request, make_response
+
+try:
+    from urlparse import urlparse, urlunparse
+except ImportError:
+    from urllib.parse import urlparse, urlunparse
 
 
 from .structures import CaseInsensitiveDict
@@ -77,6 +81,7 @@ def json_safe(string, content_type='application/octet-stream'):
     URL scheme was chosen for its simplicity.
     """
     try:
+        string = string.decode('utf-8')
         _encoded = json.dumps(string)
         return string
     except (ValueError, TypeError):
@@ -134,6 +139,17 @@ def semiflatten(multi):
     else:
         return multi
 
+def get_url(request):
+    """
+    Since we might be hosted behind a proxy, we need to check the
+    X-Forwarded-Proto header to find out what protocol was used to access us.
+    """
+    if 'X-Forwarded-Proto' not in request.headers:
+        return request.url
+    url = list(urlparse(request.url))
+    url[0] = request.headers.get('X-Forwarded-Proto')
+    return urlunparse(url)
+
 
 def get_dict(*keys, **extras):
     """Returns request dict of given keys."""
@@ -141,7 +157,6 @@ def get_dict(*keys, **extras):
     _keys = ('url', 'args', 'form', 'data', 'origin', 'headers', 'files', 'json')
 
     assert all(map(_keys.__contains__, keys))
-
     data = request.data
     form = request.form
     form = semiflatten(request.form)
@@ -152,7 +167,7 @@ def get_dict(*keys, **extras):
         _json = None
 
     d = dict(
-        url=request.url,
+        url=get_url(request),
         args=semiflatten(request.args),
         form=form,
         data=json_safe(data),

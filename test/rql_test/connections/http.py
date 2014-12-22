@@ -66,7 +66,7 @@ class TestHttpTerm(WithServer):
     def getHttpBinURL(self, *path):
         if len(path) == 0:
             path = ['get']
-        return os.path.join('http://%s:%d' % (self.host, self.targetServer.httpbinPort), *path)
+        return 'http://%s:%d/%s' % (self.host, self.targetServer.httpbinPort, '/'.join(path))
     
     # =============
     
