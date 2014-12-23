@@ -361,7 +361,8 @@ def hidden_basic_auth(user='user', passwd='passwd'):
 
 
 @app.route('/digest-auth/<qop>/<user>/<passwd>')
-def digest_auth(qop=None, user='user', passwd='passwd'):
+@app.route('/digest-auth-nocookie/<qop>/<user>/<passwd>', defaults={'checkCookie':False})
+def digest_auth(qop=None, user='user', passwd='passwd', checkCookie=True):
     """Prompts the user for authorization using HTTP Digest auth"""
     if qop not in ('auth', 'auth-int'):
         qop = None
@@ -392,11 +393,13 @@ def digest_auth(qop=None, user='user', passwd='passwd'):
             auth.set_digest('me@kennethreitz.com', nonce, opaque=opaque,
                             qop=('auth', 'auth-int') if qop is None else (qop, ))
             response.headers['WWW-Authenticate'] = auth.to_header()
-            response.headers['Set-Cookie'] = 'auth=%s' % remoteAddr
+            if checkCookie is True:
+                response.headers['Set-Cookie'] = 'auth=%s' % remoteAddr
             return response
-        elif not request.cookies.get('auth') in ('bypass_check', remoteAddr):
+        elif checkCookie is True and request.cookies.get('auth') != remoteAddr:
             # check for auth challange cookie per https://github.com/Runscope/httpbin/issues/124
-            response = app.make_response('The cookie set in the 401 response was not present in the auth response. This client seems broken.')
+            response = app.make_response('Missing the cookie set in the 401 response. '
+                'This client seems broken. To bypass this check use the digest-auth-nocookie route.')
             response.status_code = 403
             return response
     except Exception as e:
@@ -404,7 +407,6 @@ def digest_auth(qop=None, user='user', passwd='passwd'):
         response.status_code = 500
         return response
     return jsonify(authenticated=True, user=user)
-
 
 @app.route('/delay/<int:delay>')
 def delay_response(delay):
