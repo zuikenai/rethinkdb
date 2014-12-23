@@ -197,32 +197,26 @@ def test_basic_auth()
     expect_eq(res, {'authenticated' => true, 'user' => 'azure'})
 end
 
-# This test requires us to set a cookie (any cookie) due to a bug in httpbin.org
-# See https://github.com/kennethreitz/httpbin/issues/124
 def test_digest_auth()
     url = 'http://' + $httpbinAddress + '/digest-auth/auth/azure/hunter2'
 
     # Wrong password
-    expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
-                              :redirects => 5,
+    expect_error(r.http(url, {:redirects => 5,
                               :auth => {:type => 'digest', :user => 'azure', :pass => 'wrong'}}),
                  RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
 
     # Wrong username
-    expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
-                              :redirects => 5,
+    expect_error(r.http(url, {:redirects => 5,
                               :auth => {:type => 'digest', :user => 'fake', :pass => 'hunter2'}}),
                  RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
 
     # Wrong authentication type
-    expect_error(r.http(url, {:header => {'Cookie' => 'dummy'},
-                              :redirects => 5,
+    expect_error(r.http(url, {:redirects => 5,
                               :auth => {:type => 'basic', :user => 'azure', :pass => 'hunter2'}}),
                  RethinkDB::RqlRuntimeError, err_string('GET', url, 'status code 401'))
 
     # Correct credentials
-    res = r.http(url, {:header => {'Cookie' => 'dummy'},
-                       :redirects => 5,
+    res = r.http(url, {:redirects => 5,
                        :auth => {:type => 'digest', :user => 'azure', :pass => 'hunter2'}}).run()
     expect_eq(res, {'authenticated' => true, 'user' => 'azure'})
 end
