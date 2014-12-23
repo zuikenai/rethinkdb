@@ -226,24 +226,23 @@ class TestHttpTerm(WithServer):
         # Wrong password
         self.assertRaisesRegexp(
             r.RqlRuntimeError, self.err_string('GET', url, 'status code 401'),
-            r.http(url, header={'Cookie':'dummy'}, redirects=5, auth={'type':'digest','user':'azure','pass':'wrong'}).run, self.conn
+            r.http(url, header={'Cookie':'auth=bypass_check'}, redirects=5, auth={'type':'digest','user':'azure','pass':'wrong'}).run, self.conn
         )
         
         # Wrong username
         self.assertRaisesRegexp(
            r.RqlRuntimeError, self.err_string('GET', url, 'status code 401'),
-           r.http(url, header={'Cookie':'dummy'}, redirects=5, auth={'type':'digest','user':'fake','pass':'hunter2'}).run, self.conn
+           r.http(url, header={'Cookie':'auth=bypass_check'}, redirects=5, auth={'type':'digest','user':'fake','pass':'hunter2'}).run, self.conn
         )
         
-        # httpbin has a 500 error on this
         # Wrong authentication type
         self.assertRaisesRegexp(
            r.RqlRuntimeError, self.err_string('GET', url, 'status code 401'),
-           r.http(url, header={'Cookie':'dummy'}, redirects=5, auth={'type':'basic','user':'azure','pass':'hunter2'}).run, self.conn
+           r.http(url, header={'Cookie':'auth=bypass_check'}, redirects=5, auth={'type':'basic','user':'azure','pass':'hunter2'}).run, self.conn
         )
         
         # Correct credentials
-        res = r.http(url, header={'Cookie':'dummy'}, redirects=5,auth={'type':'digest','user':'azure','pass':'hunter2'}).run(self.conn)
+        res = r.http(url, header={'Cookie':'auth=bypass_check'}, redirects=5,auth={'type':'digest','user':'azure','pass':'hunter2'}).run(self.conn)
         self.assertEqual(res, {'authenticated': True, 'user': 'azure'})
     
     def test_file_protocol(self):
