@@ -30,6 +30,12 @@ class cluster_semilattice_metadata_t {
 public:
     cluster_semilattice_metadata_t() { }
 
+    // This is very imprecise and doesn't account for a lot of factors,
+    // but at least it scales with the number of namespaces.
+    int64_t estimate_serialized_size() const {
+        return rdb_namespaces->namespaces.size() * 50;
+    }
+
     cow_ptr_t<namespaces_semilattice_metadata_t> rdb_namespaces;
 
     machines_semilattice_metadata_t machines;

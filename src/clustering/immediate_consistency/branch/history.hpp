@@ -162,6 +162,12 @@ destination before trying to use the `branch_id_t` for anything. */
 class branch_history_t {
 public:
     std::map<branch_id_t, branch_birth_certificate_t> branches;
+
+    // A rough estimate which doesn't account for serialization overhead.
+    int64_t estimate_serialized_size() const {
+        return branches.size() *
+            (sizeof(branch_id_t) + sizeof(branch_birth_certificate_t));
+    }
 };
 
 RDB_DECLARE_SERIALIZABLE(branch_history_t);

@@ -38,7 +38,8 @@ public:
     virtual void update_metadata(const metadata_t &metadata) = 0;
 
 protected:
-    void get_write_transaction(object_buffer_t<txn_t> *txn_out);
+    void get_write_transaction(object_buffer_t<txn_t> *txn_out,
+                               int64_t expected_change_bytes = 0);
     void get_read_transaction(object_buffer_t<txn_t> *txn_out);
 
     block_size_t get_cache_block_size() const;

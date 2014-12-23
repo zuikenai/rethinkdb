@@ -263,7 +263,8 @@ void persistent_file_t<metadata_t>::construct_serializer_and_cache(const bool cr
     }
 
     {
-        balancer.init(new dummy_cache_balancer_t(MEGABYTE));
+        const uint64_t metadata_cache_size = 32 * MEGABYTE;
+        balancer.init(new dummy_cache_balancer_t(metadata_cache_size));
         cache.init(new cache_t(serializer.get(), balancer.get(), perfmon_parent));
         cache_conn.init(new cache_conn_t(cache.get()));
     }
@@ -279,11 +280,15 @@ void persistent_file_t<metadata_t>::construct_serializer_and_cache(const bool cr
 }
 
 template <class metadata_t>
-void persistent_file_t<metadata_t>::get_write_transaction(object_buffer_t<txn_t> *txn_out) {
+void persistent_file_t<metadata_t>::get_write_transaction(
+        object_buffer_t<txn_t> *txn_out,
+        int64_t expected_change_bytes) {
+    const int64_t expected_block_change_count =
+        1 + expected_change_bytes / cache->max_block_size().value();
     txn_out->create(cache_conn.get(),
                     write_durability_t::HARD,
                     repli_timestamp_t::distant_past,
-                    1);
+                    expected_block_change_count);
 }
 
 template <class metadata_t>
@@ -379,7 +384,7 @@ cluster_persistent_file_t::cluster_persistent_file_t(io_backender_t *io_backende
     persistent_file_t<cluster_semilattice_metadata_t>(io_backender, filename, perfmon_parent, true) {
 
     object_buffer_t<txn_t> txn;
-    get_write_transaction(&txn);
+    get_write_transaction(&txn, initial_metadata.estimate_serialized_size());
     buf_lock_t superblock(buf_parent_t(txn.get()), SUPERBLOCK_ID,
                           access_t::write);
     buf_write_t sb_write(&superblock);
@@ -419,7 +424,7 @@ cluster_semilattice_metadata_t cluster_persistent_file_t::read_metadata() {
 
 void cluster_persistent_file_t::update_metadata(const cluster_semilattice_metadata_t &metadata) {
     object_buffer_t<txn_t> txn;
-    get_write_transaction(&txn);
+    get_write_transaction(&txn, metadata.estimate_serialized_size());
     buf_lock_t superblock(buf_parent_t(txn.get()), SUPERBLOCK_ID,
                           access_t::write);
     buf_write_t sb_write(&superblock);
@@ -525,7 +530,13 @@ public:
 private:
     void flush(UNUSED signal_t *interruptor) {
         object_buffer_t<txn_t> txn;
-        parent->get_write_transaction(&txn);
+        // It's important that we pass in some *approximately* right change size
+        // estimate here, because otherwise loads of concurrent flushes can just
+        // blow the cache size by a huge factor.
+        // The alternative would be limiting the number of concurrent flushes
+        // here. That would have the benefit of being able to merge multiple
+        // rewrites of the branch history together, but is more work.
+        parent->get_write_transaction(&txn, bh.estimate_serialized_size());
         buf_lock_t superblock(buf_parent_t(txn.get()), SUPERBLOCK_ID,
                               access_t::write);
         buf_write_t sb_write(&superblock);
