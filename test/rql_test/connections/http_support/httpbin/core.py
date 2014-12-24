@@ -10,13 +10,12 @@ This module provides the core HttpBin experience.
 import base64
 import json
 import os
+import random
 import time
 import uuid
-import random
-import base64
 
-from flask import Flask, Response, request, render_template, redirect, jsonify, make_response
-from werkzeug.datastructures import WWWAuthenticate
+from flask import Flask, Response, request, render_template, redirect, jsonify as flask_jsonify, make_response
+from werkzeug.datastructures import WWWAuthenticate, MultiDict
 from werkzeug.http import http_date
 from werkzeug.wrappers import BaseResponse
 
@@ -26,7 +25,7 @@ except NameError:
     xrange = range
 
 from . import filters
-from .helpers import get_headers, status_code, get_dict, check_basic_auth, check_digest_auth, H, ROBOT_TXT, ANGRY_ASCII
+from .helpers import get_headers, status_code, get_dict, check_basic_auth, check_digest_auth, secure_cookie, H, ROBOT_TXT, ANGRY_ASCII
 from .utils import weighted_choice
 from .structures import CaseInsensitiveDict
 
@@ -40,6 +39,12 @@ ENV_COOKIES = (
     '__utma',
     '__utmb'
 )
+
+def jsonify(*args, **kwargs):
+    response = flask_jsonify(*args, **kwargs)
+    if not response.data.endswith(b'\n'):
+        response.data += b'\n'
+    return response
 
 # Prevent WSGI from correcting the casing of the Location header
 BaseResponse.autocorrect_location_header = False
@@ -62,6 +67,8 @@ def set_cors_headers(response):
         # http://www.w3.org/TR/cors/#access-control-allow-methods-response-header
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
         response.headers['Access-Control-Max-Age'] = '3600'  # 1 hour cache
+        if request.headers.get('Access-Control-Request-Headers') is not None:
+            response.headers['Access-Control-Allow-Headers'] = request.headers['Access-Control-Request-Headers']
     return response
 
 
@@ -271,14 +278,20 @@ def view_status_code(codes):
 @app.route('/response-headers')
 def response_headers():
     """Returns a set of response headers from the query string """
-    headers = CaseInsensitiveDict(request.args.items())
-    response = jsonify(headers.items())
+    headers = MultiDict(request.args.items(multi=True))
+    response = jsonify(headers.lists())
 
     while True:
         content_len_shown = response.headers['Content-Length']
-        response = jsonify(response.headers.items())
-        for key, value in headers.items():
-            response.headers[key] = value
+        d = {}
+        for key in response.headers.keys():
+            value = response.headers.get_all(key)
+            if len(value) == 1:
+                value = value[0]
+            d[key] = value
+        response = jsonify(d)
+        for key, value in headers.items(multi=True):
+            response.headers.add(key, value)
         if response.headers['Content-Length'] == content_len_shown:
             break
     return response
@@ -312,7 +325,7 @@ def set_cookie(name, value):
     """Sets a cookie and redirects to cookie list."""
 
     r = app.make_response(redirect('/cookies'))
-    r.set_cookie(key=name, value=value)
+    r.set_cookie(key=name, value=value, secure=secure_cookie())
 
     return r
 
@@ -324,7 +337,7 @@ def set_cookies():
     cookies = dict(request.args.items())
     r = app.make_response(redirect('/cookies'))
     for key, value in cookies.items():
-        r.set_cookie(key=key, value=value)
+        r.set_cookie(key=key, value=value, secure=secure_cookie())
 
     return r
 
@@ -408,6 +421,7 @@ def digest_auth(qop=None, user='user', passwd='passwd', checkCookie=True):
         return response
     return jsonify(authenticated=True, user=user)
 
+
 @app.route('/delay/<int:delay>')
 def delay_response(delay):
     """Returns a delayed response"""
@@ -438,6 +452,7 @@ def drip():
 
     response = Response(generate_bytes(), headers={
         "Content-Type": "application/octet-stream",
+        "Content-Length": str(numbytes),
     })
 
     response.status_code = code
@@ -471,6 +486,11 @@ def cache_control(value):
     response = view_get()
     response.headers['Cache-Control'] = 'public, max-age={0}'.format(value)
     return response
+
+
+@app.route('/encoding/utf8')
+def encoding():
+    return render_template('UTF-8-demo.txt')
 
 
 @app.route('/bytes/<int:n>')
