@@ -24,7 +24,7 @@ var httpAddress = process.env.HTTP_TEST_ADDRESS || 'dev.rethinkdb.com';
 var httpsAddress = process.env.HTTPS_TEST_ADDRESS || 'dev.rethinkdb.com';
 var port = parseInt(process.env.RDB_DRIVER_PORT, 10);
 
-var imageAddress = httpAddress
+var imageAddress = httpAddress;
 if (imageAddress == 'dev.rethinkdb.com') {
     imageAddress = 'www.rethinkdb.com/assets/images/docs/api_illustrations';
 }
