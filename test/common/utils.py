@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import atexit, collections, fcntl, os, random, shutil, signal, socket, string, subprocess, sys, tempfile, threading, time, warnings
+import atexit, collections, fcntl, os, random, re, shutil, signal, socket, string, subprocess, sys, tempfile, threading, time, warnings
 
 import test_exceptions
 
@@ -377,9 +377,10 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
     deadline = time.time() + timeout
     graceDeadline = time.time() + shudown_grace
     
+    psRegex = re.compile('^\s*(%d\s|\d+\s+%d\s)' % (processGroupId, processGroupId))
     psOutput = ''
-    psCommand = ['ps', '-g', str(processGroupId), '-o', 'pid,user,command', '-www']
-    
+    psCommand = ['ps', '-u', str(os.getuid()), '-o', 'pgid=', '-o', 'pid=', '-o', 'command=', '-www']
+    psFiter = lambda output: [x for x in output.splitlines() if psRegex.match(x)]
     try:
         # -- allow processes to gracefully exit
         
@@ -389,10 +390,13 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
             while time.time() < graceDeadline:
                 os.killpg(processGroupId, 0) # 0 checks to see if the process is there
                 
-                # -- check with `ps` that it too thinks there is something there
-            
+                # - check with `ps` that it too thinks there is something there
+                try:
+                    os.waitpid(processGroupId, os.WNOHANG)
+                except exception: pass
                 psOutput, _ = subprocess.Popen(psCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()
-                if len(psOutput.splitlines()) < 2:
+                psLines = psFiter(psOutput)
+                if len(psLines) == 0:
                     return
                 
                 time.sleep(.1)
@@ -402,10 +406,13 @@ def kill_process_group(processGroupId, timeout=20, shudown_grace=5):
         while time.time() < deadline:
             os.killpg(processGroupId, signal.SIGKILL)
             
-            # -- check with `ps` that it too thinks there is something there
-            
+            # - check with `ps` that it too thinks there is something there
+            try:
+                os.waitpid(processGroupId, os.WNOHANG)
+            except exception: pass
             psOutput, _ = subprocess.Popen(psCommand, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()
-            if len(psOutput.splitlines()) < 2:
+            psLines = psFiter(psOutput)
+            if len(psLines) == 0:
                 return
             
             time.sleep(.2)
