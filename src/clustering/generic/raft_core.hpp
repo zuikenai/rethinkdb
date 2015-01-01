@@ -82,6 +82,12 @@ public:
         return (votes * 2 > voting_members.size());
     }
 
+    /* Returns `true` if the given member ID is either a voting or non-voting member. */
+    bool is_member(const raft_member_id_t &member) const {
+        return voting_members.count(member) == 1 ||
+            non_voting_members.count(member) == 1;
+    }
+
     /* Returns `true` if the given member can act as a leader. (Mostly this exists for
     consistency with `raft_complex_config_t`.) */
     bool is_valid_leader(const raft_member_id_t &member) const {
@@ -514,8 +520,13 @@ public:
     class change_lock_t {
     public:
         change_lock_t(raft_member_t *parent, signal_t *interruptor);
+        /* This is the same as `raft_member_t::get_latest_state()->get()`, except more
+        convenient and performant. Beware that the returned reference will be invalidated
+        if you destroy the `change_lock_t` or call `propose_[config_]change()`. */
+        const state_and_config_t &get_latest_state();
     private:
         friend class raft_member_t;
+        raft_member_t *parent;
         new_mutex_acq_t mutex_acq;
     };
 

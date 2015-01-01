@@ -21,8 +21,7 @@ public:
         raft_member_t<table_raft_state_t> *_raft);
 
 private:
-    void pump(auto_drainer_t::lock_t keepalive);
-    void pump_change(
+    void pump(signal_t *interruptor);
 
     raft_member_t<table_raft_state_t> *raft;
 };

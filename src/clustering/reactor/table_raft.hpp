@@ -4,27 +4,34 @@
 
 class table_raft_activity_t {
 public:
-    class primary_t {
+    class do_primary_t {
     public:
         branch_id_t branch_id;
     };
-    class secondary_t {
+    class do_secondary_t {
     public:
         branch_id_t branch_id;
     };
-    class backfill_t {
+    class do_backfill_t {
     public:
         server_id_t source;
     };
-    class stop_t {
+    class do_delete_t {
     };
-    class done_t {
+    class do_stop_t {
+    };
+    class done_secondary_t {
+    public:
+        branch_id_t branch_id;
+    };
+    class done_stop_t {
     public:
         version_t version;
     };
     template<class T>
     explicit table_raft_change_t(T &&t) : v(t) { }
-    boost::variant<primary_t, secondary_t, backfill_t, stop_t, done_t> v;
+    boost::variant<do_primary_t, do_secondary_t, do_backfill_t, do_delete_t, do_stop_t,
+        done_t> v;
 };
 
 class table_raft_change_t {

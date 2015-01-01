@@ -128,10 +128,16 @@ raft_persistent_state_t<state_t> raft_member_t<state_t>::get_state_for_init() {
 
 template<class state_t>
 raft_member_t<state_t>::change_lock_t::change_lock_t(
-        raft_member_t *parent,
+        raft_member_t *_parent,
         signal_t *interruptor) :
+    parent(_parent),
     mutex_acq(&parent->mutex, interruptor) {
     DEBUG_ONLY_CODE(parent->check_invariants(&mutex_acq));
+}
+
+template<class state_t>
+const state_and_config_t &raft_member_t<state_t>::change_lock_t::get_latest_state() {
+    return parent->latest_state.get_ref();
 }
 
 template<class state_t>
