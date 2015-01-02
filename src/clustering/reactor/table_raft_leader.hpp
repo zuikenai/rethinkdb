@@ -22,6 +22,17 @@ public:
 
 private:
     void pump(signal_t *interruptor);
+    void pump_add_members(
+        raft_member_t<table_raft_state_t>::change_lock_t *cl,
+        raft_config_t *ideal_raft_config,
+        signal_t *interruptor);
+    void pump_activities(
+        raft_member_t<table_raft_state_t>::change_lock_t *cl,
+        signal_t *interruptor);
+    void pump_remove_members(
+        raft_member_t<table_raft_state_t>::change_lock_t *cl,
+        raft_config_t *ideal_raft_config,
+        signal_t *interruptor);
 
     raft_member_t<table_raft_state_t> *raft;
 };
