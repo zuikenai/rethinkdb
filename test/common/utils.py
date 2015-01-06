@@ -116,7 +116,7 @@ def build_in_folder(targetFolder, waitNotification=None, notificationTimeout=2, 
 
 def import_python_driver(targetDir=None):
     '''import the latest built version of the python driver into the caller's namespace, ensuring that the drivers are built'''
-    import imp # note: depreciated but not gone in 3.4, will have to add importlib at some point
+    import imp # note: deprecated but not gone in 3.4, will have to add importlib at some point
     
     # TODO: modify this to allow for system-installed drivers
     
@@ -515,8 +515,6 @@ def cleanupPathAtExit(path):
 
 def getShardRanges(conn, table, db='test'):
     '''Given a table and a connection return a list of tuples'''
-    
-    tableName = None
     
     # -- input validation/defaulting
     

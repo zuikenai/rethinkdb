@@ -243,7 +243,7 @@ class Connection(object):
                 except IOError as err:
                     if err.errno != errno.EINTR:
                         self.close(noreply_wait=False)
-                        raise RqlDriverError('Interrupted connection while reciving from %s:%s - %s' % (self.host, self.port, str(err)))
+                        raise RqlDriverError('Interrupted connection while receiving from %s:%s - %s' % (self.host, self.port, str(err)))
                 except Exception as err:
                     self.close(noreply_wait=False)
                     raise RqlDriverError('Error recieving from %s:%s - %s' % (self.host, self.port, str(err)))
@@ -261,8 +261,8 @@ class Connection(object):
         while offset < len(data):
             try:
                 offset += self.socket.send(data[offset:])
-            except IOError as e:
-                if e.errno != errno.EINTR:
+            except IOError as err:
+                if err.errno != errno.EINTR:
                     self.close(noreply_wait=False)
                     raise RqlDriverError('Interrupted connection while sending to %s:%s - %s' % (self.host, self.port, str(err)))
             except Exception as err:
