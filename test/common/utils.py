@@ -57,7 +57,7 @@ def find_rethinkdb_executable(mode=None):
 def latest_build_dir(check_executable=True, mode=None):
     '''Look for the most recently built version of this project'''
     
-    candidate Path = None
+    candidatePath = None
     
     if os.getenv('RETHINKDB_BUILD_DIR') is not None:
         candidatePath = os.path.realpath(os.getenv('RETHINKDB_BUILD_DIR'))
