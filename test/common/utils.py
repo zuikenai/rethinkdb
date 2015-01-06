@@ -534,7 +534,7 @@ def getShardRanges(conn, table, db='test'):
     
     # -- get split points
     
-    splitPointsRaw = list(conn._r.db('rethinkdb').table('_debug_table_status').filter({'uuid':conn._r.db(dbName).table(tableName).config()['id']}).run(conn))[0]['split_points']
+    splitPointsRaw = conn._r.db('rethinkdb').table('_debug_table_status').get(conn._r.db(dbName).table(tableName).config()['id'])['split_points'].run(conn)
     
     # -- translate split points into ranges
     
