@@ -33,9 +33,8 @@ r.db(dbName).table_create(tableName).run(conn)
 
 # == populate the table
 
-step = 1000
-for startPoint in range(1, records, step):
-	r.db(dbName).table(tableName).insert([{'id': x} for x in range(startPoint, startPoint + step)]).run(conn)
+r.db(dbName).table(tableName).insert(r.range(1, records + 1).map(lambda x: {'id':x})).run(conn)
+assert r.db(dbName).table(tableName).count().run(conn) == records
 
 # == shard the table
 
