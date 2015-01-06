@@ -240,10 +240,13 @@ class Connection(object):
                 try:
                     chunk = self.socket.recv(length - len(res))
                     break
-                except IOError as e:
-                    if e.errno != errno.EINTR:
+                except IOError as err:
+                    if err.errno != errno.EINTR:
                         self.close(noreply_wait=False)
-                        raise
+                        raise RqlDriverError('Interrupted connection while reciving from %s:%s - %s' % (self.host, self.port, str(err)))
+                except Exception as err:
+                    self.close(noreply_wait=False)
+                    raise RqlDriverError('Error recieving from %s:%s - %s' % (self.host, self.port, str(err)))
                 except:
                     self.close(noreply_wait=False)
                     raise
@@ -261,7 +264,10 @@ class Connection(object):
             except IOError as e:
                 if e.errno != errno.EINTR:
                     self.close(noreply_wait=False)
-                    raise
+                    raise RqlDriverError('Interrupted connection while sending to %s:%s - %s' % (self.host, self.port, str(err)))
+            except Exception as err:
+                self.close(noreply_wait=False)
+                raise RqlDriverError('Error sending to %s:%s - %s' % (self.host, self.port, str(err)))
             except:
                 self.close(noreply_wait=False)
                 raise
