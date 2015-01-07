@@ -33,7 +33,7 @@ r.db(dbName).table_create(tableName).run(conn)
 
 # == populate the table
 
-r.db(dbName).table(tableName).insert(r.range(1, records + 1).map(lambda x: {'id':x})).run(conn)
+r.db(dbName).table(tableName).insert(r.range(1, records + 1).map({'id':r.row})).run(conn)
 assert r.db(dbName).table(tableName).count().run(conn) == records
 
 # == shard the table
