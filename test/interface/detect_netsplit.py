@@ -33,12 +33,12 @@ with driver.Metacluster() as metacluster:
     
     print("Checking that both servers see each other (%.2fs)" % (time.time() - startTime))
     
-    serverAOuput = list(r.db('rethinkdb').table('server_status').pluck('id', 'status', 'name').run(connA))
-    serverBOuput = list(r.db('rethinkdb').table('server_status').pluck('id', 'status', 'name').run(connB))
+    serverAOutput = list(r.db('rethinkdb').table('server_status').pluck('id', 'status', 'name').run(connA))
+    serverBOutput = list(r.db('rethinkdb').table('server_status').pluck('id', 'status', 'name').run(connB))
 
-    assert serverAOuput == serverBOuput, 'Output did not match:\n%s\n\tvs.\n%s' % (repr(serverAOuput), repr(serverBOuput))
-    assert all([x['status'] == 'connected' for x in serverAOuput]), 'One of the servers was not online: %s' % repr(serverAOuput)
-    assert sorted([serverA.uuid, serverB.uuid]) == sorted([x['id'] for x in serverAOuput])
+    assert serverAOutput == serverBOutput, 'Output did not match:\n%s\n\tvs.\n%s' % (repr(serverAOutput), repr(serverBOutput))
+    assert all([x['status'] == 'connected' for x in serverAOutput]), 'One of the servers was not online: %s' % repr(serverAOutput)
+    assert sorted([serverA.uuid, serverB.uuid]) == sorted([x['id'] for x in serverAOutput])
     
     print("Splitting cluster (%.2fs)" % (time.time() - startTime))
     
@@ -48,18 +48,13 @@ with driver.Metacluster() as metacluster:
     print("Watching up to 20 seconds to see that they detected the netsplit (%.2fs)" % (time.time() - startTime))
     
     deadline = time.time() + 20
+    query = r.db('rethinkdb').table('server_status')['status'].count('disconnected').eq(1)
     while time.time() < deadline:
-        readyServers = 0
-        for conn in (connA, connB):
-            if 1 == len([1 for x in r.db('rethinkdb').table('server_status').pluck('status').run(conn) if x['status'] == 'connected']):
-                readyServers += 1
-        if readyServers > 1:
+        if all([query.run(connA), query.run(connB)]):
             break
-        else:
-            continue
         time.sleep(.1)
     else:
-        assert False, 'Clients did not detect the netsplit after 20 seconds'
+        assert False, 'Servers did not detect the netsplit after 20 seconds'
     
     cluster1.check()
     cluster2.check()
@@ -90,16 +85,13 @@ with driver.Metacluster() as metacluster:
     print("Watching up to 10 seconds to see that they detected the resolution (%.2fs)" % (time.time() - startTime))
     
     deadline = time.time() + 10
+    query = r.db('rethinkdb').table('server_status')['status'].count('connected').eq(2)
     while time.time() < deadline:
-        readyServers = 0
-        for conn in (connA, connB):
-            if 2 == len([1 for x in r.db('rethinkdb').table('server_status').pluck('status').run(conn) if x['status'] == 'connected']):
-                readyServers += 1
-        if readyServers > 1:
+        if all([query.run(connA), query.run(connB)]):
             break
         time.sleep(.1)
     else:
-        assert False, 'Clients did not detect the netsplit resolution after 10 seconds'
+        assert False, 'Servers did not detect the netsplit resolution after 10 seconds'
     
     cluster1.check()
     cluster2.check()
