@@ -51,17 +51,46 @@ module 'MainView', ->
             })
 
         fetch_data: (server_uuid) =>
-            get_name = (id) ->
-                r.db(system_db).table('server_config').get(id)('name')
-            issues_query = r.db(system_db).table('current_issues', identifierFormat: 'uuid')
+            issues_id = r.db(system_db).table(
+                'current_issues', identifierFormat: 'uuid')
+            issues_query = r.db(system_db).table('current_issues')
                 .merge((issue) ->
-                    r.branch(issue('type').ne('server_disconnected'),
-                        issue,
-                        info:
-                            id: issue('info')('disconnected_server')
-                            name: get_name(issue('info')('disconnected_server'))
-                            reporting_servers: issue('info')('reporting_servers')
-                                .map(get_name)
+                    issue_id = issues_id.get(issue('id'))
+                    server_disconnected =
+                        disconnected_server_id:
+                            issue_id('info')('disconnected_server')
+                        reporting_servers:
+                            issue('info')('reporting_servers')
+                                .map(issue_id('info')('reporting_servers'),
+                                    (server, server_id) ->
+                                        server: server,
+                                        server_id: server_id
+                                    )
+                    log_write_error =
+                        servers: issue('info')('servers').map(
+                            issue_id('info')('servers'),
+                            (server, server_id) ->
+                                server: server
+                                server_id: server_id
+                        )
+                    outdated_index =
+                        tables: issue('info')('tables').map(
+                            issue_id('info')('tables'),
+                            (table, table_id) ->
+                                db_id: table_id('db')
+                                table_id: table_id('table')
+                        )
+                    invalid_config =
+                        table_id: issue_id('info')('table')
+                        db_id: issue_id('info')('db')
+                    info: driver.helpers.match(issue('type'),
+                        ['server_disconnected', server_disconnected],
+                        ['log_write_error', log_write_error],
+                        ['outdated_index', outdated_index],
+                        ['table_needs_primary', invalid_config],
+                        ['data_lost', invalid_config],
+                        ['write_acks', invalid_config],
+                        [issue('type'), issue('info')], # default
                     )
                 ).coerceTo('array')
             query = r.expr
@@ -83,7 +112,7 @@ module 'MainView', ->
 
             @timer = driver.run query, 5000, (error, result) =>
                 if error?
-                    #TODO
+                    console.log(error)
                 else
                     for database in result.databases
                         @databases.add new Database(database), {merge: true}

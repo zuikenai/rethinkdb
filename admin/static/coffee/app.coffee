@@ -157,6 +157,23 @@ class @Driver
         @timers[timer]?.connection?.close {noreplyWait: false}
         delete @timers[timer]
 
+    # helper methods
+    helpers:
+        # Macro to create a match/switch construct in reql by
+        # nesting branches
+        # Use like: match(doc('field'),
+        #                 ['foo', some_reql],
+        #                 [r.expr('bar'), other_reql],
+        #                 [some_other_query, contingent_3_reql],
+        #                 default_reql)
+        # Throws an error if a match isn't found. The error can be absorbed
+        # by tacking on a .default() if you want
+        match: (variable, specs...) ->
+            previous = r.error("nothing matched #{variable}")
+            for [val, action] in specs.reverse()
+                previous = r.branch(r.expr(variable).eq(val), action, previous)
+            return previous
+
     # common queries used in multiple places in the ui
     queries:
         all_logs: (limit) =>
