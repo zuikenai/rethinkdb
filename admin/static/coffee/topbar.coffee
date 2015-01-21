@@ -129,7 +129,7 @@ module 'TopBar', ->
     class @IssuesBanner extends Backbone.View
         template: Handlebars.templates['sidebar-issues_banner-template']
         resolve_issues_route: '#resolve_issues'
-        
+
         events:
             'click .btn-resolve-issues': 'toggle_display'
             'click .change-route': 'toggle_display'
@@ -145,13 +145,7 @@ module 'TopBar', ->
 
             @collection.on 'change:fixed', =>
                 # an issue was fixed, so re-fetch the issues list from the server
-                issue_ids = r.db(system_db).table(
-                    'current_issues', identifierFormat: 'uuid')
-                query = r.db(system_db).table('current_issues').merge((issue) ->
-                    info:
-                        db_id: issue_ids.get(issue('id'))('info')('db')
-                        table_id: issue_ids.get(issue('id'))('info')('table')
-                )
+                query = driver.queries.issues_with_ids()
                 driver.run_once query, (err, result) =>
                     # if we get an error here, we don't really care
                     # because this will be re-queried in 5000ms

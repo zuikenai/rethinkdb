@@ -51,53 +51,11 @@ module 'MainView', ->
             })
 
         fetch_data: (server_uuid) =>
-            issues_id = r.db(system_db).table(
-                'current_issues', identifierFormat: 'uuid')
-            issues_query = r.db(system_db).table('current_issues')
-                .merge((issue) ->
-                    issue_id = issues_id.get(issue('id'))
-                    server_disconnected =
-                        disconnected_server_id:
-                            issue_id('info')('disconnected_server')
-                        reporting_servers:
-                            issue('info')('reporting_servers')
-                                .map(issue_id('info')('reporting_servers'),
-                                    (server, server_id) ->
-                                        server: server,
-                                        server_id: server_id
-                                    )
-                    log_write_error =
-                        servers: issue('info')('servers').map(
-                            issue_id('info')('servers'),
-                            (server, server_id) ->
-                                server: server
-                                server_id: server_id
-                        )
-                    outdated_index =
-                        tables: issue('info')('tables').map(
-                            issue_id('info')('tables'),
-                            (table, table_id) ->
-                                db_id: table_id('db')
-                                table_id: table_id('table')
-                        )
-                    invalid_config =
-                        table_id: issue_id('info')('table')
-                        db_id: issue_id('info')('db')
-                    info: driver.helpers.match(issue('type'),
-                        ['server_disconnected', server_disconnected],
-                        ['log_write_error', log_write_error],
-                        ['outdated_index', outdated_index],
-                        ['table_needs_primary', invalid_config],
-                        ['data_lost', invalid_config],
-                        ['write_acks', invalid_config],
-                        [issue('type'), issue('info')], # default
-                    )
-                ).coerceTo('array')
             query = r.expr
                 databases: r.db(system_db).table('db_config').merge({id: r.row("id")}).pluck('name', 'id').coerceTo("ARRAY")
                 tables: r.db(system_db).table('table_config').merge({id: r.row("id")}).pluck('db', 'name', 'id').coerceTo("ARRAY")
                 servers: r.db(system_db).table('server_config').merge({id: r.row("id")}).pluck('name', 'id').coerceTo("ARRAY")
-                issues: issues_query
+                issues: driver.queries.issues_with_ids()
                 num_issues: r.db(system_db).table('current_issues').count()
                 num_servers: r.db(system_db).table('server_config').count()
                 num_available_servers: r.db(system_db).table('server_status').filter( (server) ->
