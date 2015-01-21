@@ -671,6 +671,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
                 &replacer,
                 &sindex_cb,
                 ql_env.limits(),
+                sampler,
                 trace);
     }
 
@@ -692,10 +693,12 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
                 &replacer,
                 &sindex_cb,
                 bi.limits,
+                sampler,
                 trace);
     }
 
     void operator()(const point_write_t &w) {
+        sampler->new_sample();
         response->response = point_write_response_t();
         point_write_response_t *res =
             boost::get<point_write_response_t>(&response->response);
@@ -709,6 +712,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
     }
 
     void operator()(const point_delete_t &d) {
+        sampler->new_sample();
         response->response = point_delete_response_t();
         point_delete_response_t *res =
             boost::get<point_delete_response_t>(&response->response);
@@ -722,6 +726,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
     }
 
     void operator()(const sindex_create_t &c) {
+        sampler->new_sample();
         sindex_create_response_t res;
 
         write_message_t wm;
@@ -751,6 +756,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
     }
 
     void operator()(const sindex_drop_t &d) {
+        sampler->new_sample();
         sindex_drop_response_t res;
         res.success = store->drop_sindex(sindex_name_t(d.id), &sindex_block);
         response->response = res;
@@ -766,6 +772,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
 
         bool old_name_found = false;
         for (auto it = sindexes.begin(); it != sindexes.end(); ++it) {
+            sampler->new_sample();
             if (it->first == old_name) {
                 guarantee(!it->first.being_deleted);
                 old_name_found = true;
@@ -790,6 +797,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
     }
 
     void operator()(const sync_t &) {
+        sampler->new_sample();
         response->response = sync_response_t();
 
         // We know this sync_t operation will force all preceding write transactions
@@ -809,6 +817,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
                         scoped_ptr_t<superblock_t> *_superblock,
                         repli_timestamp_t _timestamp,
                         rdb_context_t *_ctx,
+                        profile::sampler_t *_sampler,
                         profile::trace_t *_trace,
                         write_response_t *_response,
                         signal_t *_interruptor) :
@@ -820,6 +829,7 @@ struct rdb_write_visitor_t : public boost::static_visitor<void> {
         interruptor(_interruptor),
         superblock(_superblock),
         timestamp(_timestamp),
+        sampler(_sampler),
         trace(_trace),
         sindex_block((*superblock)->expose_buf(),
                      (*superblock)->get_sindex_block_id(),
@@ -844,6 +854,7 @@ private:
     signal_t *const interruptor;
     scoped_ptr_t<superblock_t> *const superblock;
     const repli_timestamp_t timestamp;
+    profile::sampler_t *const sampler;
     profile::trace_t *const trace;
     buf_lock_t sindex_block;
     profile::event_log_t event_log_out;
@@ -859,13 +870,14 @@ void store_t::protocol_write(const write_t &write,
     scoped_ptr_t<profile::trace_t> trace = ql::maybe_make_profile_trace(write.profile);
 
     {
-        profile::starter_t start_write("Perform write on shard.", trace);
+        profile::sampler_t start_write("Perform write on shard.", trace);
         rdb_write_visitor_t v(btree.get(),
                               this,
                               (*superblock)->expose_buf().txn(),
                               superblock,
                               timestamp.to_repli_timestamp(),
                               ctx,
+                              &start_write,
                               trace.get_or_null(),
                               response,
                               interruptor);
