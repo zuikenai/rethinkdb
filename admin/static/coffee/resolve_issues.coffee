@@ -35,7 +35,6 @@ module 'ResolveIssuesView', ->
         className: 'issue-container'
         initialize: (data) =>
             @type = data.model.get 'type'
-            @model = data.model
             @model.set('collisionType', @parseCollisionType @model.get('type'))
             @listenTo @model, 'change', @render
 
@@ -74,6 +73,7 @@ module 'ResolveIssuesView', ->
             @modal.render()
 
         remove_server: (event) =>
+            console.log "Removing a server man"
             modalModel = new Backbone.Model
                 name: @model.get('info').disconnected_server
                 id: @model.get('info').disconnected_server_id
