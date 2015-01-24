@@ -15,5 +15,4 @@ tests:
         rb: "'nu'+'ll'"
       
     - cd: r.expr(null).coerce_to('null')
-      rb: r.expr(null).coerce_to('nu'+'ll')
       ot: null

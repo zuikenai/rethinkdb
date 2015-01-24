@@ -88,7 +88,7 @@ class SrcLang(object):
     line_comment = '#'
     
     quote_regex = re.compile(r'^(?P<quoteChar>[\'\"]?)(?P<content>.+?)(?P=quoteChar)(?P<extra>.*)$')
-    none_regex = re.compile(r"(?<!\"|')(?:\b)(None|null)(?:\b)(?<!\"|')")
+    none_regex = re.compile(r"(?<!\"|')(?:\b)(None|null|nil)(?:\b)(?<!\"|')")
     
     # -- class variables
     
