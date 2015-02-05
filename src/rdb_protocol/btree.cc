@@ -1096,12 +1096,12 @@ void rdb_modification_report_cb_t::on_mod_report(
         keys_available_cond.wait_lazily_unordered();
         store_->changefeed_server->send_all(
             ql::changefeed::msg_t(
-                ql::changefeed::msg_t::change_t{
+                ql::changefeed::msg_t::change_t(
                     old_keys,
                     new_keys,
                     report.primary_key,
                     report.info.deleted.first,
-                    report.info.added.first}),
+                    report.info.added.first)),
             report.primary_key);
         sindexes_updated_cond.wait_lazily_unordered();
     }

@@ -82,7 +82,20 @@ struct msg_t {
         exc_t exc;
         RDB_DECLARE_ME_SERIALIZABLE(limit_stop_t);
     };
+    // TODO! What else do we need to change?
     struct change_t {
+        change_t() { }
+        change_t(
+                std::map<std::string, std::vector<datum_t> > _old_indexes,
+                std::map<std::string, std::vector<datum_t> > _new_indexes,
+                store_key_t _pkey,
+                datum_t _old_val,
+                datum_t _new_val)
+            : old_indexes(std::move(_old_indexes)),
+              new_indexes(std::move(_new_indexes)),
+              pkey(std::move(_pkey)),
+              old_val(std::move(_old_val)),
+              new_val(std::move(_new_val)) { }
         std::map<std::string, std::vector<datum_t> > old_indexes, new_indexes;
         store_key_t pkey;
         /* For a newly-created row, `old_val` is an empty `datum_t`. For a deleted row,
