@@ -124,7 +124,9 @@ class Connection extends events.EventEmitter
         if typeof host is 'undefined'
             host = {}
         # It's really convenient to be able to pass just a hostname to
-        # connect. We just detect that case and wrap it.
+        # connect, since that's the thing that is most likely to vary
+        # (default ports, no auth key, default connection timeout are
+        # all common). We just detect that case and wrap it.
         else if typeof host is 'string'
             host = {host: host}
 
@@ -133,17 +135,19 @@ class Connection extends events.EventEmitter
         @port = host.port || @DEFAULT_PORT
 
         # One notable exception to defaulting is the db name. If the
-        # user doesn't specify it, we leave it undefined
+        # user doesn't specify it, we leave it undefined. On the
+        # server side, if no database is specified for a table, the
+        # database will default to `"test"`.
         @db = host.db # left undefined if this is not set
 
         @authKey = host.authKey || @DEFAULT_AUTH_KEY
         @timeout = host.timeout || @DEFAULT_TIMEOUT
 
-        # The protocol allows for results to queries on the same
-        # connection to be returned interleaved. When a query is run with
-        # this connection, an entry is added to this object. The key of the
-        # entry is the query token, and the value is another object with the
-        # following fields:
+        # The protocol allows for responses to queries on the same
+        # connection to be returned interleaved. When a query is run
+        # with this connection, an entry is added to
+        # `@outstandingCallbacks`. The key is the query token, and the
+        # value is an object with the following fields:
         #
         # - **cb**: The callback to invoke when a query returns another
         #   batch of results
@@ -151,8 +155,9 @@ class Connection extends events.EventEmitter
         #   [ast module](ast.html)) representing the query being run.
         # - **opts**: global options passed to `.run`.
         #
-        # Once the server returns a response, one of two fields may be added
-        # to the entry for that query depending on what comes back:
+        # Once the server returns a response, one of two fields may be
+        # added to the entry for that query depending on what comes
+        # back (this is done in `_processResponse`):
         #
         # - **cursor**: is set to a `Cursor` object (defined in the
         #   [cursor module](cursor.html)) if the server
@@ -163,7 +168,7 @@ class Connection extends events.EventEmitter
         #   [cursor module](cursor.html)). This is very similar to a `Cursor`,
         #   except that it is potentially infinite. Changefeeds are a way
         #   for the server to notify the client when a change occurs to
-        #   a query the user is running.
+        #   the results of a query the user wants to watch.
         #
         # Any other responses are considered "done" and don't have any
         # further results to fetch from the server. At that time the
@@ -187,12 +192,13 @@ class Connection extends events.EventEmitter
         @closing = false
 
         # We create a [Buffer](http://nodejs.org/api/buffer.html)
-        # object to use with .
+        # object to receive all bytes coming in on this
+        # connection. The buffer is modified in the `_data` method
+        # (which is called whenever data comes in over the network on
+        # this connection), and it is also modified by the handshake
+        # callback that's defined in the `TCPConnection` constructor.
         @buffer = new Buffer(0)
 
-        # TODO: delete this line. It was part of emulating the
-        # EventEmitter interface when the driver was still based on
-        # Google closure
         @_events = @_events || {}
 
         # Now we set up two callbacks, one to run on successful
@@ -276,51 +282,161 @@ class Connection extends events.EventEmitter
     # return a cursor, a cursor is completely consumed, or the query
     # encounters an error.
     _delQuery: (token) ->
-        # This query is done, delete this cursor
         delete @outstandingCallbacks[token]
 
+    # #### Connection _processResponse method
+    #
+    # This method is contains the main logic for taking different
+    # actions based on the response type. It receives the response as
+    # an object (parsed from the JSON coming over the wire), and the
+    # token for the query the response corresponds to.
     _processResponse: (response, token) ->
+        # For brevity the wire format specifies that the profile key
+        # is "p". We give it a more readable variable name here.
         profile = response.p
+        # First we need to check if we're even expecting a response
+        # for this token. If not it's an error.
         if @outstandingCallbacks[token]?
             {cb:cb, root:root, cursor: cursor, opts: opts, feed: feed} = @outstandingCallbacks[token]
+            # Some results for queries are not returned all at once,
+            # but in chunks. The driver takes care of making sure the
+            # user doesn't see this, and uses `Cursor`s to take
+            # multiple responses and make them into one long stream of
+            # query results.
+            #
+            # Depending on the type of result, and whether this is the
+            # first response for this token, we may or may not have a
+            # cursor defined for this token. If we do have a cursor
+            # defined already, we add this response to the cursor.
             if cursor?
                 cursor._addResponse(response)
 
+                # `cursor._addResponse` will check if this response is
+                # the last one for this token, and if so will set its
+                # `cursor._endFlag` to true. If this is the last
+                # response for this query and we aren't waiting on any
+                # other responses for this cursor (if, for example, we
+                # get the responses out of order), then we remove this
+                # token's entry in `@outstandingCallbacks`.
                 if cursor._endFlag && cursor._outstandingRequests is 0
                     @_delQuery(token)
+
+            # Similar to cursors, we may or may not have a feed object
+            # already for this token. The feed object is created on
+            # the first response received, so we may not have one if
+            # this is the first response for this token. (Or we may
+            # not have one if this isn't a query that returns a feed)
             else if feed?
+                # Cursor and Feed have a shared implementation, so the
+                # logic for adding a response to the feed and deciding
+                # whether to delete the token from
+                # `@outstandingRequests` is the same.
                 feed._addResponse(response)
 
                 if feed._endFlag && feed._outstandingRequests is 0
                     @_delQuery(token)
+            # Next we check if we have a callback registered for this
+            # token. In [ast](ast.html) we always provide `_start`
+            # with a wrapped callback function, so this may as well be
+            # an else branch.
             else if cb?
-                # Behavior varies considerably based on response type
+                # The protocol (again for brevity) puts the response
+                # type into a key called "t". What we do next depends
+                # on that value. We'll be comparing it to the values
+                # in the `proto-def` module, in `protoResponseType`.
                 switch response.t
+                    # ##### Error responses
                     when protoResponseType.COMPILE_ERROR
+                        # Compile errors happen during parsing and
+                        # type checking the query on the server
+                        # side. An example is passing too many
+                        # arguments to a function.  We pass an error
+                        # object that includes the backtrace from the
+                        # response and the original query
+                        # (`root`). Then we delete the token from
+                        # `@outstandingCallbacks`.
                         cb mkErr(err.RqlCompileError, response, root)
                         @_delQuery(token)
                     when protoResponseType.CLIENT_ERROR
+                        # Client errors are returned when the client
+                        # is buggy. This can happen if a query isn't
+                        # serialized right, or the handshake is done
+                        # incorrectly etc. Hopefully end users of the
+                        # driver should never see these.
                         cb mkErr(err.RqlClientError, response, root)
                         @_delQuery(token)
                     when protoResponseType.RUNTIME_ERROR
+                        # Runtime errors are the most common type of
+                        # error. They happen when something goes wrong
+                        # that can only be determined by running the
+                        # query. For example, if you try to get the
+                        # value of a field in an object that doesn't
+                        # exist.
                         cb mkErr(err.RqlRuntimeError, response, root)
                         @_delQuery(token)
+                    # ##### Success responses
                     when protoResponseType.SUCCESS_ATOM
+                        # `SUCCESS_ATOM` is returned when the query
+                        # was successful and returned a single ReQL
+                        # data type. The `mkAtom` function from the
+                        # [util module](util.html) converts all
+                        # pseudotypes in this response to their
+                        # corresponding native types
                         response = mkAtom response, opts
+                        # If the response is an array, we patch it a
+                        # bit so it can be used as a stream.
                         if Array.isArray response
                             response = cursors.makeIterable response
+                        # If there's a profile available, we nest the
+                        # response slightly differently before passing
+                        # it to the callback for this token.
                         if profile?
                             response = {profile: profile, value: response}
                         cb null, response
+                        # The `SUCCESS_ATOM` response means there will
+                        # be no further results for this query, so we
+                        # remove it from `@outstandingCallbacks`
                         @_delQuery(token)
                     when protoResponseType.SUCCESS_PARTIAL
+                        # `SUCCESS_PARTIAL` indicates the client
+                        # should create a cursor and request more data
+                        # from the server when it's ready by sending a
+                        # `CONTINUE` query with the same token. So, we
+                        # create a new Cursor for this token, and add
+                        # it to the object stored in
+                        # `@outstandingCallbacks`
                         cursor = new cursors.Cursor @, token, opts, root
                         @outstandingCallbacks[token].cursor = cursor
+                        # Again, if we have profile information, we
+                        # wrap the result given to the callback.  In
+                        # either case, we need to add the response to
+                        # the new Cursor.
                         if profile?
                             cb null, {profile: profile, value: cursor._addResponse(response)}
                         else
                             cb null, cursor._addResponse(response)
                     when protoResponseType.SUCCESS_SEQUENCE
+                        # The `SUCCESS_SEQUENCE` response is sent when
+                        # a cursor or feed is complete, and this is
+                        # the last response that will be received for
+                        # this token. Often, however, the entire
+                        # result for a query fits within the initial
+                        # batch. In this case, we never see a
+                        # `SUCCESS_PARTIAL` response, so there is no
+                        # existing Cursor to add the response to. So,
+                        # that's what we do here, create a new Cursor,
+                        # and delete the token from the
+                        # `@outstandingCallbacks`.
+                        #
+                        # Note that qeries that have already received
+                        # a `SUCCESS_PARTIAL` will not be handled
+                        # here. They will be handled when we check for
+                        # `cursor?` in the conditional up above. In
+                        # that branch, we call cursor._addResponse,
+                        # which takes care of checking if we received
+                        # a `SUCCESS_SEQUENCE`. So this code only gets
+                        # executed when the first batch on a cursor is
+                        # also our last.
                         cursor = new cursors.Cursor @, token, opts, root
                         @_delQuery(token)
                         if profile?
@@ -328,6 +444,18 @@ class Connection extends events.EventEmitter
                         else
                             cb null, cursor._addResponse(response)
                     when protoResponseType.SUCCESS_FEED
+                        # The `SUCCESS_FEED` response is sent by the
+                        # server to indicate that the response
+                        # represents a changefeed. This works just
+                        # like a cursor (sending `CONTINUE` to get
+                        # more results etc), except that it is
+                        # potentially infinite.
+                        #
+                        # The main difference here is that we create a
+                        # `Feed` object vs. a `Cursor` object, and we
+                        # set the `feed` key for this token in
+                        # `@outstandingCallbacks` instead of the
+                        # `cursor` key.
                         feed = new cursors.Feed @, token, opts, root
                         @outstandingCallbacks[token].feed = feed
                         if profile?
@@ -335,6 +463,13 @@ class Connection extends events.EventEmitter
                         else
                             cb null, feed._addResponse(response)
                     when protoResponseType.SUCCESS_ATOM_FEED
+                        # `SUCCESS_ATOM_FEED` is just like
+                        # `SUCCESS_FEED`, except that it indicates the
+                        # changes coming back will all be for a single
+                        # document, vs. changes from potentially many
+                        # documents. So for example, a query like
+                        # `r.table('foo').get('bar').changes()` will
+                        # return a `SUCCESS_ATOM_FEED` response
                         feed = new cursors.AtomFeed @, token, opts, root
                         @outstandingCallbacks[token].feed = feed
                         if profile?
@@ -342,15 +477,26 @@ class Connection extends events.EventEmitter
                         else
                             cb null, feed._addResponse(response)
                     when protoResponseType.WAIT_COMPLETE
+                        # The `WAIT_COMPLETE` response is sent by the
+                        # server after all queries executed with the
+                        # optarg `noReply: true` have completed. No
+                        # data is returned, so the callback is just provided `null`
                         @_delQuery(token)
                         cb null, null
                     else
                         cb new err.RqlDriverError "Unknown response type"
         else
-            # Unexpected token
+            # Throw an error if we get a response with a token not
+            # found in `@outstandingCallbacks`
             @emit 'error', new err.RqlDriverError "Unexpected token #{token}."
 
+    # #### Connection close method
+    #
+    # A public method that closes the connection. See [API docs for
+    # close](http://rethinkdb.com/api/javascript/close/).
     close: (varar 0, 2, (optsOrCallback, callback) ->
+        # First determine which argument combination this method was
+        # called with, and set the callback and options appropriately.
         if callback?
             opts = optsOrCallback
             unless Object::toString.call(opts) is '[object Object]'
@@ -367,12 +513,35 @@ class Connection extends events.EventEmitter
             cb = null
 
         for own key of opts
+            # Currently, only one optional argument is accepted by
+            # `.close`: whether or not to wait for completion of all
+            # outstanding `noreply` queries. So we throw an error if
+            # anything else is passed.
             unless key in ['noreplyWait']
                 throw new err.RqlDriverError "First argument to two-argument `close` must be { noreplyWait: <bool> }."
 
+        # Next we set `@closing` to true. It will be set false once
+        # the promise resolves. The `isOpen` method takes this
+        # variable into account.
         @closing = true
+
+        # Should we wait for all outstanding `noreply` writes before
+        # considering the connection closed?
+        #
+        # - if the options object doesn't have a `noreplyWait` key, we
+        # default to `true`.
+        # - if we do have a `noreplyWait` key, then use that value
+        # - if this connection isn't `@open`, then this is all moot
         noreplyWait = ((not opts.noreplyWait?) or opts.noreplyWait) and @open
 
+        # This creates a promise that can either do one of two things:
+        # 1. If we are waiting for all outstanding `noreply` queries
+        # to be done, then this promise is resolved when that query
+        # completes.
+        # 2. If we aren't waiting, this promise is resolved immediately
+        #
+        # In either case, the callback provided to `.close` is invoked
+        # after this promise is resolved.
         new Promise( (resolve, reject) =>
             wrappedCb = (err, result) =>
                 @open = false
